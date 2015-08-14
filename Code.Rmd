@@ -1,0 +1,2285 @@
+---
+title: "Freshwater Verrucocmicrobia"
+author: "Edna Chiang"
+date: "July 6, 2015"
+output: html_document
+---
+
+
+### Load Libraries
+```{r}
+#source("http://bioconductor.org/biocLite.R")
+#biocLite("phyloseq")
+library(phyloseq)
+packageVersion("phyloseq")
+library(ggplot2)
+library(ape)
+library(vegan)
+library(plyr)
+library(scales)
+library(grid)
+library(reshape2)
+theme_set(theme_bw())
+set.seed(1)
+```
+
+### Import Data
+```{r}
+# mothur file import
+sharedfile = "combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.point.shared"
+taxfile = "combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.cons.taxonomy"
+mothurdata = import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+    #Creates phyloseq object of mothurdata
+
+##To view phyloseq tables
+View(otu_table(mothurdata))
+View(tax_table(mothurdata))
+
+# We need to change the taxonomy names
+colnames(tax_table(mothurdata)) <- c("Kingdom","Phylum","Class","Order","Family","Genus")
+```
+
+### Filter out unwanted sequences
+```{r}
+good<-subset_taxa(mothurdata,Class!="Chloroplast")
+good<-subset_taxa(good,Kingdom=="Bacteria")
+good<-subset_taxa(good,Family!="mitochondria")
+
+#Remove controls
+good <- prune_samples(sample_names(good) != "Mock4",good)
+good <- prune_samples(sample_names(good) != "Mock_S96",good)
+good <- prune_samples(sample_names(good) != "Mus.Control",good)
+good <- prune_samples(sample_names(good) != "Negative4",good)
+good <- prune_samples(sample_names(good) != "Sed.Control",good)
+good <- prune_samples(sample_names(good) != "Water_S84",good)
+good <- prune_samples(sample_names(good) != "Z14.C1",good)
+good <- prune_samples(sample_names(good) != "Z14.C2",good)
+good <- prune_samples(sample_names(good) != "Z14.C3",good)
+good <- prune_samples(sample_names(good) != "Z14.C4",good)
+good <- prune_samples(sample_names(good) != "Z15.PBS1",good)
+good <- prune_samples(sample_names(good) != "Z15.PBS2",good)
+good <- prune_samples(sample_names(good) != "mockA03032015",good)
+good <- prune_samples(sample_names(good) != "mockB03032015",good)
+good <- prune_samples(sample_names(good) != "mockC.05082015",good)
+good <- prune_samples(sample_names(good) != "mockC03032015",good)
+good <- prune_samples(sample_names(good) != "negA03032015",good)
+good <- prune_samples(sample_names(good) != "negB03032015",good)
+good <- prune_samples(sample_names(good) != "negC03032015",good)
+good <- prune_samples(sample_names(good) != "waterD.05082015",good)
+
+#Remove taxa that are absent from all samples
+good <- prune_taxa(taxa_sums(good)>0,good)
+
+```
+
+### Trim & normalize data based on # of reads/sequence depth
+```{r}
+# Look at # of reads
+ggplot(data.frame(sum=sample_sums(good)),aes(sum)) + 
+  geom_histogram(colour="white",fill="blue")+
+  ggtitle("Sample read counts")+xlab("total sequences")
+
+# Mean, max and min of sample read counts
+mins<-min(sample_sums(good))
+paste(c("The minimum sample read count is",mins))
+means<-mean(sample_sums(good))
+paste(c("The mean sample read count is",means))
+maxs<-max(sample_sums(good))
+paste(c("The max sample read count is",maxs))
+
+# Delete samples under 10000 sequence depth
+pruned <-  prune_samples(sample_sums(good) > 10000, good)
+    ## removed 44 samples
+
+# Look at reads of pruned
+ggplot(data.frame(sum=sample_sums(pruned)),aes(sum)) + 
+  geom_histogram(colour="white",fill="blue")+
+  ggtitle("Sample read counts")+xlab("total sequences")
+
+# Mean, max and min of pruned
+mins<-min(sample_sums(pruned))
+paste(c("The minimum sample read count is",mins))
+means<-mean(sample_sums(pruned))
+paste(c("The mean sample read count is",means))
+maxs<-max(sample_sums(pruned))
+paste(c("The max sample read count is",maxs))
+
+# This is the min # of reads in our pruned dataset
+n <- min(sample_sums(pruned))
+
+# # Function to normalize data
+# scale_reads <- function(physeq,n){
+#   physeq.scale <- transform_sample_counts(physeq, function(x) {round((n*x/sum(x)))})
+#   #otu_table(physeq.scale) = round(otu_table(physeq.scale))
+#   physeq.scale = prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
+#   return(physeq.scale)
+# }
+# 
+# # Normalize our dataset!
+# scaled <- scale_reads(pruned, n)   ### Scaled to 10,423
+# 
+# # Let's visualized our normalized dataset
+# ggplot(data.frame(sum=sample_sums(scaled)),aes(sum)) + geom_histogram(colour="black",fill="deeppink")+ggtitle("Sample read counts")+xlab("total sequences")
+# 
+# # mean, max and min of sample read counts
+# mins<-min(sample_sums(scaled))
+# paste(c("The minimum sample read count is",mins))
+# means<-mean(sample_sums(scaled))
+# paste(c("The mean sample read count is",means))
+# maxs<-max(sample_sums(scaled))
+# paste(c("The max sample read count is",maxs))
+
+
+```
+
+
+
+
+### Make Lake Michigan Sample Data
+```{r}
+# Create list of Lake Michigan sample names
+pruned.otu <- otu_table(pruned)
+pruned.names <- colnames(pruned.otu)
+LM.names <- c(pruned.names[1:59], pruned.names[168:210], pruned.names[213:278])
+
+# Create matrix for Lake Michigan samples
+LM <- data.frame(matrix(NA,length(LM.names),2))
+
+# Add in Samples to LM matrix
+LM$Sample <- LM.names
+
+## Rename samples
+new.names <- c("Fa13.BD.MLB.DN", "Fa13.BD.MLB.SN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SN", "Fa13.BD.MM110.SN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SN", "Fa13.BD.MM15.SN", "Fa13.BcD.MLB.DN", "Fa13.BcD.MLB.SN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SN", "Fa13.BcD.MM15.SN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.SN", "Fa13.ED.MLB.SN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SN", "Fa13.ED.MM110.SN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SN", "Fa13.ED.MM15.SN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.SN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SN", "Fa13.EcD.MM15.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MM110.DD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SN", "Sp13.BD.MM110.SN", "Sp13.BD.MM15.DD", "Sp13.BD.MM15.SD", "Sp13.BD.MM15.SN", "Sp13.BD.MM15.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SN", "Sp13.BcD.MM15.SN", "Sp13.ED.MLB.SN", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SN", "Sp13.EcD.MM15.SN", "Su13.BD.MLB.DD", "Su13.BD.MLB.SD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DN", "Su13.BD.MM110.DN", "Su13.BD.MM110.SD", "Su13.BD.MM110.SD", "Su13.BD.MM110.SN", "Su13.BD.MM110.SN", "Su13.BD.MM15.DN", "Su13.BD.MM15.DN", "Su13.BD.MM15.SD", "Su13.BD.MM15.SD", "Su13.BD.MM15.SN", "Su13.BD.MM15.SN", "Su13.BcD.MLB.DD", "Su13.BcD.MLB.SD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SN", "Su13.BcD.MM110.SN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SN", "Su13.BcD.MM15.SN", "Su13.ED.MLB.DD", "Su13.ED.MLB.DD", "Su13.ED.MLB.SD", "Su13.ED.MLB.SD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SN", "Su13.ED.MM110.SN", "Su13.ED.MM15.DN", "Su13.ED.MM15.DN", "Su13.ED.MM15.SD", "Su13.ED.MM15.SD", "Su13.ED.MM15.SN", "Su13.ED.MM15.SN", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.SD", "Su13.EcD.MLB.SD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SN", "Su13.EcD.MM110.SN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SN", "Su13.EcD.MM15.SN")
+
+#new.names <- c("Fa13.BD.MLB.DN", "Fa13.BD.MLB.SN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SN", "Fa13.BD.MM110.SN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SN", "Fa13.BD.MM15.SN", "Fa13.BcD.MLB.DN", "Fa13.BcD.MLB.SN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SN", "Fa13.BcD.MM15.SN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.SN", "Fa13.ED.MLB.SN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SN", "Fa13.ED.MM110.SN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SN", "Fa13.ED.MM15.SN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.SN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SN", "Fa13.EcD.MM15.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MM110.DD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SN", "Sp13.BD.MM110.SN", "Sp13.BD.MM15.DD", "Sp13.BD.MM15.SD", "Sp13.BD.MM15.SN", "Sp13.BD.MM15.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SN", "Sp13.BcD.MM15.SN", "Sp13.ED.MLB.SN", "Sp13.ED.MM110.DD", "Sp13.ED.MM110.SD", "Sp13.ED.MM110.SD", "Sp13.ED.MM110.SN", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.SD", "Sp13.EcD.MM110.SD", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SN", "Sp13.EcD.MM15.SN", "Su13.BD.MLB.DD", "Su13.BD.MLB.SD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DN", "Su13.BD.MM110.DN", "Su13.BD.MM110.SD", "Su13.BD.MM110.SD", "Su13.BD.MM110.SN", "Su13.BD.MM110.SN", "Su13.BD.MM15.DN", "Su13.BD.MM15.DN", "Su13.BD.MM15.SD", "Su13.BD.MM15.SD", "Su13.BD.MM15.SN", "Su13.BD.MM15.SN", "Su13.BcD.MLB.DD", "Su13.BcD.MLB.SD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SN", "Su13.BcD.MM110.SN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SN", "Su13.BcD.MM15.SN", "Su13.ED.MLB.DD", "Su13.ED.MLB.DD", "Su13.ED.MLB.SD", "Su13.ED.MLB.SD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SN", "Su13.ED.MM110.SN", "Su13.ED.MM15.DN", "Su13.ED.MM15.DN", "Su13.ED.MM15.SD", "Su13.ED.MM15.SD", "Su13.ED.MM15.SN", "Su13.ED.MM15.SN", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.SD", "Su13.EcD.MLB.SD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SN", "Su13.EcD.MM110.SN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SN", "Su13.EcD.MM15.SN")
+    ## Raw names
+
+## Add Dup column
+LM$Dups <- new.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+LM$Group <- substr(LM$Sample, 9, 11)
+LM$Group[LM$Group == "MLB"] <- "Estuary"
+LM$Group[LM$Group == "MM1"] <- "Laurentian"
+LM$Group[LM$Group == ".ML"] <- "Estuary"
+LM$Group[LM$Group == ".MM"] <- "Laurentian"
+  
+# Add Lake column
+LM$Lake <- substr(LM$Sample, 9, 11)
+LM$Lake[LM$Lake == "MLB"] <- "Muskegon"
+LM$Lake[LM$Lake == "MM1"] <- "Michigan"
+LM$Lake[LM$Lake == ".ML"] <- "Muskegon"
+LM$Lake[LM$Lake == ".MM"] <- "Michigan"
+  
+# Add Date column
+LM$Date <- substr(LM$Sample, 1, 4)
+
+# Add Site column
+LM$Site <- substr(LM$Sample, 9, 13)
+LM$Site[LM$Site == "MLB.D"] <- "Buoy"
+LM$Site[LM$Site == "MLB.S"] <- "Buoy"
+LM$Site[LM$Site == ".MLB."] <- "Buoy"
+LM$Site[LM$Site == "MM110"] <- "Far"
+LM$Site[LM$Site == "MM15."] <- "Shore"
+LM$Site[LM$Site == ".MLB"] <- "Buoy"
+LM$Site[LM$Site == ".MM11"] <- "Far"
+LM$Site[LM$Site == ".MM15"] <- "Shore"
+LM$Site[LM$Site == ".MLB"] <- "Buoy"
+
+# Add Depth column
+LM$Depth <- substr(LM$Sample, 13,17)
+LM$Depth[LM$Depth == "DN"] <- "Bottom"
+LM$Depth[LM$Depth == "SN"] <- "Top"
+LM$Depth[LM$Depth == "0.DN"] <- "Bottom"
+LM$Depth[LM$Depth == "0.SD"] <- "Top"
+LM$Depth[LM$Depth == ".DN"] <- "Bottom"
+LM$Depth[LM$Depth == ".SD"] <- "Top"
+LM$Depth[LM$Depth == ".SN"] <- "Top"
+LM$Depth[LM$Depth == "10.DN"] <- "Bottom"
+LM$Depth[LM$Depth == "10.SD"] <- "Top"
+LM$Depth[LM$Depth == "10.SN"] <- "Top"
+LM$Depth[LM$Depth == "5.DN"] <- "Bottom"
+LM$Depth[LM$Depth == "5.SD"] <- "Top"
+LM$Depth[LM$Depth == "5.SN"] <- "Top"
+LM$Depth[LM$Depth == "0.SN"] <- "Top"
+LM$Depth[LM$Depth == "0.DD"] <- "Bottom"
+LM$Depth[LM$Depth == ".DD"] <- "Bottom"
+LM$Depth[LM$Depth == "10.DD"] <- "Bottom"
+LM$Depth[LM$Depth == "5.DD"] <- "Bottom"
+LM$Depth[LM$Depth == "DD"] <- "Bottom"
+LM$Depth[LM$Depth == "SD"] <- "Top"
+LM$Depth[LM$Depth == "0.DCM"] <- "DCM"
+LM$Depth[LM$Depth == "10.DC"] <- "DCM"
+LM$Depth[LM$Depth == "DN.1."] <- "Bottom"
+LM$Depth[LM$Depth == "SN.1."] <- "Top"
+LM$Depth[LM$Depth == "0.DN."] <- "Bottom"
+LM$Depth[LM$Depth == "0.SD."] <- "Top"
+LM$Depth[LM$Depth == "0.SN."] <- "Top"
+LM$Depth[LM$Depth == ".DN.1"] <- "Bottom"
+LM$Depth[LM$Depth == ".DN.2"] <- "Bottom"
+LM$Depth[LM$Depth == ".SD.1"] <- "Top"
+LM$Depth[LM$Depth == ".SD.2"] <- "Top"
+LM$Depth[LM$Depth == ".SN.1"] <- "Top"
+LM$Depth[LM$Depth == ".SN.2"] <- "Top"
+LM$Depth[LM$Depth == "5.DN."] <- "Bottom"
+LM$Depth[LM$Depth == "5.SD."] <- "Top"
+LM$Depth[LM$Depth == "5.SN."] <- "Top"
+LM$Depth[LM$Depth == "DN.2."] <- "Bottom"
+LM$Depth[LM$Depth == "SN.2."] <- "Top"
+LM$Depth[LM$Depth == "0.DD."] <- "Bottom"
+LM$Depth[LM$Depth == "DD.1."] <- "Bottom"
+LM$Depth[LM$Depth == "DD.2."] <- "Bottom"
+LM$Depth[LM$Depth == "SD.1."] <- "Top"
+LM$Depth[LM$Depth == "SD.2."] <- "Top"
+LM$Depth[LM$Depth == "5.DD."] <- "Bottom"
+
+# Add Fraction column
+LM$Fraction <- substr(LM$Sample, 6,7)
+LM$Fraction[LM$Fraction == "BD"] <- "Free"
+LM$Fraction[LM$Fraction == "ED"] <- "Particle"
+LM$Fraction[LM$Fraction == "Bc"] <- "cFree"
+LM$Fraction[LM$Fraction == "Ec"] <- "cParticle"
+
+# Remove blank columns
+LM$X1 = NULL
+LM$X2 = NULL
+
+```
+
+
+
+### Create Muskegon Lake Sample Data
+```{r}
+# Create list of Muskegon Lake sample names
+#good.otu <- otu_table(good)
+#good.names <- colnames(good.otu)
+ML.names <- c(pruned.names[60:164])
+
+# Create matrix for Muskegon Lake samples
+ML <- data.frame(matrix(NA,length(ML.names),2))
+
+# Add in Samples to LM matrix
+ML$Sample <- ML.names
+
+# Update sample names
+new.names <- c("MBR.S.714", "MBR.S.914", "MBR.S.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.514", "MDPE.P.714", "MDPE.P.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.714", "MDPE.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.714", "MINE.P.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.714", "MINE.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.514", "MOTE.P.714", "MOTE.P.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.714", "MOTE.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914")
+
+
+#new.names <- c("MBR.S.714", "MBR.S.914", "MBR.S.714", "MBR.S.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.514", "MDPE.P.714", "MDPE.P.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.714", "MDPE.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.514", "MINE.P.714", "MINE.P.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.714", "MINE.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.514", "MOTE.P.714", "MOTE.P.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.714", "MOTE.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914")
+    ## Raw
+  
+# Create Dups column
+ML$Dups <- new.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+ML$Group <- c(rep("Estuary"))
+  
+# Add Lake column
+ML$Lake <- c(rep("Muskegon"))
+  
+# Add Date column
+ML$Date <- substr(ML$Sample, 8, 11)
+ML$Date[ML$Date == ".514"] <- "514"
+ML$Date[ML$Date == ".714"] <- "714"
+ML$Date[ML$Date == ".914"] <- "914"
+
+
+#Add Site column
+ML$Site <- substr(ML$Sample, 2, 3)
+ML$Site[ML$Site == "IN"] <- "Inlet"
+ML$Site[ML$Site == "BR"] <- "Bear"
+ML$Site[ML$Site == "OT"] <- "Outlet"
+ML$Site[ML$Site == "DP"] <- "Deep"
+
+# Add Depth column
+ML$Depth <- substr(ML$Sample, 4,4)
+ML$Depth[ML$Depth == "E"] <- "Top"
+ML$Depth[ML$Depth == "H"] <- "Bottom"
+ML$Depth[ML$Depth == "1"] <- "Sediment"
+ML$Depth[ML$Depth == "2"] <- "Sediment"
+
+#Add Fraction column
+ML$Fraction <- substr(ML$Sample, 6,7)
+ML$Fraction[ML$Fraction == ".F"] <- "Free"
+ML$Fraction[ML$Fraction == ".P"] <- "Particle"
+ML$Fraction[ML$Fraction == "S."] <- "Sediment"
+
+# Remove blank columns
+ML$X1 = NULL
+ML$X2 = NULL
+
+
+```
+
+
+### Create Thunder Bay Sample Data
+```{r}
+# Create list of Thunder Bay sample names
+#good.otu <- otu_table(good)
+#good.names <- colnames(good.otu)
+TB.names <- c(pruned.names[165:167], pruned.names[211:212])
+
+# Create matrix for Thunder Bay samples
+TB <- data.frame(matrix(NA,length(TB.names),2))
+
+# Add in Samples to LM matrix
+TB$Sample <- TB.names
+
+# Create Dups column
+TB$Dups <- TB.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+TB$Group <- c(rep("Laurentian"))
+  
+# Add Lake column
+TB$Lake <- c(rep("Huron"))
+  
+# Add Date column
+TB$Date <- substr(TB$Sample, 1, 4)
+
+# Add Site column
+TB$Site <- substr(TB$Sample, 9,14)
+
+# Add Depth column
+TB$Depth <- substr(TB$Sample, 13, 14)
+TB$Depth[TB$Depth == "SD"] <- "Top"
+TB$Depth[TB$Depth == "SN"] <- "Top"
+TB$Depth[TB$Depth == "DN"] <- "Bottom"
+TB$Depth[TB$Depth == "0S"] <- "Top"
+TB$Depth[TB$Depth == "2D"] <- "Bottom"
+TB$Depth[TB$Depth == "2S"] <- "Top"
+TB$Depth[TB$Depth == "8D"] <- "Bottom"
+TB$Depth[TB$Depth == "6S"] <- "Top"
+
+# Add Fraction column
+TB$Fraction <- substr(TB$Sample, 6,9)
+TB$Fraction[TB$Fraction == "BD.T"] <- "Free"
+TB$Fraction[TB$Fraction == "BcD."] <- "cFree"
+TB$Fraction[TB$Fraction == "ED.T"] <- "Particle"
+
+# Remove blank columns
+TB$X1 = NULL
+TB$X2 = NULL
+
+```
+
+
+### Create UMWC Sample Data
+```{r}
+# Create list of Inland Lake sample names
+#good.otu <- otu_table(good)
+#good.names <- colnames(good.otu)
+IL.names <- c(pruned.names[279:418])
+
+# Create matrix for Inland Lake samples
+IL <- data.frame(matrix(NA,length(IL.names),2))
+
+# Add in Samples to LM matrix
+IL$Sample <- IL.names
+
+# Add Dups column
+IL$Dups <- IL.names
+IL$Dups[IL$Dups == "Z14.015.F1"] <- "Z14.015.F"
+IL$Dups[IL$Dups == "Z14.015.F2"] <- "Z14.015.F"
+IL$Dups[IL$Dups == "Z14.050.F"] <- "Z14.049.F"
+IL$Dups[IL$Dups == "Z14.050.P"] <- "Z14.049.P"
+IL$Dups[IL$Dups == "Z14.052.F"] <- "Z14.051.F"
+IL$Dups[IL$Dups == "Z14.052.P"] <- "Z14.051.P"
+IL$Dups[IL$Dups == "Z14.054.F"] <- "Z14.053.F"
+IL$Dups[IL$Dups == "Z14.054.P"] <- "Z14.053.P"
+IL$Dups[IL$Dups == "Z14.056.F"] <- "Z14.055.F"
+IL$Dups[IL$Dups == "Z14.056.P"] <- "Z14.055.P"
+IL$Dups[IL$Dups == "Z14.058.F"] <- "Z14.057.F"
+IL$Dups[IL$Dups == "Z14.058.P"] <- "Z14.057.P"
+IL$Dups[IL$Dups == "Z14.060.F"] <- "Z14.059.F"
+IL$Dups[IL$Dups == "Z14.060.P"] <- "Z14.059.P"
+IL$Dups[IL$Dups == "Z14.062.F"] <- "Z14.061.F"
+IL$Dups[IL$Dups == "Z14.062.P"] <- "Z14.061.P"
+IL$Dups[IL$Dups == "Z14.064.F"] <- "Z14.063.F"
+IL$Dups[IL$Dups == "Z14.064.P"] <- "Z14.063.P"
+IL$Dups[IL$Dups == "Z15.066.F"] <- "Z15.065.F"
+IL$Dups[IL$Dups == "Z15.066.P"] <- "Z15.065.P"
+IL$Dups[IL$Dups == "Z15.068.F"] <- "Z15.067.F"
+IL$Dups[IL$Dups == "Z15.068.P"] <- "Z15.067.P"
+IL$Dups[IL$Dups == "Z15.070.F"] <- "Z15.069.F"
+IL$Dups[IL$Dups == "Z15.070.P"] <- "Z15.069.P"
+IL$Dups[IL$Dups == "Z15.072.F"] <- "Z15.071.F"
+IL$Dups[IL$Dups == "Z15.072.P"] <- "Z15.071.P"
+IL$Dups[IL$Dups == "Z15.074.F"] <- "Z15.073.F"
+IL$Dups[IL$Dups == "Z15.074.P"] <- "Z15.073.P"
+IL$Dups[IL$Dups == "Z15.076.F"] <- "Z15.075.F"
+IL$Dups[IL$Dups == "Z15.076.P"] <- "Z15.075.P"
+IL$Dups[IL$Dups == "Z15.078.F"] <- "Z15.077.F"
+IL$Dups[IL$Dups == "Z15.078.P"] <- "Z15.077.P"
+IL$Dups[IL$Dups == "Z15.080.F"] <- "Z15.079.F"
+IL$Dups[IL$Dups == "Z15.080.P"] <- "Z15.079.P"
+
+#Add Group (which group of lakes; Great, Estuary, Inland) column
+IL$Group <- c(rep("Inland"))
+  
+#Add Lake column
+IL$Lake <- substr(IL$Sample,5,7)
+IL$Lake <- IL$Lake <- c(rep("Bishop",8), rep("Woodland",8), rep("BigSeven",8), rep("Heron",8), rep("Lobdell",8), rep("North",8), rep("Bruin",8), rep("Halfmoon",8), rep("Cedar",8), rep("Sand",8), rep("Whitmore",8), rep("Independence",8), rep("North",8), rep("Bruin",8), rep("Whitmore",8), rep("Independence",8), rep("NA",12))
+        ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
+  
+#Add Date column
+IL$Date <- c(rep("Su14",94), rep("Fa14",28), rep("Sp15",18))
+      ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
+
+#Add Site column
+IL$Site <- c("Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Outlet", "Inlet", "Inlet", "Epi", "Epi", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet","Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", rep ("NA", 18))
+IL$Site[IL$Site == "Epi"] <- "Top"
+IL$Site[IL$Site == "Hypo"] <- "Bottom"
+    ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
+
+#Add Depth column
+IL$Depth <- c("Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Outlet", "Inlet", "Inlet", "Epi", "Epi", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet","Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", rep ("NA", 18))
+IL$Depth[IL$Depth == "Epi"] <- "Top"
+IL$Depth[IL$Depth == "Hypo"] <- "Bottom"
+IL$Depth[IL$Depth == "Inlet"] <- "Top"
+IL$Depth[IL$Depth == "Outlet"] <- "Top"
+
+#Add Fraction column
+IL$Fraction <- substr(IL$Sample, 9,9)
+IL$Fraction[IL$Fraction == "F"] <- "Free"
+IL$Fraction[IL$Fraction == "P"] <- "Particle"
+
+#Remove blank columns
+IL$X1 = NULL
+IL$X2 = NULL
+
+```
+
+
+### Combine matrices to make overall Sample Data
+```{r}
+# Create matrix for all samples
+sampleinfo <- data.frame(matrix(NA,length(pruned.names),2))
+
+# Add in Samples to LM matrix
+sampleinfo$Sample <- c(LM$Sample, ML$Sample, TB$Sample, IL$Sample)
+
+# Add Dups column
+sampleinfo$Dups <- c(LM$Dups, ML$Dups, TB$Dups, IL$Dups)
+
+#Add Group (which group of lakes; Great, Estuary, Inland) column
+sampleinfo$Group <- c(LM$Group, ML$Group, TB$Group, IL$Group)
+  
+#Add Lake column
+sampleinfo$Lake <- c(LM$Lake, ML$Lake, TB$Lake, IL$Lake)
+  
+#Add Date column
+sampleinfo$Date <- c(LM$Date, ML$Date, TB$Date, IL$Date)
+
+#Add Site column
+sampleinfo$Site <- c(LM$Site, ML$Site, TB$Site, IL$Site)
+
+#Add Depth column
+sampleinfo$Depth <- c(LM$Depth, ML$Depth, TB$Depth, IL$Depth)
+
+#Add Fraction column
+sampleinfo$Fraction <- c(LM$Fraction, ML$Fraction, TB$Fraction, IL$Fraction)
+
+#Remove blank columns
+sampleinfo$X1 = NULL
+sampleinfo$X2 = NULL
+
+write.table(sampleinfo, "sampleinfo", sep = "\t")
+
+```
+
+### Update phyloseq object w/ sample data
+```{r}
+mapfile <- "sampleinfo"
+map <- import_qiime_sample_data(mapfile)
+merge <- merge_phyloseq(pruned,map)
+```
+
+### Merge Duplicates & create new phyloseq object
+```{r}
+dups_merge <- merge_samples(merge, "Dups", fun = "mean")
+merge_info <- sample_data(dups_merge)
+
+write.table(otu_table(dups_merge), "otus", sep = "\t")
+otu_data <- read.csv("otus", sep = "\t")
+
+
+missing_dups <- c("Fa13.BD.MLB.DN", "Fa13.BD.MLB.SN", "Fa13.BcD.MLB.DN", "Fa13.BcD.MLB.SN", "Fa13.EcD.MLB.SN", "MBR.S.714", "MDPE.P.514", "MOTE.P.514", "Sp12.BD.TB82SN", "Sp12.BcD.TB10SD", "Sp12.BcD.TB10SN", "Sp13.BD.MM110.DD", "Sp13.BD.MM15.DD", "Sp13.BD.MM15.SD", "Sp13.ED.MLB.SN", "Sp13.ED.MM15.SN", "Su12.BcD.TB18DN", "Su12.BcD.TB82SN", "Su13.BD.MLB.DD", "Su13.BD.MLB.SD", "Su13.BcD.MLB.DD", "Su13.BcD.MLB.SD", IL$Sample[1:28], IL$Sample[31:94], IL$Sample[132], IL$Sample[135])
+
+#missing_dups <- c("Fa13.BD.MLB.DN.1.renamed", "Fa13.BD.MLB.SN.1.renamed", "Fa13.BcD.MLB.DN.1", "Fa13.BcD.MLB.SN.1", "Fa13.EcD.MLB.SN.2", "Sp13.BD.MM110.DD.1.renamed", "Sp13.BD.MM15.DD.1.renamed", "Sp13.BD.MM15.SD.1.renamed", "Sp13.ED.MLB.SN.1.renamed", "Sp13.ED.MM110.DD.2.renamed", "Sp13.ED.MM110.SN.1.renamed", "Sp13.ED.MM15.SN.2.renamed", "Su13.BD.MLB.DD.1.renamed", "Su13.BD.MLB.SD.1.renamed", "Su13.BcD.MLB.DD.1", "Su13.BcD.MLB.SD.1", "MDPE1.P.514", "MINE1.P.514", "MOTE1.P.514", IL$Sample[1:28], IL$Sample[31:161])
+    ## These samples DO NOT have duplicates
+    ## raw
+
+otu_data$names <- row.names(otu_data)
+nodups <- otu_data[rownames(otu_data) %in% missing_dups,]
+    ## Collect only the samples that DO NOT have duplicates
+dups_only <- otu_data[!rownames(otu_data) %in% missing_dups,]
+    ## Collect only the samples that DO have duplicates
+dups_only$names = NULL
+nodups$names = NULL
+rowSums(dups_only)
+dups_half <- round(dups_only/2)
+    ## Here we're taking the average.
+norm_all <- rbind(dups_half, nodups)
+sums <- data.frame(rowSums(norm_all))
+colnames(sums) <- c("Totals")
+sums_range <- max(sums) -min(sums)
+paste(c("The range of sample read counts when scaled, merged (summed), averaged and then scaled is",sums_range))
+tnorm_all <- t(norm_all)
+otu_manual <- otu_table(tnorm_all, taxa_are_rows = TRUE)
+taxo <- tax_table(dups_merge)
+manual_merged <- merge_phyloseq(taxo, otu_manual)
+manual_merged <- prune_taxa(taxa_sums(manual_merged) > 0, manual_merged)
+    ## Everything looks good except for the sample data
+    ## Time to redo the sample data...again! x.x
+```
+
+
+### Trim & normalize data based on # of reads/sequence depth
+```{r}
+# Look at # of reads
+ggplot(data.frame(sum=sample_sums(manual_merged)),aes(sum)) + 
+  geom_histogram(colour="white",fill="blue")+
+  ggtitle("Sample read counts")+xlab("total sequences")
+
+# Mean, max and min of sample read counts
+mins<-min(sample_sums(manual_merged))
+paste(c("The minimum sample read count is",mins))
+means<-mean(sample_sums(manual_merged))
+paste(c("The mean sample read count is",means))
+maxs<-max(sample_sums(manual_merged))
+paste(c("The max sample read count is",maxs))
+    ## Aside from the max being a lot smaller now, min & mean are relatively similar
+    ## to pruned (pre-duplicate merging)
+
+# This is the min # of reads in our pruned dataset
+n <- min(sample_sums(manual_merged))
+
+# Function to normalize data
+scale_reads <- function(physeq,n){
+  physeq.scale <- transform_sample_counts(physeq, function(x) {round((n*x/sum(x)))})
+  #otu_table(physeq.scale) = round(otu_table(physeq.scale))
+  physeq.scale = prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
+  return(physeq.scale)
+}
+
+# Normalize our dataset!
+scaled <- scale_reads(manual_merged, n)   ### Scaled to 10,468
+
+# Let's visualized our normalized dataset
+ggplot(data.frame(sum=sample_sums(scaled)),aes(sum)) + geom_histogram(colour="black",fill="deeppink")+ggtitle("Sample read counts")+xlab("total sequences")
+
+# mean, max and min of sample read counts
+mins<-min(sample_sums(scaled))
+paste(c("The minimum sample read count is",mins))
+means<-mean(sample_sums(scaled))
+paste(c("The mean sample read count is",means))
+maxs<-max(sample_sums(scaled))
+paste(c("The max sample read count is",maxs))
+
+```
+
+### Time to update sample data
+```{r}
+scaled.otu <- otu_table(scaled)
+scaled.names <- colnames(scaled.otu)
+
+############### Lake Michigan Sample Data ###############
+LM.names <- c(scaled.names[1:27], scaled.names[79:128], scaled.names[152:156], scaled.names[163:167], scaled.names[170:173])
+
+# Create matrix for Lake Michigan samples
+LM <- data.frame(matrix(NA,length(LM.names),2))
+
+# Add in Samples to LM matrix
+LM$Sample <- LM.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+LM$Group <- substr(LM$Sample, 9, 11)
+LM$Group[LM$Group == "MLB"] <- "Estuary"
+LM$Group[LM$Group == "MM1"] <- "Laurentian"
+LM$Group[LM$Group == ".ML"] <- "Estuary"
+LM$Group[LM$Group == ".MM"] <- "Laurentian"
+  
+# Add Lake column
+LM$Lake <- substr(LM$Sample, 9, 11)
+LM$Lake[LM$Lake == "MLB"] <- "Muskegon"
+LM$Lake[LM$Lake == "MM1"] <- "Michigan"
+LM$Lake[LM$Lake == ".ML"] <- "Muskegon"
+LM$Lake[LM$Lake == ".MM"] <- "Michigan"
+  
+# Add Date column
+LM$Date <- substr(LM$Sample, 1, 4)
+
+# Add Site column
+LM$Site <- substr(LM$Sample, 9, 13)
+LM$Site[LM$Site == "MLB.D"] <- "Buoy"
+LM$Site[LM$Site == "MLB.S"] <- "Buoy"
+LM$Site[LM$Site == ".MLB."] <- "Buoy"
+LM$Site[LM$Site == "MM110"] <- "Far"
+LM$Site[LM$Site == "MM15."] <- "Shore"
+LM$Site[LM$Site == ".MLB"] <- "Buoy"
+LM$Site[LM$Site == ".MM11"] <- "Far"
+LM$Site[LM$Site == ".MM15"] <- "Shore"
+LM$Site[LM$Site == ".MLB"] <- "Buoy"
+
+# Add Depth column
+LM$Depth <- substr(LM$Sample, 13,17)
+LM$Depth[LM$Depth == "DN"] <- "Bottom"
+LM$Depth[LM$Depth == "SN"] <- "Top"
+LM$Depth[LM$Depth == "0.DN"] <- "Bottom"
+LM$Depth[LM$Depth == "0.SD"] <- "Top"
+LM$Depth[LM$Depth == ".DN"] <- "Bottom"
+LM$Depth[LM$Depth == ".SD"] <- "Top"
+LM$Depth[LM$Depth == ".SN"] <- "Top"
+LM$Depth[LM$Depth == "10.DN"] <- "Bottom"
+LM$Depth[LM$Depth == "10.SD"] <- "Top"
+LM$Depth[LM$Depth == "10.SN"] <- "Top"
+LM$Depth[LM$Depth == "5.DN"] <- "Bottom"
+LM$Depth[LM$Depth == "5.SD"] <- "Top"
+LM$Depth[LM$Depth == "5.SN"] <- "Top"
+LM$Depth[LM$Depth == "0.SN"] <- "Top"
+LM$Depth[LM$Depth == "0.DD"] <- "Bottom"
+LM$Depth[LM$Depth == ".DD"] <- "Bottom"
+LM$Depth[LM$Depth == "10.DD"] <- "Bottom"
+LM$Depth[LM$Depth == "5.DD"] <- "Bottom"
+LM$Depth[LM$Depth == "DD"] <- "Bottom"
+LM$Depth[LM$Depth == "SD"] <- "Top"
+LM$Depth[LM$Depth == "0.DCM"] <- "DCM"
+LM$Depth[LM$Depth == "10.DC"] <- "DCM"
+LM$Depth[LM$Depth == "DN.1."] <- "Bottom"
+LM$Depth[LM$Depth == "SN.1."] <- "Top"
+LM$Depth[LM$Depth == "0.DN."] <- "Bottom"
+LM$Depth[LM$Depth == "0.SD."] <- "Top"
+LM$Depth[LM$Depth == "0.SN."] <- "Top"
+LM$Depth[LM$Depth == ".DN.1"] <- "Bottom"
+LM$Depth[LM$Depth == ".DN.2"] <- "Bottom"
+LM$Depth[LM$Depth == ".SD.1"] <- "Top"
+LM$Depth[LM$Depth == ".SD.2"] <- "Top"
+LM$Depth[LM$Depth == ".SN.1"] <- "Top"
+LM$Depth[LM$Depth == ".SN.2"] <- "Top"
+LM$Depth[LM$Depth == "5.DN."] <- "Bottom"
+LM$Depth[LM$Depth == "5.SD."] <- "Top"
+LM$Depth[LM$Depth == "5.SN."] <- "Top"
+LM$Depth[LM$Depth == "DN.2."] <- "Bottom"
+LM$Depth[LM$Depth == "SN.2."] <- "Top"
+LM$Depth[LM$Depth == "0.DD."] <- "Bottom"
+LM$Depth[LM$Depth == "DD.1."] <- "Bottom"
+LM$Depth[LM$Depth == "DD.2."] <- "Bottom"
+LM$Depth[LM$Depth == "SD.1."] <- "Top"
+LM$Depth[LM$Depth == "SD.2."] <- "Top"
+LM$Depth[LM$Depth == "5.DD."] <- "Bottom"
+
+# Add Fraction column
+LM$Fraction <- substr(LM$Sample, 6,7)
+LM$Fraction[LM$Fraction == "BD"] <- "Free"
+LM$Fraction[LM$Fraction == "ED"] <- "Particle"
+LM$Fraction[LM$Fraction == "Bc"] <- "cFree"
+LM$Fraction[LM$Fraction == "Ec"] <- "cParticle"
+
+# Remove blank columns
+LM$X1 = NULL
+LM$X2 = NULL
+
+
+
+############### Muskegon Lake Sample Data ###############
+ML.names <- c(scaled.names[28:78], scaled.names[157:159])
+
+# Create matrix for Muskegon Lake samples
+ML <- data.frame(matrix(NA,length(ML.names),2))
+
+# Add in Samples to LM matrix
+ML$Sample <- ML.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+ML$Group <- c(rep("Estuary"))
+  
+# Add Lake column
+ML$Lake <- c(rep("Muskegon"))
+  
+# Add Date column
+ML$Date <- substr(ML$Sample, 7, 11)
+ML$Date[ML$Date == ".514"] <- "Sp14"
+ML$Date[ML$Date == ".714"] <- "Su14"
+ML$Date[ML$Date == ".914"] <- "Fa14"
+ML$Date[ML$Date == "514"] <- "Sp14"
+ML$Date[ML$Date == "714"] <- "Su14"
+ML$Date[ML$Date == "914"] <- "Fa14"
+
+#Add Site column
+ML$Site <- substr(ML$Sample, 2, 3)
+ML$Site[ML$Site == "IN"] <- "Inlet"
+ML$Site[ML$Site == "BR"] <- "Bear"
+ML$Site[ML$Site == "OT"] <- "Outlet"
+ML$Site[ML$Site == "DP"] <- "Deep"
+
+# Add Depth column
+ML$Depth <- substr(ML$Sample, 4,4)
+ML$Depth[ML$Depth == "E"] <- "Top"
+ML$Depth[ML$Depth == "H"] <- "Bottom"
+ML$Depth[ML$Depth == "."] <- "Sediment"
+
+#Add Fraction column
+ML$Fraction <- substr(ML$Sample, 6,6)
+ML$Fraction[ML$Fraction == "F"] <- "Free"
+ML$Fraction[ML$Fraction == "P"] <- "Particle"
+ML$Fraction[ML$Fraction == "."] <- "Sediment"
+
+# Remove blank columns
+ML$X1 = NULL
+ML$X2 = NULL
+
+
+
+############### Thunder Bay Sample Data ###############
+TB.names <- c(scaled.names[160:162], scaled.names[168:169])
+
+# Create matrix for Thunder Bay samples
+TB <- data.frame(matrix(NA,length(TB.names),2))
+
+# Add in Samples to LM matrix
+TB$Sample <- TB.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+TB$Group <- c(rep("Laurentian"))
+  
+# Add Lake column
+TB$Lake <- c(rep("Huron"))
+  
+# Add Date column
+TB$Date <- substr(TB$Sample, 1, 4)
+
+# Add Site column
+TB$Site <- substr(TB$Sample, 9,14)
+
+# Add Depth column
+TB$Depth <- substr(TB$Sample, 13, 14)
+TB$Depth[TB$Depth == "SD"] <- "Top"
+TB$Depth[TB$Depth == "SN"] <- "Top"
+TB$Depth[TB$Depth == "DN"] <- "Bottom"
+TB$Depth[TB$Depth == "0S"] <- "Top"
+TB$Depth[TB$Depth == "2D"] <- "Bottom"
+TB$Depth[TB$Depth == "2S"] <- "Top"
+TB$Depth[TB$Depth == "8D"] <- "Bottom"
+TB$Depth[TB$Depth == "6S"] <- "Top"
+
+# Add Fraction column
+TB$Fraction <- substr(TB$Sample, 6,9)
+TB$Fraction[TB$Fraction == "BD.T"] <- "Free"
+TB$Fraction[TB$Fraction == "BcD."] <- "cFree"
+TB$Fraction[TB$Fraction == "ED.T"] <- "Particle"
+
+# Remove blank columns
+TB$X1 = NULL
+TB$X2 = NULL
+
+
+
+############### Inland Lake Sample Data ###############
+IL.names <- c(scaled.names[129:151], scaled.names[174:267])
+
+# Create matrix for Inland Lake samples
+IL <- data.frame(matrix(NA,length(IL.names),2))
+
+# Add in Samples to LM matrix
+IL$Sample <- IL.names
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+IL$Group <- c(rep("Inland"))
+  
+# Add Lake column
+IL$Lake <- substr(IL$Sample,5,7)
+IL$Lake <- c("Heron", rep("North",2), rep("Bruin",4), rep("Whitmore",4), rep("Independence",4), rep("Bruin",4), rep("Whitmore",2), rep("Independence",2), rep("Bishop",8), rep("Woodland",8), rep("BigSeven",8), rep("Heron", 6), rep("Lobdell",8), rep("North",8), rep("Bruin",8), rep("Halfmoon",8), rep("Cedar",8), rep("Sand",8), rep("Whitmore",8), rep("Independence",6), rep("Whitmore",2))
+  
+# Add Date column
+IL$Date <- c("Su14", rep("Fa14",14), rep("Sp15",8), rep("Su14",92), rep("Sp15",2))
+  
+  c(rep("Su14",94), rep("Fa14",28), rep("Sp15",18))
+      ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
+
+#Add Site column
+IL$Site <- c("Bottom", rep("Top",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), "Top", "Bottom", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Top", "Bottom")
+
+#Add Depth column
+IL$Depth <- c("Bottom", rep("Top",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), "Top", "Bottom", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Top", "Bottom")
+IL$Depth[IL$Depth == "Inlet"] <- "Top"
+IL$Depth[IL$Depth == "Outlet"] <- "Top"
+
+#Add Fraction column
+IL$Fraction <- substr(IL$Sample, 9,9)
+IL$Fraction[IL$Fraction == "F"] <- "Free"
+IL$Fraction[IL$Fraction == "P"] <- "Particle"
+
+#Remove blank columns
+IL$X1 = NULL
+IL$X2 = NULL
+
+############### Make final sample data table ###############
+sampleinfo <- data.frame(matrix(NA,length(scaled.names),2))
+
+# Add in Samples to LM matrix
+sampleinfo$Sample <- c(LM$Sample, ML$Sample, TB$Sample, IL$Sample)
+
+# Add Group (which group of lakes; Great, Estuary, Inland) column
+sampleinfo$Group <- c(LM$Group, ML$Group, TB$Group, IL$Group)
+  
+# Add Lake column
+sampleinfo$Lake <- c(LM$Lake, ML$Lake, TB$Lake, IL$Lake)
+  
+# Add Date column
+sampleinfo$Date <- c(LM$Date, ML$Date, TB$Date, IL$Date)
+
+# Add Site column
+sampleinfo$Site <- c(LM$Site, ML$Site, TB$Site, IL$Site)
+
+# Add Depth column
+sampleinfo$Depth <- c(LM$Depth, ML$Depth, TB$Depth, IL$Depth)
+
+# Add Fraction column
+sampleinfo$Fraction <- c(LM$Fraction, ML$Fraction, TB$Fraction, IL$Fraction)
+
+# Add Season column
+sampleinfo$Season <- substr(sampleinfo$Date, 1,2)
+sampleinfo$Season[sampleinfo$Season == "Sp"] <- "Spring"
+sampleinfo$Season[sampleinfo$Season == "Su"] <- "Summer"
+sampleinfo$Season[sampleinfo$Season == "Fa"] <- "Fall"
+
+# Add Origin column
+sampleinfo$Origin <- substr(sampleinfo$Fraction, 1, 10)
+sampleinfo$Origin[sampleinfo$Origin == "Free"] <- "Water"
+sampleinfo$Origin[sampleinfo$Origin == "cFree"] <- "Water"
+sampleinfo$Origin[sampleinfo$Origin == "Particle"] <- "Water"
+sampleinfo$Origin[sampleinfo$Origin == "cParticle"] <- "Water"
+
+# Remove blank columns
+sampleinfo$X1 = NULL
+sampleinfo$X2 = NULL
+
+write.table(sampleinfo, "sampleinfo", sep = "\t")
+
+```
+
+### Add updated sample data to most recent phyloseq object
+```{r}
+info <- "sampleinfo"
+info <- import_qiime_sample_data(info)
+final <- merge_phyloseq(scaled,info)
+    ## For some reason, the sample_data comes up NA when you View
+    ## But if you do sample_data(info), it comes up fine
+    ## Weird
+```
+
+### Time to remove the cDNA samples
+```{r}
+final <- subset_samples(final, Fraction != "cFree")
+final <- subset_samples(final, Fraction != "cParticle")
+final <- subset_samples(final, Lake != "Huron")
+```
+
+### Let's take a look at the phyla in our normalized dataset
+```{r}
+# Merges things that have the same taxanomic rank
+good_phylum<-tax_glom(final,taxrank = "Phylum")
+
+# Transforms each merged phylum count to rel abun
+phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
+
+# If a phylum has <1% rel abun, change that to 0%
+otu_table(phylum.99)[otu_table(phylum.99)<.01] <- 0
+
+# Remove anything with 0% rel abun
+phylum.99 = prune_taxa(taxa_sums(phylum.99)>0,phylum.99)
+
+# Create rank abundance of OTUs
+
+tiff("top5.tiff", width = 8.5, height = 5, units = "in", res = 500)
+barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),las=2,cex.axis=.7, space=F, names.arg=c("Proteobacteria", "Bacteroidetes","Actinobacteria","Verrucomicrobia", "Cyanobacteria"), col = c("khaki1", "mediumorchid3", "firebrick3", "lightslateblue", "chartreuse3"), main = "Top 5 Bacterial Phyla", xlab = "Phylum", ylab = "Relative Abundance (%)", ylim = c(0, 35), las=0)
+    ## 1 = Proteobacteria
+    ## 2 = Bacteroidetes
+    ## 3 = Actinobacteria
+    ## 4 = Verrucomicrobia!
+    ## Unclassified at phylum level = 9th most abundant
+dev.off()
+```
+
+### STACKED BAR PLOT OF GROUPS
+```{r}
+################# TIME TO CREATE STACKED BAR PLOT OF GROUPS #################
+
+# Merge samples by group
+phy.group<-merge_samples(phylum.99, "Group")
+    ## But this only sums them
+phy.samp <- data.frame(sample_data(phylum.99))
+
+# Average groups
+phy.otu <- data.frame(otu_table(phy.group))
+phy <- data.frame(tax_table(phy.group))
+phy.otu[1,] <- (phy.otu[1,]/64)
+    ## Averaging Estuary
+phy.otu[2,] <- (phy.otu[2,]/117)
+    ## Averaging Inland
+phy.otu[3,] <- (phy.otu[3,]/34)
+    ## Averaging Laurentian
+#colnames(phy.otu) <- c("Proteobacteria","Actinobacteria","Cyanobacteria","Bacteroidetes","Planctomycetes","Chloroflexi","Verrucomicrobia","Armatimonadetes","NPL-UPA2","Chlorobi","Gemmatimonadetes","Acidobacteria","Candidate_division_OP3","Nitrospirae","Candidate_division_OD1","Spirochaetae","Candidate_division_OP8","Chlamydiae","Lentisphaerae","BD1-5","TM6","unclassified","Firmicutes", "Candidate_division_WS3","Fibrobacteres","Candidate_division_SR1")
+tphy.otu <- t(phy.otu)
+phy.otu <- otu_table(tphy.otu, taxa_are_rows = T)
+phy.tax <- tax_table(phy.group)
+phy.samp <- sample_data(phy.group)
+phy.group.merge <- merge_phyloseq(phy.tax, phy.otu, phy.samp)
+    ## Makes new phyloseq object of 3 groups: Estuary, Inland, Laurentian
+        
+########### MAKE OBJECT TO BE USED IN GGPLOT ###########
+phylum_long <- psmelt(phy.group.merge)
+phylum_sort <- arrange(phylum_long, Phylum)
+phylum_sort$Sample <- factor(phylum_sort$Sample, levels=c("Laurentian","Estuary","Inland"))
+
+# Set phylum plotting colors
+phylum.colors <- c(Acidobacteria = "lightblue1", Actinobacteria = "firebrick3", Armatimonadetes = "salmon", "BD1-5" = "gold", Bacteroidetes = "mediumorchid3", "Candidate_division_OD1" = "tan", "Candidate_division_OP3" = "grey76", "Candidate_division_OP8" = "darkolivegreen1", "Candidate_division_SR1" = "cornflowerblue", "Candidate_division_WS3" = "purple4", Clamydiae = "violetred1", Chlorobi = "goldenrod", Chloroflexi = "firebrick4", Cyanobacteria = "chartreuse3", Fibrobacteres = "black", Firmicutes = "white", Gemmatimonadetes = "grey", Lentisphaerae = "yellow", "NPL-UPA2" = "hotpink", Nitrospirae = "midnightblue", Planctomycetes = "deepskyblue", Proteobacteria = "khaki1", Spirochaetae = "coral1", "TM6" = "slategray1", Verrucomicrobia = "lightslateblue", unclassified = "green4")
+  
+  #c(Proteobacteria = "deepskyblue", Actinobacteria = "royalblue", Cyanobacteria = "chartreuse3", Bacteroidetes = "darkorange", Planctomycetes = "mediumorchid3", Chloroflexi = "darkgreen", Verrucomicrobia = "purple4", Armatimonadetes = "red", "NPL-UPA2"="#652926", Chlorobi = "cyan2", Gemmatimonadetes = "black", Acidobacteria = "grey76", "Candidate_division_OP3" = "hotpink", Nitrospirae = "blue", "Candidate_division_OD1" = "brown", Spirochaetae = "gold3", "Candidate_division_OP8" = "goldenrod1", Chlamydiae = "violet", Lentisphaerae = "yellow1", "BD1-5" = "chartreuse", "TM6" = "olivedrab", unclassified = "grey", Firmicutes = "blue4", "Candidate_division_WS3"= "magenta", Fibrobacteres = "darkred", "Candidate_division_SR1" = "tan3" )
+  
+  #c(Acidobacteria = "grey26", Actinobacteria = "royalblue", Alphaproteobacteria = "plum2", Armatimonadetes = "red", Bacteroidetes = "darkorange", "BD1-5" = "chartreuse", Betaproteobacteria = "slateblue2", "Candidate_division_BRC1" = "violetred4", "Candidate_division_OD1" = "#6DDE88", "Candidate_division_OP3" = "hotpink", "Candidate_division_OP8" = "goldenrod1",  "Candidate_division_SR1" = "tan3", "Candidate_division_TM7" = "skyblue1", "Candidate_division_WS3" = "magenta", Chlamydiae="violet", Chlorobi="cyan2", Chloroflexi="darkgreen", Cyanobacteria = "chartreuse3", Deferribacteres = "slateblue3", "Deinococcus-Thermus" = "violetred", Deltaproteobacteria = "deepskyblue", Elusimicrobia = "yellow3", Epsilonproteobacteria = "lightskyblue", Fibrobacteres = "darkred", Firmicutes = "blue4", Fusobacteria = "slateblue1", Gammaproteobacteria = "steelblue4", Gemmatimonadetes="black", Lentisphaerae = "yellow1", "NPL-UPA2"="#652926", Planctomycetes = "mediumorchid3", Proteobacteria = "deepskyblue", Spirochaetae = "gold3", Tenericutes="pink", Thermotogae = "chocolate1", TM6 = "olivedrab", unclassified = "grey", Verrucomicrobia = "purple4", "WCHB1-60" = "palegreen")
+
+# GGPLOT it
+
+tiff("stackedbar.tiff", width = 7, height = 8, units = "in", res = 500)
+ggplot(phylum_sort, aes(x=Sample, y=Abundance, fill=Phylum)) +
+          geom_bar(stat="identity", position="fill", color="black") +
+          scale_y_continuous(labels = percent_format()) +
+          scale_fill_manual(values = phylum.colors, name="Phylum") + 
+          theme(axis.title.x = element_text(size=16, face = "bold"),
+                axis.text.x = element_text(angle=50, colour = "black", vjust=1, hjust = 1, size=14),
+                axis.text.y = element_text(colour = "black", size=14),
+                axis.title.y = element_text(size=16, face="bold"),
+                plot.title = element_text(size = 18, face="bold"),
+                legend.title = element_text(size=14),
+                legend.text = element_text(size = 13),
+                legend.position="right") +
+          guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) + 
+          xlab("Group") +
+          ylab("Relative Abundance (taxa>0.1%)") +
+          ggtitle("Lake Bacterial Community Composition")
+dev.off()
+
+```
+
+### LOOKING AT INTRA-VERRUCO COMMUNITY
+```{r}
+phy.Ver <- subset_taxa(phylum.99,Phylum=="Verrucomicrobia")
+# min, max, & mean
+mins<-min(sample_sums(phy.Ver))
+paste(c("The minimum sample read count is",mins))
+means<-mean(sample_sums(phy.Ver))
+paste(c("The mean sample read count is",means))
+maxs<-max(sample_sums(phy.Ver))
+paste(c("The max sample read count is",maxs))
+
+# Merge samples by Group
+phy.group.Ver<-merge_samples(phy.Ver, "Group")
+
+# Average groups
+group.Ver <- data.frame(otu_table(phy.group.Ver))
+group.Ver[1,] <- (group.Ver[1,]/54)
+    ## Averaging Estuary
+group.Ver[2,] <- (group.Ver[2,]/117)
+    ## Averaging Inland
+group.Ver[3,] <- (group.Ver[3,]/45)
+    ## Averaging Laurentian
+#tgroup.Ver <- t(group.Ver)
+#tgroup.Ver <- data.frame(tgroup.Ver)
+group.Ver$Lake_Type <- rownames(group.Ver)
+
+# Really crappy bar plot
+ggplot(data=group.Ver, aes(x=Lake_Type, y=Otu000064)) +
+                      geom_bar(stat="identity", fill="dark grey", colour="black") 
+
+# Unclassifed phylum
+phy.unclas <- subset_taxa(phylum.99, Phylum == "unclassified")
+# min, max, & mean
+mins<-min(sample_sums(phy.unclas))
+paste(c("The minimum sample read count is",mins))
+means<-mean(sample_sums(phy.unclas))
+paste(c("The mean sample read count is",means))
+maxs<-max(sample_sums(phy.unclas))
+paste(c("The max sample read count is",maxs))
+
+
+```
+
+
+### Separate out Verrucos
+```{r}
+# Phyloseq object of ALL Verruco OTUs
+Ver <- subset_taxa(final,Phylum=="Verrucomicrobia")
+
+# For additional analysis -> Removing Sediment samples
+phy.Ver.water <- subset_samples(phy.Ver, Fraction != "Sediment")
+
+```
+
+### Making phy.Ver normal
+```{r}
+phy.Ver.otu <- as.numeric(otu_table(phy.Ver))
+hist(phy.Ver.otu,breaks=c(0.0, 0.025,0.05,0.075,0.1,0.125,0.15,0.175,0.2,0.225,0.25,0.275,0.3,0.325,0.35,0.375,0.4,0.425,0.45,0.475,0.5), xlab = "Relative Abundance", main = "Original Histogram")
+    ## NOT NORMAL
+    ## SKEWED RIGHT
+qqnorm(phy.Ver.otu)
+qqline(phy.Ver.otu)
+    ## NOT NORMAL
+
+# Test for normality
+shapiro.test(phy.Ver.otu)
+    ## DEF not normal (p-value = 0)
+ks.test(phy.Ver.otu, "pnorm", mean=mean(phy.Ver.otu), sd=sd(phy.Ver.otu))
+    # NOT NORMAL (p-value = 0.01615)
+
+##### Log Transformation #####
+log.ver <- log(phy.Ver.otu)
+hist(log.ver, breaks=18, main = "Log-Transformed Histogram", xlab = "Log(Relative Abundance)")
+    ## LOOKS BEAUTIFUL!
+qqnorm(log.ver)
+qqline(log.ver)
+    ## Looks slightly better...
+shapiro.test(log.ver)
+    ## p-value = 0.08386
+    ## Barely non-significant...I want a bigger p-value
+ks.test(log.ver, "pnorm", mean=mean(log.ver), sd=sd(log.ver))
+    ## p-value = 0.5135
+    ## This is A LOT better
+############ The histogram looks great, & both shapiro & ks come out not significant
+############ Although shapiro is close-ish to the edge, I think it's okay based on the histogram
+
+
+
+
+####### Repeat for phy.Ver.water #######
+phy.Ver.water.otu <- as.numeric(otu_table(phy.Ver.water))
+hist(phy.Ver.water.otu,breaks=c(0.0, 0.025,0.05,0.075,0.1,0.125,0.15,0.175,0.2,0.225,0.25,0.275,0.3,0.325,0.35,0.375,0.4,0.425,0.45,0.475,0.5), xlab = "Relative Abundance", main = "Original Histogram")
+    ## NOT NORMAL
+    ## SKEWED RIGHT
+qqnorm(phy.Ver.water.otu)
+qqline(phy.Ver.water.otu)
+    ## NOT NORMAL
+
+# Test for normality
+shapiro.test(phy.Ver.water.otu)
+    ## DEF not normal (p-value = 0)
+ks.test(phy.Ver.water.otu, "pnorm", mean=mean(phy.Ver.water.otu), sd=sd(phy.Ver.water.otu))
+    # NOT NORMAL (p-value = 0.0275)
+
+##### Log Transformation #####
+log.ver.water <- log(phy.Ver.water.otu)
+hist(log.ver.water, breaks=18, main = "Log-Transformed Histogram", xlab = "Log(Relative Abundance)")
+    ## LOOKS BEAUTIFUL!
+qqnorm(log.ver.water)
+qqline(log.ver.water)
+    ## Looks slightly better...
+shapiro.test(log.ver.water)
+    ## p-value = 0.05037
+    ## Barely non-significant...I want a bigger p-value
+ks.test(log.ver.water, "pnorm", mean=mean(log.ver.water), sd=sd(log.ver.water))
+    ## p-value = 0.5383
+    ## This is A LOT better
+
+
+
+
+################ Import normal data in phy.Ver phyloseq object ################
+phy.Ver.otu <- data.frame(otu_table(phy.Ver))
+phy.Ver.otu[1,] <- log.ver
+
+phy.Ver.water.otu <- data.frame(otu_table(phy.Ver.water))
+phy.Ver.water.otu[1,] <- log.ver.water
+
+################# THIS IS THE VERRUCO PHYLUM PHYLOSEQ OBJECT YOU'LL USE IN THE FUTURE #################
+otu <- otu_table(phy.Ver.otu, taxa_are_rows = TRUE)
+tax <- tax_table(phy.Ver)
+samp <- sample_data(phy.Ver)
+normal.Ver <- merge_phyloseq(tax, otu, samp)
+
+
+```
+
+
+### Box-And-Whisker Plots
+```{r}
+######## YOU'RE USING THE PHY.VER.OTU DATAFRAME WITH THE NORMAL DATA ########
+tphy.Ver.otu <- t(phy.Ver.otu)
+phy.Ver.samp.norm <- data.frame(sample_data(phy.Ver))
+phy.Ver.samp.norm$Relative_Abundance <- tphy.Ver.otu[,1]
+phy.Ver.samp.norm$Group <- ordered(phy.Ver.samp.norm$Group, levels=c("Laurentian","Estuary","Inland"))
+phy.Ver.samp.norm$Lake <- ordered(phy.Ver.samp.norm$Lake, levels=c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
+phy.Ver.samp.norm$Fraction <- ordered(phy.Ver.samp.norm$Fraction, levels = c("Particle", "Free", "Sediment"))
+phy.Ver.samp.norm$Depth <- ordered(phy.Ver.samp.norm$Depth, levels = c("Top", "Bottom", "Sediment"))
+
+phy.Ver.otu.box <- data.frame(otu_table(phy.Ver))
+tphy.Ver.box <- t(phy.Ver.otu.box)
+phy.Ver.samp <- data.frame(sample_data(phy.Ver))
+phy.Ver.samp$Relative_Abundance <- tphy.Ver.box[,1]
+phy.Ver.samp$Group <- ordered(phy.Ver.samp$Group, levels=c("Laurentian","Estuary","Inland"))
+phy.Ver.samp$Lake <- ordered(phy.Ver.samp$Lake, levels=c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
+phy.Ver.samp$Fraction <- ordered(phy.Ver.samp$Fraction, levels = c("Particle", "Free", "Sediment"))
+phy.Ver.samp$Depth <- ordered(phy.Ver.samp$Depth, levels = c("Top", "Bottom", "Sediment"))
+
+
+
+################### BOXPLOT BY GROUP & FRACTION ###################
+tiff("boxplot.tiff", width = 7, height = 5, units = "in", res = 500)
+boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Group + phy.Ver.samp$Fraction, xlab = "Sample", ylab = "Relative Abundance", main = "Verrucomicrobia Abundance", names = rep("",9))
+dev.off()
+
+group.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Group, xlab = "Group", ylab = "Relative Abundance")
+pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Group, p.adjust="bonferroni")
+    ## SIGNIFICANT btwn Estuary/Laurentian & Inland/Laurentian
+    ## NOT SIGNIFICANT btwn Estuary & Inland
+
+lake.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Lake, data = phy.Ver.samp, xlab = "Lake Type", ylab = "Relative Abundance", main = "Lake Type", ylim = c(0,0.45))
+anova(lm(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Lake))
+    ## Significant
+pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Lake, p.adjust="bonferroni")
+    ## SIGNIFICANT btwn Michigan/Muskegon, Michigan/Bruin, Michigan/Heron, Michigan/Independence, Michigan/North, Michigan/Sand, Michigan/Whitmore;; Michigan/Lobdell is on the cusp
+    ## SIGNIFICANT btwn Muskegon/Michigan, Muskegon/North
+    ## SIGNIFICANT btwn North & Michigan, Cedar
+
+fraction.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Fraction, xlab = "Fraction", ylab = "Relative Abundance", main = "Fraction")
+pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Fraction, p.adjust="bonferroni")
+    ## SIGNIFICANT between Sed/Part & Sed/Free
+    ## NOT SIGNIFICANT btwn Part & Free
+
+depth.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Depth, xlab = "Depth", ylab = "Relative Abundance", main = "Depth")
+pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Depth, p.adjust="bonferroni")
+    ## SIGNIFICANT between Sed/Top & Sed/Bottom
+    ## NOT SIGNIFICANT btwn Top & Bottom
+
+date.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Season, xlab = "Season", ylab = "Relative Abundance", main = "Season")
+pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Season, p.adjust="bonferroni")
+    ## NOT SIGNIFICANT (p-value=1)
+
+origin.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Origin, xlab = "Season", ylab = "Relative Abundance", main = "Season")
+pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Origin, p.adjust="bonferroni")
+    ## SIGNIFICANT (p-value = 0.001)
+
+
+############################## Just water column samples (NO SEDIMENT) ##############################
+######## YOU'RE USING THE PHY.VER.WATER.OTU DATAFRAME WITH THE NORMAL DATA ########
+phy.Ver.water.otu <- data.frame(otu_table(phy.Ver.water))
+tphy.Ver.water.otu <- t(phy.Ver.water.otu)
+phy.Ver.water.samp <- data.frame(sample_data(phy.Ver.water))
+phy.Ver.water.samp$Relative_Abundance <- tphy.Ver.water.otu[,1]
+phy.Ver.water.samp$Group <- ordered(phy.Ver.water.samp$Group, levels=c("Laurentian","Estuary","Inland"))
+phy.Ver.water.samp$Lake <- ordered(phy.Ver.water.samp$Lake, levels=c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
+phy.Ver.water.samp$Fraction <- ordered(phy.Ver.water.samp$Fraction, levels = c("Particle", "Free"))
+phy.Ver.water.samp$Depth <- ordered(phy.Ver.water.samp$Depth, levels = c("Top", "Bottom"))
+
+### By Group ###
+boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Group, xlab = "Lake Type", ylab = "Relative Abundance", main = "Lake Type")
+pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Group, p.adjust="bonferroni")
+    ## SIGNIFICANT btwn Estuary/Laurentian & Inland/Laurentian
+    ## NOT SIGNIFICANT btwn Estuary & Inland
+
+### By Lake ###
+boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Lake, data = phy.Ver.samp, xlab = "Lake Type", ylab = "Relative Abundance", main = "Lake Type", ylim = c(0,0.45))
+anova(lm(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Lake))
+    ## Significant
+pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Lake, p.adjust="bonferroni")
+    ## SIGNIFICANT btwn Michigan/Muskegon, Michigan/Bruin, Michigan/Heron, Michigan/Independence, Michigan/North, Michigan/Sand, Michigan/Whitmore;; Michigan/Lobdell is on the cusp
+    ## SIGNIFICANT btwn Muskegon/Michigan
+    ## SIGNIFICANT btwn North & Michigan, BigSeven, Bishop, Bruin, Cedar
+
+### By Fraction ###
+boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Fraction, xlab = "Fraction", ylab = "Relative Abundance", main = "Fraction")
+pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Fraction, p.adjust="bonferroni")
+    ## NOT SIGNIFICANT btwn Part & Free
+
+### By Depth ###
+boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Depth, xlab = "Depth", ylab = "Relative Abundance", main = "Depth")
+pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Depth, p.adjust="bonferroni")
+    ## NOT SIGNIFICANT btwn Top & Bottom
+
+
+################### REMOVING SED DOESN'T HAVE AN EFFECT ON SIG BY GROUP OR LAKE ###################
+
+
+```
+
+### Time to transform your ENTIRE VERRUCO COMMUNITY DATA to become normal
+```{r}
+# Transforms each merged phylum count to rel abun
+Ver.rel = transform_sample_counts(Ver, function(x){x/sum(x)})
+
+# If a phylum has <1% rel abun, change that to 0%
+otu_table(Ver.rel)[otu_table(Ver.rel)<.01] <- 0
+
+# Remove anything with 0% rel abun
+Ver.rel = prune_taxa(taxa_sums(Ver.rel)>0,Ver.rel)
+
+# Create rank abundance of OTUs
+barplot(sort(taxa_sums(Ver.rel),TRUE)[1:20]/nsamples(Ver.rel),las=2,cex.axis=.7)
+    ## 1 = OPB35_soil_group
+    ## 2 = OPB35_soil_group
+    ## 3 = Opitutae - vadinHA64
+    ## 4 = Spartobacteria - Chthoniobacterales - FukuN18_freshwater_group
+    ## 5 = Verrucomicrobiae - Verrucomicrobiales - Verrucomicrobiaceae
+
+Ver.otu <- as.numeric(otu_table(Ver.rel))
+hist(Ver.otu)
+    ## So skewed that I can't even get a legit histogram from it
+qqnorm(Ver.otu)
+qqline(Ver.otu)
+    ## Looks exponentially distributed
+
+# Test for normality
+shapiro.test(Ver.otu)
+    ## Too many samples
+ks.test(Ver.otu, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
+    # p-value = 0
+    # Not normal
+ks.test(Ver.otu, "pexp")
+    ## p-value = 9
+    ## not exponentially distributed
+Ver.otu <- Ver.otu + 1
+
+#### Log Transformation ####
+Ver.log <- log(Ver.otu)
+hist(Ver.log)
+    ## Still not normal
+    ## Skewed to the right
+qqnorm(Ver.log)
+qqline(Ver.log)
+ks.test(Ver.log, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
+    ## p=value = 0
+    ## Not normal
+
+#################### Verruco Intra-Phyla Rel Abun is NOT NORMAL ####################
+
+```
+
+### NMDS
+```{r}
+nowinOTU <- otu_table(Ver.rel)
+norm.bray <- vegdist(nowinOTU, method = "bray", binary = FALSE)
+    ## Calculates Bray-Curtis distances
+nowinOTU.df <- data.frame(otu_table(Ver.rel))
+norm.soren <- vegdist(nowinOTU.df, method = "bray", binary = TRUE)
+    ## Calculates Sorensen Indicies
+
+
+################### Start on the NMDS (Bray-Curtis) ###################
+nmds.bray <- metaMDS(t(nowinOTU), distance="bray")
+    ## NMDS from vegan package
+    ## stress - 0.2230533
+nmds.bray <- data.frame(nmds.bray$points)
+nmds.bray$Names <- row.names(nmds.bray)
+
+### Creating dataframe
+nowinSamp <- data.frame(sample_data(Ver.rel))
+nmds.bray$Group <- nowinSamp$Group
+nmds.bray$Lake <- nowinSamp$Lake
+nmds.bray$Date <- nowinSamp$Date
+nmds.bray$Site <- nowinSamp$Site
+nmds.bray$Depth <- nowinSamp$Depth
+nmds.bray$Fraction <- nowinSamp$Fraction
+nmds.bray$Season <- nowinSamp$Season
+
+### Order factors
+nmds.bray$Group<- ordered(nmds.bray$Group, levels = c("Laurentian", "Estuary", "Inland"))
+nmds.bray$Lake<- ordered(nmds.bray$Lake, levels = c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
+nmds.bray$Fraction<- ordered(nmds.bray$Fraction, levels = c("Particle", "Free", "Sediment"))
+nmds.bray$Depth<- ordered(nmds.bray$Depth, levels = c("Top", "DCM", "Bottom", "Sediment"))
+nmds.bray$Season<- ordered(nmds.bray$Season, levels = c("Spring", "Summer", "Fall"))
+
+
+
+
+
+
+####### GROUP #######
+tiff("nmds.group.depth.tiff", width = 6.5, height = 5, units = "in", res = 500)
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Group, shape = Depth)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(size=2,alpha = 1) + theme_bw() +
+  scale_color_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
+                     labels = c("Laurentian","Estuary","Inland"),
+                     values = c("indianred1","green3","mediumpurple2")) +
+  scale_shape_manual(name = "Depth", breaks = c("Top", "DCM", "Bottom", "Sediment"),
+                     labels = c("Top", "DCM", "Bottom", "Sediment"),
+                     values = c(17, 5, 16, 4)) +
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+dev.off()
+
+
+
+
+
+
+### Color by Depth, Shape by Group;; I don't really like this plot very much
+tiff("nmds.colordepth.shapegroup.tiff", width = 6.5, height = 5, units = "in", res = 500)
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Depth, shape = Group)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(size=2,alpha = 1) + theme_bw() +
+  scale_shape_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
+                     labels = c("Laurentian","Estuary","Inland"),
+                     values = c(5,16,4)) +
+  scale_color_manual(name = "Depth", breaks = c("Top", "DCM", "Bottom", "Sediment"),
+                     labels = c("Top", "DCM", "Bottom", "Sediment"),
+                     values = c("indianred1","green3","mediumpurple2", "skyblue")) +
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+dev.off()
+
+
+
+
+### Color by Fraction, Shape by Group;; This plot isn't half bad
+tiff("nmds.colorfrac.shapegroup.tiff", width = 6.5, height = 5, units = "in", res = 500)
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Fraction, shape = Group)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(size=2,alpha = 1) + theme_bw() +
+  scale_shape_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
+                     labels = c("Laurentian","Estuary","Inland"),
+                     values = c(5,16,4)) +
+  scale_color_manual(name = "Fraction", breaks = c("Particle","Free","Sediment"),
+                     labels = c("Particle","Free","Sediment"),
+                     values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+dev.off()
+
+
+
+### Color by Season, Shape by Group;; This plot isn't half bad
+tiff("nmds.colorseason.shapegroup.tiff", width = 6.5, height = 5, units = "in", res = 500)
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Season, shape = Group)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(size=2,alpha = 1) + theme_bw() +
+  scale_shape_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
+                     labels = c("Laurentian","Estuary","Inland"),
+                     values = c(5,16,4)) +
+  scale_color_manual(name = "Season", breaks = c("Spring","Summer","Fall"),
+                     labels = c("Spring","Summer","Fall"),
+                     values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+dev.off()
+
+
+
+### Color by Group, Shape by Season, Size by Fraction
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Group, shape = Season, size = Fraction)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(alpha = 1) + theme_bw() +
+  scale_color_manual(name = "Lake Type", breaks = c("Laurentian","Estuary","Inland"),
+                     labels = c("Laurentian","Estuary","Inland"),
+                     values = c("indianred1","green3","mediumpurple2")) +
+  scale_shape_manual(name = "Season", breaks = c("Spring", "Summer", "Fall"),
+                     labels = c("Spring", "Summer", "Fall"),
+                     values = c(4, 16, 17)) +
+  scale_size_manual(name = "Fraction", breaks = c("Particle","Free", "Sediment"),
+                    labels = c("Particle","Free","Sediment"),
+                    values = c(4, 2, 1)) +
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+
+### Facet by Group, Color by Fraction, Shape by Season
+tiff("nmds.facet.tiff", width = 6.5, height = 5, units = "in", res = 500)
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season, size = Fraction)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(size = 2, alpha = 1) + theme_bw() +
+  facet_grid(.~Group) +
+  scale_color_manual(name = "Fraction", breaks = c("Particle","Free","Sediment"),
+                     labels = c("Particle","Free","Sediment"),
+                     values = c("blue3","gold", "tan3")) +
+  scale_shape_manual(name = "Season", breaks = c("Spring", "Summer", "Fall"),
+                     labels = c("Spring", "Summer", "Fall"),
+                     values = c(4, 16, 17)) +
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+dev.off()
+
+### Facet by Group, Color by Fraction, Shape by Season
+ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season, size = Depth)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+  geom_point(size = 2, alpha = 1) + theme_bw() +
+  facet_grid(.~Group) +
+  scale_color_manual(name = "Fraction", breaks = c("Particle","Free","Sediment"),
+                     labels = c("Particle","Free","Sediment"),
+                     values = c("blue3","gold", "tan3")) +
+  scale_shape_manual(name = "Season", breaks = c("Spring", "Summer", "Fall"),
+                     labels = c("Spring", "Summer", "Fall"),
+                     values = c(4, 16, 17)) +
+  scale_size_manual(name = "Depth", breaks = c("Top","DCM","Bottom","Sediment"),
+                    labels = c("Top","DCM","Bottom","Sediment"),
+                    values = c(9, 7, 5, 3)) + 
+  theme(axis.title.x = element_text(size=16, face="bold"),
+        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
+        axis.text.y = element_text(colour="black", size=14),
+        plot.title = element_text(size=18),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size = 13),
+        legend.position = "right") +
+  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  ggtitle("Bray-Curtis Dissimilarity")
+
+
+
+
+
+
+
+
+################################ SORENSEN  ################################
+### Bray-Curtis is weighted (abundance matters)
+### Sorensen is unweighted (abundance does not matter)
+
+plot(hclust(norm.soren), main = "Sorensen Distance")
+    ## lolwutisthis
+
+soren.pcoa <- pcoa(norm.soren)
+soren.pcoa2 <- soren.pcoa$vectors
+soren.pcoa3 <- data.frame(soren.pcoa2[, 1:3])
+soren.pcoa3$Names <- row.names(soren.pcoa3)
+soren.pcoa3$Group <- nowinSamp$Group
+soren.pcoa3$Lake <- nowinSamp$Lake
+soren.pcoa3$Date <- nowinSamp$Date
+soren.pcoa3$Site <- nowinSamp$Site
+soren.pcoa3$Depth <- nowinSamp$Depth
+soren.pcoa3$Fraction <- nowinSamp$Fraction
+soren.pcoa3$Season <- nowinSamp$Season
+
+
+
+#soren_pcoa <- pcoa(norm.soren)
+#soren_pcoa2 <- soren_pcoa$vectors
+#soren_pcoa3 <- data.frame(soren_pcoa2[, 1:3])
+#soren_pcoa3$names <- row.names(soren_pcoa3)
+soren_pcoa4 <- makeCategories_dups(soren_pcoa3)
+soren_pcoa4$quadrant <- factor(soren_pcoa4$quadrant,levels = c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"))
+### Let's extract the values of each axis for the pcoa
+soren_values <- soren_pcoa$values
+soren_rel_eigens <- soren_values$Relative_eig
+soren_rel_eigen1 <- soren_rel_eigens[1]
+soren_rel_eigen1_percent <- round(soren_rel_eigen1 * 100, digits = 1)
+soren_rel_eigen2 <- soren_rel_eigens[2]
+soren_rel_eigen2_percent <- round(soren_rel_eigen2 * 100, digits = 1)
+soren_axis1 <- paste("PCoA1:",soren_rel_eigen1_percent,"%")
+soren_axis2 <- paste("PCoA2:",soren_rel_eigen2_percent,"%")
+
+pcoa_soren <- ggplot(soren_pcoa4, aes(Axis.1 * -1, Axis.2 * -1, color = quadrant, shape = trophicstate)) +
+  xlab(soren_axis1) + ylab(soren_axis2) + #ggtitle("Bray-Curtis: Trophic State") +
+  geom_point(size= 6, alpha=0.9) + theme_bw() + #ylim(1, -1) + xlim(1, -1) +
+  scale_color_manual(name = "Habitat", breaks=c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"),
+                     labels = c("Free-Living Epilimnion", "Free-Living Mixed",  "Free-Living Hypolimnion", "Particle-Associated Epilimnion", "Particle-Associated Mixed", "Particle-Associated Hypolimnion"), 
+                     values = c("purple3", "mediumblue", "darkgreen", "orchid1", "deepskyblue", "green")) +
+  scale_shape_manual(name = "Trophic State", breaks = c("Eutrophic", "Mesotrophic", "Oligotrophic", "Mixed"), 
+                     labels = c("Eutrophic", "Mesotrophic", "Oligotrophic", "Mixed"),
+                     values = c(15, 19, 17)) +
+  theme(axis.text.x = element_text(colour="black", vjust=0.5, size=14), 
+        axis.text.y = element_text(colour="black", vjust=0.5, size=14),
+        axis.title.x = element_text(face="bold", size=16),
+        axis.title.y = element_text(face="bold", size=16),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        ###LEGEND TOP RIGHT CORNER
+        legend.position = "right"); pcoa_soren
+
+
+
+
+###################################### SORENSEN NMDS ######################################
+nmds.soren <- metaMDS(nowinOTU, distance="bray", binary=T)
+
+
+
+
+
+
+##### Below is Marian's code of an NMDS of Sorensen Index #####
+nmds_soren <- metaMDS(nowinOTU, distance="bray", binary = TRUE)
+nmds_soren <- data.frame(nmds_soren$points) #http://strata.uga.edu/software/pdf/mdsTutorial.pdf
+nmds_soren$names<-row.names(nmds_soren) #new names column
+nmds_soren <- makeCategories_dups(nmds_soren) #will add our categorical information:  lakenames, limnion, filter, quadrant and trophicstate
+nmds_soren$ProdLevel <- as.character(nmds_soren$trophicstate)
+nmds_soren$ProdLevel[nmds_soren$trophicstate == "Eutrophic"] <- "Productive"
+nmds_soren$ProdLevel[nmds_soren$trophicstate == "Mesotrophic"] <- "Productive"
+nmds_soren$ProdLevel[nmds_soren$trophicstate == "Oligotrophic"] <- "Unproductive"
+nmds_soren$quadrant <- factor(nmds_soren$quadrant,levels = c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"))
+
+nmds_soren_quad <- ggplot(nmds_soren, aes(MDS1, MDS2, color = quadrant, shape = ProdLevel)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sørensen Dissimilarity") +
+  geom_point(size= 6, alpha=0.9) + theme_bw() +   geom_point(colour="white", size = 2) +
+  annotate("text", label = "A", x = (min(nmds_soren$MDS1) + 0.05), y = (max(nmds_soren$MDS2) -0.02), face = "bold",size = 10, colour = "black") +
+  annotate("text", label = "Stress = 0.14", x = (max(nmds_soren$MDS1) -0.18), y = (max(nmds_soren$MDS2) -0.01), size = 6, colour = "black") +
+  scale_color_manual(name = "Habitat", breaks=c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"),
+                     labels = c("Free-Living Epilimnion", "Free-Living Mixed",  "Free-Living Hypolimnion", "Particle-Associated Epilimnion", "Particle-Associated Mixed", "Particle-Associated Hypolimnion"), 
+                     values = c("darkgreen", "mediumblue", "purple3", "green", "deepskyblue", "orchid1")) +
+  scale_shape_manual(name = "Nutrient Level", breaks = c("Productive", "Unproductive"), 
+                     labels = c("High", "Low"),
+                     values = c(15, 17)) +
+  guides(shape = guide_legend(order=1), color = guide_legend(order=2)) +
+  theme(axis.text.x = element_text(colour="black", vjust=0.5, size=14), 
+        axis.text.y = element_text(colour="black", vjust=0.5, size=14),
+        axis.title.x = element_text(face="bold", size=16),
+        axis.title.y = element_text(face="bold", size=16),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        plot.title = element_text(size = 16, face="bold"),
+        ###LEGEND TOP RIGHT CORNER
+        legend.position = "none");  nmds_soren_quad
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#nmds_bc_quad <- ggplot(nmds_bray, aes(MDS1*10, MDS2*10, color = quadrant, shape = ProdLevel)) +
+ # xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") + 
+  #geom_point(size= 6, alpha=0.9) + theme_bw() +   geom_point(colour="white", size = 2) +
+  #annotate("text", label = "B", x = (min(nmds_bray$MDS1*10) + 0.05), y = (max(nmds_bray$MDS2*10) -0.02), face = "bold",size = 10, colour = "black") +
+  #annotate("text", label = "Stress = 0.17", x = (max(nmds_bray$MDS1*10) -0.2), y = (max(nmds_bray$MDS2*10) -0.02), size = 6, colour = "black") +
+ # scale_color_manual(name = "Habitat", breaks=c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"),
+ #                    labels = c("Free-Living Epilimnion", "Free-Living Mixed",  "Free-Living Hypolimnion", "Particle-Associated Epilimnion", "Particle-Associated Mixed", "Particle-Associated Hypolimnion"), 
+  #                   values = c("darkgreen", "mediumblue", "purple3", "green", "deepskyblue", "orchid1")) +
+  #scale_shape_manual(name = "Nutrient Level", breaks = c("Productive", "Unproductive"), 
+                     #labels = c("High", "Low"),
+                     #values = c(15, 17)) +
+#   guides(shape = guide_legend(order=1), color = guide_legend(order=2)) +
+#   scale_y_continuous(breaks=seq(-0.6, 0.6, 0.3), lim = c(-0.6,0.7)) +
+#   theme(axis.text.x = element_text(colour="black", vjust=0.5, size=14), 
+#         axis.text.y = element_text(colour="black", vjust=0.5, size=14),
+#         axis.title.x = element_text(face="bold", size=16),
+#         axis.title.y = element_text(face="bold", size=16),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size = 12),
+#         plot.title = element_text(size = 16, face="bold"),
+#         ###LEGEND TOP RIGHT CORNER
+#         legend.position = "right");  nmds_bc_quad
+
+
+
+
+############################ PREPARING FOR ADONIS ############################
+test.otu <- data.frame(otu_table(Ver.rel))
+test.otu <- t(test.otu)
+test.bray <- vegdist(test.otu, method = "bray")
+    ## ROWS = SAMPLES
+    ## COLS = OTUs
+    ## IF IT'S NOT SET UP LIKE THIS, IT WON'T WORK!
+test.sample <- data.frame(sample_data(Ver.rel))
+
+
+
+################################# ADONIS ADONIS ADONIS ADONIS ADONIS ################################# 
+
+####################### Group #######################
+adonis.group <- adonis(test.bray ~ Group, test.sample)
+    ## SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.11273
+beta.tax = betadisper(test.bray, test.sample$Group)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.911)
+    ## F = 0.0925504
+
+### Laurentian & Estuary ###
+le.phy <- subset_samples(Ver.rel, Group != "Inland")
+le.otu <- t(data.frame(otu_table(le.phy)))
+le.bray <- vegdist(le.otu, method = "bray")
+le.samp <- data.frame(sample_data(le.phy))
+adonis.group <- adonis(le.bray ~ Group, le.samp)
+    ## LAURENTIAN & ESTUARY ARE SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.11037
+beta.tax = betadisper(le.bray, le.samp$Group)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.756)
+    ## F = 0.1158866
+
+### Laurentian & Inland ###
+li.phy <- subset_samples(Ver.rel, Group != "Estuary")
+li.otu <- t(data.frame(otu_table(li.phy)))
+li.bray <- vegdist(li.otu, method = "bray")
+li.samp <- data.frame(sample_data(li.phy))
+adonis.group <- adonis(li.bray ~ Group, li.samp)
+    ## LAURENTIAN & ESTUARY ARE SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.08129
+beta.tax = betadisper(li.bray, li.samp$Group)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.861)
+    ## F = 0.03344
+
+### Laurentian & Inland ###
+li.phy <- subset_samples(Ver.rel, Group != "Estuary")
+li.otu <- t(data.frame(otu_table(li.phy)))
+li.bray <- vegdist(li.otu, method = "bray")
+li.samp <- data.frame(sample_data(li.phy))
+adonis.group <- adonis(li.bray ~ Group, li.samp)
+    ## LAURENTIAN & INLAND ARE SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.08129
+beta.tax = betadisper(li.bray, li.samp$Group)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.861)
+    ## F = 0.03344
+
+### Estuary & Inland ###
+ei.phy <- subset_samples(Ver.rel, Group != "Laurentian")
+ei.otu <- t(data.frame(otu_table(ei.phy)))
+ei.bray <- vegdist(ei.otu, method = "bray")
+ei.samp <- data.frame(sample_data(ei.phy))
+adonis.group <- adonis(ei.bray ~ Group, ei.samp)
+    ## ESTUARY AND INLAND ARE SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.07519
+beta.tax = betadisper(ei.bray, ei.samp$Group)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.733)
+    ## F = 0.1042774
+
+
+
+####################### Lake #######################
+adonis.lake <- adonis(test.bray ~ Lake, test.sample)
+    ## SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.25706
+beta.tax = betadisper(test.bray, test.sample$Lake)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 3.319597
+
+### All Inland Lakes ###
+in.phy <- subset_samples(Ver.rel, Group != "Laurentian")
+in.phy <- subset_samples(in.phy, Group != "Estuary")
+in.otu <- t(data.frame(otu_table(in.phy)))
+in.bray <- vegdist(in.otu, method = "bray")
+in.samp <- data.frame(sample_data(in.phy))
+adonis.lake <- adonis(in.bray ~ Lake, in.samp)
+    ## ALL INLAND LAKES ARE SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.30286
+beta.tax = betadisper(in.bray, in.samp$Lake)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.186)
+    ## F = 1.366156
+
+####################### Fraction #######################
+adonis.fraction <- adonis(test.bray ~ Fraction, test.sample)
+    ## SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.16876
+beta.tax = betadisper(test.bray, test.sample$Fraction)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 27.38858
+
+### Particle vs. Free ###
+pf.phy <- subset_samples(Ver.rel, Fraction != "Sediment")
+pf.otu <- t(data.frame(otu_table(pf.phy)))
+pf.bray <- vegdist(pf.otu, method = "bray")
+pf.samp <- data.frame(sample_data(pf.phy))
+adonis.fraction <- adonis(pf.bray ~ Fraction, pf.samp)
+    ## PARTICLE VS. FREE IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.09636
+beta.tax = betadisper(pf.bray, pf.samp$Fraction)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 17.77422
+
+### Particle vs. Sediment ###
+ps.phy <- subset_samples(Ver.rel, Fraction != "Free")
+ps.otu <- t(data.frame(otu_table(ps.phy)))
+ps.bray <- vegdist(ps.otu, method = "bray")
+ps.samp <- data.frame(sample_data(ps.phy))
+adonis.fraction <- adonis(ps.bray ~ Fraction, ps.samp)
+    ## PARTICLE VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.14117
+beta.tax = betadisper(ps.bray, ps.samp$Fraction)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 52.04351
+
+### Free vs. Sediment ###
+fs.phy <- subset_samples(Ver.rel, Fraction != "Particle")
+fs.otu <- t(data.frame(otu_table(fs.phy)))
+fs.bray <- vegdist(fs.otu, method = "bray")
+fs.samp <- data.frame(sample_data(fs.phy))
+adonis.fraction <- adonis(fs.bray ~ Fraction, fs.samp)
+    ## FREE VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.18408
+beta.tax = betadisper(fs.bray, fs.samp$Fraction)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.01)
+    ## F = 23.51907
+
+### Water vs. Sediment ###
+ws.otu <- t(data.frame(otu_table(Ver.rel)))
+ws.bray <- vegdist(ws.otu, method = "bray")
+ws.samp <- data.frame(sample_data(Ver.rel))
+adonis.fraction <- adonis(ws.bray ~ Origin, ws.samp)
+    ## WATER VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.08182
+beta.tax = betadisper(fs.bray, fs.samp$Fraction)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.01)
+    ## F = 23.51907
+
+
+####################### Depth #######################
+adonis.depth <- adonis(test.bray ~ Depth, test.sample)
+    ## SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.11848
+beta.tax = betadisper(test.bray, test.sample$Depth)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 19.93423
+
+### Top vs. DCM vs. Bottom ###
+tdb.phy <- subset_samples(Ver.rel, Depth != "Sediment")
+tdb.otu <- t(data.frame(otu_table(tdb.phy)))
+tdb.bray <- vegdist(tdb.otu, method = "bray")
+tdb.samp <- data.frame(sample_data(tdb.phy))
+adonis.depth <- adonis(tdb.bray ~ Depth, tdb.samp)
+    ## WATER COLUMN DEPTH IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.04064
+beta.tax = betadisper(tdb.bray, tdb.samp$Depth)
+p=permutest(beta.tax)
+p$tab
+    ## Not significant (p-value = 0.134)
+    ## F = 1.990628
+
+
+
+####################### Season #######################
+adonis.date <- adonis(test.bray ~ Season, test.sample)
+    ## SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.09073
+beta.tax = betadisper(test.bray, test.sample$Date)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 10.76313
+
+### Spring vs. Summer ###
+ss.phy <- subset_samples(Ver.rel, Season != "Fall")
+ss.otu <- t(data.frame(otu_table(ss.phy)))
+ss.bray <- vegdist(ss.otu, method = "bray")
+ss.samp <- data.frame(sample_data(ss.phy))
+adonis.date <- adonis(ss.bray ~ Date, ss.samp)
+    ## SPRING VS. SUMMER IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.18063
+beta.tax = betadisper(ss.bray, ss.samp$Date)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 18.5581
+
+### Spring vs. Fall###
+sf.phy <- subset_samples(Ver.rel, Date != "Summer")
+sf.otu <- t(data.frame(otu_table(sf.phy)))
+sf.bray <- vegdist(sf.otu, method = "bray")
+sf.samp <- data.frame(sample_data(sf.phy))
+adonis.date <- adonis(sf.bray ~ Date, sf.samp)
+    ## SPRING VS. FALL IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.18122
+beta.tax = betadisper(sf.bray, sf.samp$Date)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 10.76313
+
+### Summer vs. Fall###
+sf.phy <- subset_samples(Ver.rel, Date != "Spring")
+sf.otu <- t(data.frame(otu_table(sf.phy)))
+sf.bray <- vegdist(sf.otu, method = "bray")
+sf.samp <- data.frame(sample_data(sf.phy))
+adonis.date <- adonis(sf.bray ~ Date, sf.samp)
+    ## SUMMER VS. FALL IS SIGNIFICANT (p-value = 0.001)
+    ## R2 = 0.18122
+beta.tax = betadisper(sf.bray, sf.samp$Date)
+p=permutest(beta.tax)
+p$tab
+    ## SIGNIFICANT (p-value = 0.001)
+    ## F = 10.76313
+
+
+####################### Stacking factors for adonis! #######################
+adonis.stack <- adonis(test.bray ~ Lake + Fraction, test.sample)
+adonis.stack
+    ## Lake R2 = 0.25706
+    ## Fraction R2 = 0.17151
+adonis.stack <- adonis(test.bray ~ Fraction + Lake, test.sample)
+adonis.stack
+    ## Fraction R2 = 0.16876
+    ##Lake R2 = 0.25982
+adonis.stack <- adonis(test.bray ~ Lake + Fraction + Depth, test.sample)
+adonis.stack
+    ## Lake R2 = 0.25706
+    ## Fraction R2 = 0.17151
+    ## Depth R2 = 0.03
+adonis.stack <- adonis(test.bray ~ Lake + Depth + Fraction, test.sample)
+adonis.stack
+    ## Lake R2 = 0.25706
+    ## Depth R2 = 0.11440
+    ## Fraction R2 = 0.08719
+adonis.stack <- adonis(test.bray ~ Lake + Fraction + Depth + Season, test.sample)
+adonis.stack
+    ## Lake R2 = 0.25706
+    ## Fraction R2 = 0.17151
+    ## Depth R2 = 0.03
+    ## Season R2 = 0.06850
+adonis.stack <- adonis(test.bray ~ Lake + Fraction + Season + Depth, test.sample) ##### I LIKE THIS ONE!!
+adonis.stack
+    ## Lake R2 = 0.25706
+    ## Fraction R2 = 0.17151
+    ## Season R2 = 0.06940
+    ## Depth R2 = 0.02918
+    ## Residual R2 = 0.47285 ###########unstac## WE CAN EXPLAIN OVER 50% OF THE VARIATION!!!!!!!!!!
+adonis.stack <- adonis(test.bray ~ Lake + Season + Fraction + Depth, test.sample)
+adonis.stack
+    ## Lake R2 = 0.25706
+    ## Season R2 = 0.07250
+    ## Fraction R2 = 0.16841
+    ## Depth R2 = 0.02918
+
+##### CORRESPONDS TO THE NMDS & RANK ABUNDANCE PLOTS!!! #####
+adonis.stack <- adonis(test.bray ~ Fraction + Group + Season + Depth, test.sample) 
+adonis.stack
+    ## Fraction R2 = 0.16876
+    ## Group R2 = 0.11422
+    ## Season R2 = 0.07149
+    ## Depth R2 = 0.02918
+    ## Residual R2 = 0.61652
+
+
+
+
+############## PHYLOSEQ NMDS ##############
+#http://joey711.github.io/phyloseq/plot_ordination-examples
+Ver.nmds <- ordinate(Ver.rel, "NMDS", "bray")
+plot_ordination(Ver.rel, Ver.nmds, type="Sample", color="Group", title="Group")
+Ver.rel.otu <- data.frame(otu_table(Ver.rel))
+Ver.rel.otu.bray <- vegdist(Ver.rel.otu, method="bray")
+adonis.group <- adonis(Ver.rel.otu.bray~Group, as(sample_data(Ver.rel),"data.frame"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+### RELATIVE ABUNDANCE UNSTACKED BAR PLOT
+```{r}
+classVer <- tax_glom(Ver, taxrank = "Class")
+
+# Calculate relative abundance
+classVer.rel = transform_sample_counts(classVer, function(x){x/sum(x)})
+
+# If a phylum has <1% rel abun, change that to 0%
+otu_table(classVer.rel)[otu_table(classVer.rel)<.01] <- 0
+
+# Remove anything with 0% rel abun
+classVer.rel = prune_taxa(taxa_sums(classVer.rel)>0,classVer.rel)
+
+# Create rank abundance of OTUs
+barplot(sort(taxa_sums(classVer.rel),TRUE)[1:20]/nsamples(classVer.rel),las=2,cex.axis=.7)
+
+# Create dataframe to use in ggplot
+classVer.df <- psmelt(classVer.rel)
+classVer.df$Abundance <- classVer.df$Abundance * 100
+#classVer.df$Class <- ordered(classVer.df$Class, levels = c("Opitutae","Verrucomicrobiae","OPB35_soil_group", "Spartobacteria", "Verrucomicrobia_Incertae_Sedis", "unclassified", "S-BQ2-57_soil_group"))
+classVer.df$Class <- ordered(classVer.df$Class, levels = c("S-BQ2-57_soil_group", "unclassified", "Verrucomicrobia_Incertae_Sedis", "Spartobacteria", "OPB35_soil_group", "Verrucomicrobiae", "Opitutae"))
+classVer.df$Group <- ordered(classVer.df$Group, levels = c("Laurentian","Estuary","Inland"))
+classVer.df$Fraction <- ordered(classVer.df$Fraction, levels = c("Particle","Free","Sediment"))
+classVer.df$Depth <- ordered(classVer.df$Depth, levels = c("Top","DCM", "Bottom","Sediment"))
+classVer.df$Season <- ordered(classVer.df$Season, levels = c("Spring","Summer","Fall"))
+
+Ver.colors <- c(Opitutae = "red2", Verrucomicrobiae = "darkorange", "OPB35_soil_group" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "deepskyblue", unclassified = "mediumorchid3", "S-BQ2-57_soil_group" = "purple4")
+
+#phylum.colors <- c(Proteobacteria = "deepskyblue", Actinobacteria = "royalblue", Cyanobacteria = "chartreuse3", Bacteroidetes = "darkorange", Planctomycetes = "mediumorchid3", Chloroflexi = "darkgreen", Verrucomicrobia = "purple4", Armatimonadetes = "red", "NPL-UPA2"="#652926", Chlorobi = "cyan2", Gemmatimonadetes = "black", Acidobacteria = "grey26", "Candidate_division_OP3" = "hotpink", Nitrospirae = "blue", "Candidate_division_OD1" = "brown", Spirochaetae = "gold3", "Candidate_division_OP8" = "goldenrod1", Chlamydiae = "violet", Lentisphaerae = "yellow1", "BD1-5" = "chartreuse", "TM6" = "olivedrab", unclassified = "grey", Firmicutes = "blue4", "Candidate_division_WS3"= "magenta", Fibrobacteres = "darkred", "Candidate_division_SR1" = "tan3" )
+
+
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Group & Fraction) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Group","Fraction"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Group","Fraction", "Class"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+groupfrac$Class <- ordered(groupfrac$Class, levels = c("S-BQ2-57_soil_group", "unclassified", "Verrucomicrobia_Incertae_Sedis", "Spartobacteria", "OPB35_soil_group", "Verrucomicrobiae", "Opitutae"))
+groupfrac$Group <- ordered(groupfrac$Group, levels = c("Laurentian","Estuary","Inland"))
+groupfrac$Fraction <- ordered(groupfrac$Fraction, levels = c("Particle","Free","Sediment"))
+
+Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_group" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_group" = "purple4")
+
+
+###### GGPLOT IT! ######
+tiff("unstackbar.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Group) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+dev.off()
+
+
+
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Season & Fraction) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Fraction"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Season", "Class", "Fraction"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+groupfrac$Season <- ordered(groupfrac$Season, levels = c("Spring","Summer","Fall"))
+groupfrac$Fraction <- ordered(groupfrac$Fraction, levels = c("Particle","Free","Sediment"))
+
+Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_group" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_group" = "purple4")
+
+
+###### GGPLOT IT! ######
+#tiff("unstackbar.seasonfrac.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Season) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+#dev.off()
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Group & Season) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Group"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Season", "Class", "Group"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+groupfrac$Season <- ordered(groupfrac$Season, levels = c("Spring","Summer","Fall"))
+groupfrac$Group <- ordered(groupfrac$Group, levels = c("Laurentian","Estuary","Inland"))
+
+Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_group" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_group" = "purple4")
+
+
+###### GGPLOT IT! ######
+tiff("unstackbar.groupseason.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Season ~ Group) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+dev.off()
+
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Fraction ~ Depth) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+groupfrac$Depth <- ordered(groupfrac$Depth, levels = c("Top","DCM","Bottom","Sediment"))
+groupfrac$Fraction <- ordered(groupfrac$Fraction, levels = c("Particle","Free","Sediment"))
+
+
+Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_group" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_group" = "purple4")
+
+
+###### GGPLOT IT! ######
+#tiff("unstackbar.depthfrac.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Depth) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+#dev.off()
+
+
+
+
+
+
+
+
+#ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
+  #geom_bar(stat="identity", position=position_dodge(),  fill = "magenta4", colour = "black") +
+  #theme_bw() + ggtitle("Phyla Above 0.1% in All Samples") +
+  #xlab("Phylum") + ylab("Mean Relative Abundance (%)") +
+  geom_errorbar(aes(ymin = PercentPhy -se, ymax = PercentPhy +se), width = 0.25) + coord_flip() +
+  #theme(axis.title.x = element_text(face="bold", size=16),
+   #     axis.text.x = element_text(angle=0, colour = "black", size=14),
+    #    axis.text.y = element_text(colour = "black", size=14),
+     #   axis.title.y = element_text(face="bold", size=16),
+      #  plot.title = element_text(face="bold", size = 20),
+       # legend.title = element_text(size=12, face="bold"),
+        #legend.text = element_text(size = 12),
+        #legend.position="none"); abund_plot
+
+
+
+#good_phylum_proteo <-tax_glom(merged_final,taxrank = "Phylum")
+goodsamps_phylum <- tax_glom(good_phylum_proteo,taxrank = "Phylum")
+goodsamps_phy_melt <- psmelt(goodsamps_phylum)  ##  Melt it into a dataframe 
+sub_goodsamps_phy_melt <- subset(goodsamps_phy_melt, select = c("Sample", "ProdLevel", "quadrant", "Phylum","Abundance"))
+TOTALS <- ddply(sub_goodsamps_phy_melt, c("Sample"), summarise, ##  Let's get the McMurdie and Holmes Scaled  Total for each sample 
+                total   = sum(Abundance))   
+sub_phy_melt_totals <- merge(sub_goodsamps_phy_melt, TOTALS, by = "Sample")  ### Merge phylum sums and the total numbers -> so we can calculate the Relative Abundance
+sub_phy_melt_totals$RelAbundance <- sub_phy_melt_totals$Abundance/sub_phy_melt_totals$total  ## Calculate the relative abundance
+sub_phy_melt_totals$PercentAbund <- sub_phy_melt_totals$RelAbundance * 100  ##  Calculate the Percent Abundance
+
+####  Make a new dataframe with the percent abudance within the entire dataset!
+phy_stats <- ddply(sub_phy_melt_totals, c("Phylum"), summarise, 
+                   N = length(PercentAbund),
+                   PercentPhy = mean(PercentAbund),
+                   sd   = sd(PercentAbund),
+                   se   = sd / sqrt(N))
+abund <- subset(phy_stats,PercentPhy > 0.001)  # Only take the phyla that are more than 0.01% abundant
+
+abund_ordered <- arrange(abund, desc(PercentPhy))
+
+abund$Phylum <- factor(abund$Phylum,levels = c("Bacteroidetes", "Cyanobacteria", "Verrucomicrobia", "Betaproteobacteria", "Actinobacteria", "Planctomycetes",  "Alphaproteobacteria", "Deltaproteobacteria",
+                                               "Gammaproteobacteria", "Chloroflexi", "Lentisphaerae", "Chlorobi", "Armatimonadetes", "Firmicutes", "Acidobacteria", "Spirochaetae", "Candidate_division_OD1",
+                                               "NPL-UPA2", "Deinococcus-Thermus", "Candidate_division_OP3", "TM6", "Chlamydiae", "Epsilonproteobacteria", "TA18", "Fibrobacteres", "Candidate_division_SR1", 
+                                               "Candidate_division_BRC1", "BD1-5", "Gemmatimonadetes", "Fusobacteria", "Candidate_division_WS3", "Tenericutes", "Elusimicrobia", "WCHB1-60", "Deferribacteres", 
+                                               "Candidate_division_TM7", "Candidate_division_OP8", "SPOTSOCT00m83", "Thermotogae", "Candidate_division_OP11", "Dictyoglomi", "unclassified"))   
+
+abund$Phylum = with(abund, factor(Phylum, levels = rev(levels(Phylum)))) 
+
+#Relative abundance plot 
+abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
+  #geom_boxplot(fill = "magenta4", colour = "black") + 
+  geom_bar(stat="identity", position=position_dodge(),  fill = "magenta4", colour = "black") +
+  theme_bw() + ggtitle("Phyla Above 0.1% in All Samples") +
+  xlab("Phylum") + ylab("Mean Relative Abundance (%)") +
+  geom_errorbar(aes(ymin = PercentPhy -se, ymax = PercentPhy +se), width = 0.25) + coord_flip() +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour = "black", size=14),
+        axis.text.y = element_text(colour = "black", size=14),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size = 20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none"); abund_plot
+
+
+
+
+
+
+```
+
+
+
+
+### Extra Functions
+```{r}
+################# FUNCTION TO FIND NAS IN A DATAFRAME #################
+nacols <- function(df) {
+  colnames(df)[unlist(lapply(df, function(x) any(is.na(x))))]
+}
+```
+
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
