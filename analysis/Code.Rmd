@@ -8,14 +8,13 @@ output: html_document
 
 ### Load Libraries
 ```{r}
-#source("http://bioconductor.org/biocLite.R")
-#biocLite("phyloseq")
 library(phyloseq)
 packageVersion("phyloseq")
 library(ggplot2)
 library(ape)
 library(vegan)
 library(plyr)
+library(dplyr)
 library(scales)
 library(grid)
 library(reshape2)
@@ -25,50 +24,50 @@ set.seed(1)
 
 ### Import Data
 ```{r}
-# mothur file import
-sharedfile = "combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.point.shared"
-taxfile = "combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.cons.taxonomy"
+# files
+sharedfile = "verruco.shared"
+taxfile = "verruco.cons.taxonomy"
+mapfile = "verruco_metadata_duplicates.csv"
+
+# Import mothur data
 mothurdata = import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
-    #Creates phyloseq object of mothurdata
+    
+# Add the OTU number as a column in the taxonomy file
+tax_table(mothurdata) <- cbind(tax_table(mothurdata), 
+	row.names(tax_table(mothurdata)))
 
-##To view phyloseq tables
-View(otu_table(mothurdata))
-View(tax_table(mothurdata))
-
-# We need to change the taxonomy names
-colnames(tax_table(mothurdata)) <- c("Kingdom","Phylum","Class","Order","Family","Genus")
+# Rename the taxonomy columns
+colnames(tax_table(mothurdata)) <- 
+  c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+  
+# Import sample metadata and transform into sample_data class
+map <- read.csv(mapfile)
 ```
 
-### Filter out unwanted sequences
+
 ```{r}
-good<-subset_taxa(mothurdata,Class!="Chloroplast")
-good<-subset_taxa(good,Kingdom=="Bacteria")
-good<-subset_taxa(good,Family!="mitochondria")
 
-#Remove controls
-good <- prune_samples(sample_names(good) != "Mock4",good)
-good <- prune_samples(sample_names(good) != "Mock_S96",good)
-good <- prune_samples(sample_names(good) != "Mus.Control",good)
-good <- prune_samples(sample_names(good) != "Negative4",good)
-good <- prune_samples(sample_names(good) != "Sed.Control",good)
-good <- prune_samples(sample_names(good) != "Water_S84",good)
-good <- prune_samples(sample_names(good) != "Z14.C1",good)
-good <- prune_samples(sample_names(good) != "Z14.C2",good)
-good <- prune_samples(sample_names(good) != "Z14.C3",good)
-good <- prune_samples(sample_names(good) != "Z14.C4",good)
-good <- prune_samples(sample_names(good) != "Z15.PBS1",good)
-good <- prune_samples(sample_names(good) != "Z15.PBS2",good)
-good <- prune_samples(sample_names(good) != "mockA03032015",good)
-good <- prune_samples(sample_names(good) != "mockB03032015",good)
-good <- prune_samples(sample_names(good) != "mockC.05082015",good)
-good <- prune_samples(sample_names(good) != "mockC03032015",good)
-good <- prune_samples(sample_names(good) != "negA03032015",good)
-good <- prune_samples(sample_names(good) != "negB03032015",good)
-good <- prune_samples(sample_names(good) != "negC03032015",good)
-good <- prune_samples(sample_names(good) != "waterD.05082015",good)
+# Convert map to sample_data class
+# Merge mothurdata object with sample_data
+map <- sample_data(map)
+rownames(map) <- map$SampleID
+mothur.merge <- merge_phyloseq(mothurdata, map)
+  
 
-#Remove taxa that are absent from all samples
-good <- prune_taxa(taxa_sums(good)>0,good)
+# Filter out non-samples (i.e. water, mock) and samples from intensive cruises.
+verruco <-
+  mothur.merge %>%
+    subset_taxa(
+      Kingdom == "Bacteria" &
+      Family != "mitochondria" &
+      Class != "Chloroplast"
+    ) %>%
+    subset_samples(Blank == "no")
+
+
+# Also prune out taxa which were only present in removed samples
+verruco <- prune_taxa(taxa_sums(verruco) > 0, verruco)
+
 
 ```
 
@@ -107,386 +106,10 @@ paste(c("The max sample read count is",maxs))
 # This is the min # of reads in our pruned dataset
 n <- min(sample_sums(pruned))
 
-# # Function to normalize data
-# scale_reads <- function(physeq,n){
-#   physeq.scale <- transform_sample_counts(physeq, function(x) {round((n*x/sum(x)))})
-#   #otu_table(physeq.scale) = round(otu_table(physeq.scale))
-#   physeq.scale = prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
-#   return(physeq.scale)
-# }
-# 
-# # Normalize our dataset!
-# scaled <- scale_reads(pruned, n)   ### Scaled to 10,423
-# 
-# # Let's visualized our normalized dataset
-# ggplot(data.frame(sum=sample_sums(scaled)),aes(sum)) + geom_histogram(colour="black",fill="deeppink")+ggtitle("Sample read counts")+xlab("total sequences")
-# 
-# # mean, max and min of sample read counts
-# mins<-min(sample_sums(scaled))
-# paste(c("The minimum sample read count is",mins))
-# means<-mean(sample_sums(scaled))
-# paste(c("The mean sample read count is",means))
-# maxs<-max(sample_sums(scaled))
-# paste(c("The max sample read count is",maxs))
-
 
 ```
 
 
-
-
-### Make Lake Michigan Sample Data
-```{r}
-# Create list of Lake Michigan sample names
-pruned.otu <- otu_table(pruned)
-pruned.names <- colnames(pruned.otu)
-LM.names <- c(pruned.names[1:59], pruned.names[168:210], pruned.names[213:278])
-
-# Create matrix for Lake Michigan samples
-LM <- data.frame(matrix(NA,length(LM.names),2))
-
-# Add in Samples to LM matrix
-LM$Sample <- LM.names
-
-## Rename samples
-new.names <- c("Fa13.BD.MLB.DN", "Fa13.BD.MLB.SN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SN", "Fa13.BD.MM110.SN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SN", "Fa13.BD.MM15.SN", "Fa13.BcD.MLB.DN", "Fa13.BcD.MLB.SN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SN", "Fa13.BcD.MM15.SN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.SN", "Fa13.ED.MLB.SN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SN", "Fa13.ED.MM110.SN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SN", "Fa13.ED.MM15.SN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.SN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SN", "Fa13.EcD.MM15.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MM110.DD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SN", "Sp13.BD.MM110.SN", "Sp13.BD.MM15.DD", "Sp13.BD.MM15.SD", "Sp13.BD.MM15.SN", "Sp13.BD.MM15.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SN", "Sp13.BcD.MM15.SN", "Sp13.ED.MLB.SN", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SN", "Sp13.EcD.MM15.SN", "Su13.BD.MLB.DD", "Su13.BD.MLB.SD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DN", "Su13.BD.MM110.DN", "Su13.BD.MM110.SD", "Su13.BD.MM110.SD", "Su13.BD.MM110.SN", "Su13.BD.MM110.SN", "Su13.BD.MM15.DN", "Su13.BD.MM15.DN", "Su13.BD.MM15.SD", "Su13.BD.MM15.SD", "Su13.BD.MM15.SN", "Su13.BD.MM15.SN", "Su13.BcD.MLB.DD", "Su13.BcD.MLB.SD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SN", "Su13.BcD.MM110.SN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SN", "Su13.BcD.MM15.SN", "Su13.ED.MLB.DD", "Su13.ED.MLB.DD", "Su13.ED.MLB.SD", "Su13.ED.MLB.SD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SN", "Su13.ED.MM110.SN", "Su13.ED.MM15.DN", "Su13.ED.MM15.DN", "Su13.ED.MM15.SD", "Su13.ED.MM15.SD", "Su13.ED.MM15.SN", "Su13.ED.MM15.SN", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.SD", "Su13.EcD.MLB.SD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SN", "Su13.EcD.MM110.SN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SN", "Su13.EcD.MM15.SN")
-
-#new.names <- c("Fa13.BD.MLB.DN", "Fa13.BD.MLB.SN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.DN", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SD", "Fa13.BD.MM110.SN", "Fa13.BD.MM110.SN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.DN", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SD", "Fa13.BD.MM15.SN", "Fa13.BD.MM15.SN", "Fa13.BcD.MLB.DN", "Fa13.BcD.MLB.SN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.DN", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SD", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM110.SN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.DN", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SD", "Fa13.BcD.MM15.SN", "Fa13.BcD.MM15.SN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.DN", "Fa13.ED.MLB.SN", "Fa13.ED.MLB.SN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.DN", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SD", "Fa13.ED.MM110.SN", "Fa13.ED.MM110.SN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.DN", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SD", "Fa13.ED.MM15.SN", "Fa13.ED.MM15.SN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.DN", "Fa13.EcD.MLB.SN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.DN", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SD", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM110.SN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.DN", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SD", "Fa13.EcD.MM15.SN", "Fa13.EcD.MM15.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MLB.SN", "Sp13.BD.MM110.DD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SD", "Sp13.BD.MM110.SN", "Sp13.BD.MM110.SN", "Sp13.BD.MM15.DD", "Sp13.BD.MM15.SD", "Sp13.BD.MM15.SN", "Sp13.BD.MM15.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MLB.SN", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.DD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SD", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM110.SN", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.DD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SD", "Sp13.BcD.MM15.SN", "Sp13.BcD.MM15.SN", "Sp13.ED.MLB.SN", "Sp13.ED.MM110.DD", "Sp13.ED.MM110.SD", "Sp13.ED.MM110.SD", "Sp13.ED.MM110.SN", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.DD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SD", "Sp13.ED.MM15.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MLB.SN", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.DD", "Sp13.EcD.MM110.SD", "Sp13.EcD.MM110.SD", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM110.SN", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.DD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SD", "Sp13.EcD.MM15.SN", "Sp13.EcD.MM15.SN", "Su13.BD.MLB.DD", "Su13.BD.MLB.SD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DCMD", "Su13.BD.MM110.DN", "Su13.BD.MM110.DN", "Su13.BD.MM110.SD", "Su13.BD.MM110.SD", "Su13.BD.MM110.SN", "Su13.BD.MM110.SN", "Su13.BD.MM15.DN", "Su13.BD.MM15.DN", "Su13.BD.MM15.SD", "Su13.BD.MM15.SD", "Su13.BD.MM15.SN", "Su13.BD.MM15.SN", "Su13.BcD.MLB.DD", "Su13.BcD.MLB.SD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DCMD", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.DN", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SD", "Su13.BcD.MM110.SN", "Su13.BcD.MM110.SN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.DN", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SD", "Su13.BcD.MM15.SN", "Su13.BcD.MM15.SN", "Su13.ED.MLB.DD", "Su13.ED.MLB.DD", "Su13.ED.MLB.SD", "Su13.ED.MLB.SD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.DCMD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SD", "Su13.ED.MM110.SN", "Su13.ED.MM110.SN", "Su13.ED.MM15.DN", "Su13.ED.MM15.DN", "Su13.ED.MM15.SD", "Su13.ED.MM15.SD", "Su13.ED.MM15.SN", "Su13.ED.MM15.SN", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.DD", "Su13.EcD.MLB.SD", "Su13.EcD.MLB.SD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DCMD", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.DN", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SD", "Su13.EcD.MM110.SN", "Su13.EcD.MM110.SN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.DN", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SD", "Su13.EcD.MM15.SN", "Su13.EcD.MM15.SN")
-    ## Raw names
-
-## Add Dup column
-LM$Dups <- new.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-LM$Group <- substr(LM$Sample, 9, 11)
-LM$Group[LM$Group == "MLB"] <- "Estuary"
-LM$Group[LM$Group == "MM1"] <- "Laurentian"
-LM$Group[LM$Group == ".ML"] <- "Estuary"
-LM$Group[LM$Group == ".MM"] <- "Laurentian"
-  
-# Add Lake column
-LM$Lake <- substr(LM$Sample, 9, 11)
-LM$Lake[LM$Lake == "MLB"] <- "Muskegon"
-LM$Lake[LM$Lake == "MM1"] <- "Michigan"
-LM$Lake[LM$Lake == ".ML"] <- "Muskegon"
-LM$Lake[LM$Lake == ".MM"] <- "Michigan"
-  
-# Add Date column
-LM$Date <- substr(LM$Sample, 1, 4)
-
-# Add Site column
-LM$Site <- substr(LM$Sample, 9, 13)
-LM$Site[LM$Site == "MLB.D"] <- "Buoy"
-LM$Site[LM$Site == "MLB.S"] <- "Buoy"
-LM$Site[LM$Site == ".MLB."] <- "Buoy"
-LM$Site[LM$Site == "MM110"] <- "Far"
-LM$Site[LM$Site == "MM15."] <- "Shore"
-LM$Site[LM$Site == ".MLB"] <- "Buoy"
-LM$Site[LM$Site == ".MM11"] <- "Far"
-LM$Site[LM$Site == ".MM15"] <- "Shore"
-LM$Site[LM$Site == ".MLB"] <- "Buoy"
-
-# Add Depth column
-LM$Depth <- substr(LM$Sample, 13,17)
-LM$Depth[LM$Depth == "DN"] <- "Bottom"
-LM$Depth[LM$Depth == "SN"] <- "Top"
-LM$Depth[LM$Depth == "0.DN"] <- "Bottom"
-LM$Depth[LM$Depth == "0.SD"] <- "Top"
-LM$Depth[LM$Depth == ".DN"] <- "Bottom"
-LM$Depth[LM$Depth == ".SD"] <- "Top"
-LM$Depth[LM$Depth == ".SN"] <- "Top"
-LM$Depth[LM$Depth == "10.DN"] <- "Bottom"
-LM$Depth[LM$Depth == "10.SD"] <- "Top"
-LM$Depth[LM$Depth == "10.SN"] <- "Top"
-LM$Depth[LM$Depth == "5.DN"] <- "Bottom"
-LM$Depth[LM$Depth == "5.SD"] <- "Top"
-LM$Depth[LM$Depth == "5.SN"] <- "Top"
-LM$Depth[LM$Depth == "0.SN"] <- "Top"
-LM$Depth[LM$Depth == "0.DD"] <- "Bottom"
-LM$Depth[LM$Depth == ".DD"] <- "Bottom"
-LM$Depth[LM$Depth == "10.DD"] <- "Bottom"
-LM$Depth[LM$Depth == "5.DD"] <- "Bottom"
-LM$Depth[LM$Depth == "DD"] <- "Bottom"
-LM$Depth[LM$Depth == "SD"] <- "Top"
-LM$Depth[LM$Depth == "0.DCM"] <- "DCM"
-LM$Depth[LM$Depth == "10.DC"] <- "DCM"
-LM$Depth[LM$Depth == "DN.1."] <- "Bottom"
-LM$Depth[LM$Depth == "SN.1."] <- "Top"
-LM$Depth[LM$Depth == "0.DN."] <- "Bottom"
-LM$Depth[LM$Depth == "0.SD."] <- "Top"
-LM$Depth[LM$Depth == "0.SN."] <- "Top"
-LM$Depth[LM$Depth == ".DN.1"] <- "Bottom"
-LM$Depth[LM$Depth == ".DN.2"] <- "Bottom"
-LM$Depth[LM$Depth == ".SD.1"] <- "Top"
-LM$Depth[LM$Depth == ".SD.2"] <- "Top"
-LM$Depth[LM$Depth == ".SN.1"] <- "Top"
-LM$Depth[LM$Depth == ".SN.2"] <- "Top"
-LM$Depth[LM$Depth == "5.DN."] <- "Bottom"
-LM$Depth[LM$Depth == "5.SD."] <- "Top"
-LM$Depth[LM$Depth == "5.SN."] <- "Top"
-LM$Depth[LM$Depth == "DN.2."] <- "Bottom"
-LM$Depth[LM$Depth == "SN.2."] <- "Top"
-LM$Depth[LM$Depth == "0.DD."] <- "Bottom"
-LM$Depth[LM$Depth == "DD.1."] <- "Bottom"
-LM$Depth[LM$Depth == "DD.2."] <- "Bottom"
-LM$Depth[LM$Depth == "SD.1."] <- "Top"
-LM$Depth[LM$Depth == "SD.2."] <- "Top"
-LM$Depth[LM$Depth == "5.DD."] <- "Bottom"
-
-# Add Fraction column
-LM$Fraction <- substr(LM$Sample, 6,7)
-LM$Fraction[LM$Fraction == "BD"] <- "Free"
-LM$Fraction[LM$Fraction == "ED"] <- "Particle"
-LM$Fraction[LM$Fraction == "Bc"] <- "cFree"
-LM$Fraction[LM$Fraction == "Ec"] <- "cParticle"
-
-# Remove blank columns
-LM$X1 = NULL
-LM$X2 = NULL
-
-```
-
-
-
-### Create Muskegon Lake Sample Data
-```{r}
-# Create list of Muskegon Lake sample names
-#good.otu <- otu_table(good)
-#good.names <- colnames(good.otu)
-ML.names <- c(pruned.names[60:164])
-
-# Create matrix for Muskegon Lake samples
-ML <- data.frame(matrix(NA,length(ML.names),2))
-
-# Add in Samples to LM matrix
-ML$Sample <- ML.names
-
-# Update sample names
-new.names <- c("MBR.S.714", "MBR.S.914", "MBR.S.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.514", "MDPE.P.714", "MDPE.P.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.714", "MDPE.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.714", "MINE.P.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.714", "MINE.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.514", "MOTE.P.714", "MOTE.P.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.714", "MOTE.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914")
-
-
-#new.names <- c("MBR.S.714", "MBR.S.914", "MBR.S.714", "MBR.S.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRE.F.714", "MBRE.F.914", "MBRE.P.714", "MBRE.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MBRH.F.714", "MBRH.F.914", "MBRH.P.714", "MBRH.P.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDP.S.514", "MDP.S.714", "MDP.S.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.514", "MDPE.P.714", "MDPE.P.914", "MDPE.F.514", "MDPE.F.714", "MDPE.F.914", "MDPE.P.714", "MDPE.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MDPH.F.514", "MDPH.F.714", "MDPH.F.914", "MDPH.P.514", "MDPH.P.714", "MDPH.P.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MIN.S.514", "MIN.S.714", "MIN.S.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.514", "MINE.P.714", "MINE.P.914", "MINE.F.514", "MINE.F.714", "MINE.F.914", "MINE.P.714", "MINE.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MINH.F.514", "MINH.F.714", "MINH.F.914", "MINH.P.514", "MINH.P.714", "MINH.P.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOT.S.514", "MOT.S.714", "MOT.S.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.514", "MOTE.P.714", "MOTE.P.914", "MOTE.F.514", "MOTE.F.714", "MOTE.F.914", "MOTE.P.714", "MOTE.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914", "MOTH.F.514", "MOTH.F.714", "MOTH.F.914", "MOTH.P.514", "MOTH.P.714", "MOTH.P.914")
-    ## Raw
-  
-# Create Dups column
-ML$Dups <- new.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-ML$Group <- c(rep("Estuary"))
-  
-# Add Lake column
-ML$Lake <- c(rep("Muskegon"))
-  
-# Add Date column
-ML$Date <- substr(ML$Sample, 8, 11)
-ML$Date[ML$Date == ".514"] <- "514"
-ML$Date[ML$Date == ".714"] <- "714"
-ML$Date[ML$Date == ".914"] <- "914"
-
-
-#Add Site column
-ML$Site <- substr(ML$Sample, 2, 3)
-ML$Site[ML$Site == "IN"] <- "Inlet"
-ML$Site[ML$Site == "BR"] <- "Bear"
-ML$Site[ML$Site == "OT"] <- "Outlet"
-ML$Site[ML$Site == "DP"] <- "Deep"
-
-# Add Depth column
-ML$Depth <- substr(ML$Sample, 4,4)
-ML$Depth[ML$Depth == "E"] <- "Top"
-ML$Depth[ML$Depth == "H"] <- "Bottom"
-ML$Depth[ML$Depth == "1"] <- "Sediment"
-ML$Depth[ML$Depth == "2"] <- "Sediment"
-
-#Add Fraction column
-ML$Fraction <- substr(ML$Sample, 6,7)
-ML$Fraction[ML$Fraction == ".F"] <- "Free"
-ML$Fraction[ML$Fraction == ".P"] <- "Particle"
-ML$Fraction[ML$Fraction == "S."] <- "Sediment"
-
-# Remove blank columns
-ML$X1 = NULL
-ML$X2 = NULL
-
-
-```
-
-
-### Create Thunder Bay Sample Data
-```{r}
-# Create list of Thunder Bay sample names
-#good.otu <- otu_table(good)
-#good.names <- colnames(good.otu)
-TB.names <- c(pruned.names[165:167], pruned.names[211:212])
-
-# Create matrix for Thunder Bay samples
-TB <- data.frame(matrix(NA,length(TB.names),2))
-
-# Add in Samples to LM matrix
-TB$Sample <- TB.names
-
-# Create Dups column
-TB$Dups <- TB.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-TB$Group <- c(rep("Laurentian"))
-  
-# Add Lake column
-TB$Lake <- c(rep("Huron"))
-  
-# Add Date column
-TB$Date <- substr(TB$Sample, 1, 4)
-
-# Add Site column
-TB$Site <- substr(TB$Sample, 9,14)
-
-# Add Depth column
-TB$Depth <- substr(TB$Sample, 13, 14)
-TB$Depth[TB$Depth == "SD"] <- "Top"
-TB$Depth[TB$Depth == "SN"] <- "Top"
-TB$Depth[TB$Depth == "DN"] <- "Bottom"
-TB$Depth[TB$Depth == "0S"] <- "Top"
-TB$Depth[TB$Depth == "2D"] <- "Bottom"
-TB$Depth[TB$Depth == "2S"] <- "Top"
-TB$Depth[TB$Depth == "8D"] <- "Bottom"
-TB$Depth[TB$Depth == "6S"] <- "Top"
-
-# Add Fraction column
-TB$Fraction <- substr(TB$Sample, 6,9)
-TB$Fraction[TB$Fraction == "BD.T"] <- "Free"
-TB$Fraction[TB$Fraction == "BcD."] <- "cFree"
-TB$Fraction[TB$Fraction == "ED.T"] <- "Particle"
-
-# Remove blank columns
-TB$X1 = NULL
-TB$X2 = NULL
-
-```
-
-
-### Create UMWC Sample Data
-```{r}
-# Create list of Inland Lake sample names
-#good.otu <- otu_table(good)
-#good.names <- colnames(good.otu)
-IL.names <- c(pruned.names[279:418])
-
-# Create matrix for Inland Lake samples
-IL <- data.frame(matrix(NA,length(IL.names),2))
-
-# Add in Samples to LM matrix
-IL$Sample <- IL.names
-
-# Add Dups column
-IL$Dups <- IL.names
-IL$Dups[IL$Dups == "Z14.015.F1"] <- "Z14.015.F"
-IL$Dups[IL$Dups == "Z14.015.F2"] <- "Z14.015.F"
-IL$Dups[IL$Dups == "Z14.050.F"] <- "Z14.049.F"
-IL$Dups[IL$Dups == "Z14.050.P"] <- "Z14.049.P"
-IL$Dups[IL$Dups == "Z14.052.F"] <- "Z14.051.F"
-IL$Dups[IL$Dups == "Z14.052.P"] <- "Z14.051.P"
-IL$Dups[IL$Dups == "Z14.054.F"] <- "Z14.053.F"
-IL$Dups[IL$Dups == "Z14.054.P"] <- "Z14.053.P"
-IL$Dups[IL$Dups == "Z14.056.F"] <- "Z14.055.F"
-IL$Dups[IL$Dups == "Z14.056.P"] <- "Z14.055.P"
-IL$Dups[IL$Dups == "Z14.058.F"] <- "Z14.057.F"
-IL$Dups[IL$Dups == "Z14.058.P"] <- "Z14.057.P"
-IL$Dups[IL$Dups == "Z14.060.F"] <- "Z14.059.F"
-IL$Dups[IL$Dups == "Z14.060.P"] <- "Z14.059.P"
-IL$Dups[IL$Dups == "Z14.062.F"] <- "Z14.061.F"
-IL$Dups[IL$Dups == "Z14.062.P"] <- "Z14.061.P"
-IL$Dups[IL$Dups == "Z14.064.F"] <- "Z14.063.F"
-IL$Dups[IL$Dups == "Z14.064.P"] <- "Z14.063.P"
-IL$Dups[IL$Dups == "Z15.066.F"] <- "Z15.065.F"
-IL$Dups[IL$Dups == "Z15.066.P"] <- "Z15.065.P"
-IL$Dups[IL$Dups == "Z15.068.F"] <- "Z15.067.F"
-IL$Dups[IL$Dups == "Z15.068.P"] <- "Z15.067.P"
-IL$Dups[IL$Dups == "Z15.070.F"] <- "Z15.069.F"
-IL$Dups[IL$Dups == "Z15.070.P"] <- "Z15.069.P"
-IL$Dups[IL$Dups == "Z15.072.F"] <- "Z15.071.F"
-IL$Dups[IL$Dups == "Z15.072.P"] <- "Z15.071.P"
-IL$Dups[IL$Dups == "Z15.074.F"] <- "Z15.073.F"
-IL$Dups[IL$Dups == "Z15.074.P"] <- "Z15.073.P"
-IL$Dups[IL$Dups == "Z15.076.F"] <- "Z15.075.F"
-IL$Dups[IL$Dups == "Z15.076.P"] <- "Z15.075.P"
-IL$Dups[IL$Dups == "Z15.078.F"] <- "Z15.077.F"
-IL$Dups[IL$Dups == "Z15.078.P"] <- "Z15.077.P"
-IL$Dups[IL$Dups == "Z15.080.F"] <- "Z15.079.F"
-IL$Dups[IL$Dups == "Z15.080.P"] <- "Z15.079.P"
-
-#Add Group (which group of lakes; Great, Estuary, Inland) column
-IL$Group <- c(rep("Inland"))
-  
-#Add Lake column
-IL$Lake <- substr(IL$Sample,5,7)
-IL$Lake <- IL$Lake <- c(rep("Bishop",8), rep("Woodland",8), rep("BigSeven",8), rep("Heron",8), rep("Lobdell",8), rep("North",8), rep("Bruin",8), rep("Halfmoon",8), rep("Cedar",8), rep("Sand",8), rep("Whitmore",8), rep("Independence",8), rep("North",8), rep("Bruin",8), rep("Whitmore",8), rep("Independence",8), rep("NA",12))
-        ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
-  
-#Add Date column
-IL$Date <- c(rep("Su14",94), rep("Fa14",28), rep("Sp15",18))
-      ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
-
-#Add Site column
-IL$Site <- c("Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Outlet", "Inlet", "Inlet", "Epi", "Epi", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet","Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", rep ("NA", 18))
-IL$Site[IL$Site == "Epi"] <- "Top"
-IL$Site[IL$Site == "Hypo"] <- "Bottom"
-    ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
-
-#Add Depth column
-IL$Depth <- c("Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Outlet", "Inlet", "Inlet", "Epi", "Epi", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet","Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", "Inlet", "Inlet","Epi", "Epi", "Hypo", "Hypo", "Outlet", "Outlet", rep ("NA", 18))
-IL$Depth[IL$Depth == "Epi"] <- "Top"
-IL$Depth[IL$Depth == "Hypo"] <- "Bottom"
-IL$Depth[IL$Depth == "Inlet"] <- "Top"
-IL$Depth[IL$Depth == "Outlet"] <- "Top"
-
-#Add Fraction column
-IL$Fraction <- substr(IL$Sample, 9,9)
-IL$Fraction[IL$Fraction == "F"] <- "Free"
-IL$Fraction[IL$Fraction == "P"] <- "Particle"
-
-#Remove blank columns
-IL$X1 = NULL
-IL$X2 = NULL
-
-```
-
-
-### Combine matrices to make overall Sample Data
-```{r}
-# Create matrix for all samples
-sampleinfo <- data.frame(matrix(NA,length(pruned.names),2))
-
-# Add in Samples to LM matrix
-sampleinfo$Sample <- c(LM$Sample, ML$Sample, TB$Sample, IL$Sample)
-
-# Add Dups column
-sampleinfo$Dups <- c(LM$Dups, ML$Dups, TB$Dups, IL$Dups)
-
-#Add Group (which group of lakes; Great, Estuary, Inland) column
-sampleinfo$Group <- c(LM$Group, ML$Group, TB$Group, IL$Group)
-  
-#Add Lake column
-sampleinfo$Lake <- c(LM$Lake, ML$Lake, TB$Lake, IL$Lake)
-  
-#Add Date column
-sampleinfo$Date <- c(LM$Date, ML$Date, TB$Date, IL$Date)
-
-#Add Site column
-sampleinfo$Site <- c(LM$Site, ML$Site, TB$Site, IL$Site)
-
-#Add Depth column
-sampleinfo$Depth <- c(LM$Depth, ML$Depth, TB$Depth, IL$Depth)
-
-#Add Fraction column
-sampleinfo$Fraction <- c(LM$Fraction, ML$Fraction, TB$Fraction, IL$Fraction)
-
-#Remove blank columns
-sampleinfo$X1 = NULL
-sampleinfo$X2 = NULL
-
-write.table(sampleinfo, "sampleinfo", sep = "\t")
-
-```
 
 ### Update phyloseq object w/ sample data
 ```{r}
