@@ -30,11 +30,14 @@ taxfile = "verruco.cons.taxonomy"
 mapfile = "verruco_metadata_duplicates.csv"
 
 # Import mothur data
-mothurdata = import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+mothurdata = import_mothur(
+  mothur_shared_file = sharedfile, 
+  mothur_constaxonomy_file = taxfile
+)
     
 # Add the OTU number as a column in the taxonomy file
 tax_table(mothurdata) <- cbind(tax_table(mothurdata), 
-	row.names(tax_table(mothurdata)))
+  row.names(tax_table(mothurdata)))
 
 # Rename the taxonomy columns
 colnames(tax_table(mothurdata)) <- 
@@ -42,10 +45,6 @@ colnames(tax_table(mothurdata)) <-
   
 # Import sample metadata and transform into sample_data class
 map <- read.csv(mapfile)
-```
-
-
-```{r}
 
 # Convert map to sample_data class
 # Merge mothurdata object with sample_data
@@ -54,7 +53,7 @@ rownames(map) <- map$SampleID
 mothur.merge <- merge_phyloseq(mothurdata, map)
   
 
-# Filter out non-samples (i.e. water, mock) and samples from intensive cruises.
+# Filter out non-samples (i.e. water, mock) and non-bacteria
 verruco <-
   mothur.merge %>%
     subset_taxa(
@@ -62,467 +61,109 @@ verruco <-
       Family != "mitochondria" &
       Class != "Chloroplast"
     ) %>%
-    subset_samples(Blank == "no")
-
+    subset_samples(
+      Blank == "no" &
+      !Fraction %in% c("cFree", "cParticle") &
+      Lake != "Huron" #?????????????????????
+    ) 
 
 # Also prune out taxa which were only present in removed samples
 verruco <- prune_taxa(taxa_sums(verruco) > 0, verruco)
 
-
 ```
+
 
 ### Trim & normalize data based on # of reads/sequence depth
 ```{r}
 # Look at # of reads
-ggplot(data.frame(sum=sample_sums(good)),aes(sum)) + 
-  geom_histogram(colour="white",fill="blue")+
-  ggtitle("Sample read counts")+xlab("total sequences")
+ggplot(data.frame(sum = sample_sums(verruco)), aes(sum)) + 
+  geom_histogram(colour = "white", fill = "blue") + 
+  ggtitle("Sample read counts") + xlab("total sequences")
 
-# Mean, max and min of sample read counts
-mins<-min(sample_sums(good))
-paste(c("The minimum sample read count is",mins))
-means<-mean(sample_sums(good))
-paste(c("The mean sample read count is",means))
-maxs<-max(sample_sums(good))
-paste(c("The max sample read count is",maxs))
-
-# Delete samples under 10000 sequence depth
-pruned <-  prune_samples(sample_sums(good) > 10000, good)
-    ## removed 44 samples
-
-# Look at reads of pruned
-ggplot(data.frame(sum=sample_sums(pruned)),aes(sum)) + 
-  geom_histogram(colour="white",fill="blue")+
-  ggtitle("Sample read counts")+xlab("total sequences")
-
-# Mean, max and min of pruned
-mins<-min(sample_sums(pruned))
-paste(c("The minimum sample read count is",mins))
-means<-mean(sample_sums(pruned))
-paste(c("The mean sample read count is",means))
-maxs<-max(sample_sums(pruned))
-paste(c("The max sample read count is",maxs))
-
-# This is the min # of reads in our pruned dataset
-n <- min(sample_sums(pruned))
-
-
+# Min, Mean, Max of sample read counts
+min(sample_sums(verruco))
+mean(sample_sums(verruco))
+max(sample_sums(verruco))
 ```
 
-
-
-### Update phyloseq object w/ sample data
-```{r}
-mapfile <- "sampleinfo"
-map <- import_qiime_sample_data(mapfile)
-merge <- merge_phyloseq(pruned,map)
-```
 
 ### Merge Duplicates & create new phyloseq object
 ```{r}
-dups_merge <- merge_samples(merge, "Dups", fun = "mean")
-merge_info <- sample_data(dups_merge)
+# Merges duplicates
+verr.dupmerge <- merge_samples(verruco, "Duplicates")
 
-write.table(otu_table(dups_merge), "otus", sep = "\t")
-otu_data <- read.csv("otus", sep = "\t")
+## Fix metadata of merged duplicates 
+# Grab unique lines (first entry) from verruco phyloseq object metadata
+unique.idx <- !(duplicated(sample_data(verruco)$Duplicates))
+duplicate.metadata <- sample_data(verruco)[unique.idx, ]
 
+# Fix SampleID and rownames
+duplicate.metadata$SampleID <- duplicate.metadata$Duplicates
+rownames(duplicate.metadata) <- duplicate.metadata$Duplicates
 
-missing_dups <- c("Fa13.BD.MLB.DN", "Fa13.BD.MLB.SN", "Fa13.BcD.MLB.DN", "Fa13.BcD.MLB.SN", "Fa13.EcD.MLB.SN", "MBR.S.714", "MDPE.P.514", "MOTE.P.514", "Sp12.BD.TB82SN", "Sp12.BcD.TB10SD", "Sp12.BcD.TB10SN", "Sp13.BD.MM110.DD", "Sp13.BD.MM15.DD", "Sp13.BD.MM15.SD", "Sp13.ED.MLB.SN", "Sp13.ED.MM15.SN", "Su12.BcD.TB18DN", "Su12.BcD.TB82SN", "Su13.BD.MLB.DD", "Su13.BD.MLB.SD", "Su13.BcD.MLB.DD", "Su13.BcD.MLB.SD", IL$Sample[1:28], IL$Sample[31:94], IL$Sample[132], IL$Sample[135])
+# Assign new metadata to phyloseq object
+sample_data(verr.dupmerge) <- duplicate.metadata
 
-#missing_dups <- c("Fa13.BD.MLB.DN.1.renamed", "Fa13.BD.MLB.SN.1.renamed", "Fa13.BcD.MLB.DN.1", "Fa13.BcD.MLB.SN.1", "Fa13.EcD.MLB.SN.2", "Sp13.BD.MM110.DD.1.renamed", "Sp13.BD.MM15.DD.1.renamed", "Sp13.BD.MM15.SD.1.renamed", "Sp13.ED.MLB.SN.1.renamed", "Sp13.ED.MM110.DD.2.renamed", "Sp13.ED.MM110.SN.1.renamed", "Sp13.ED.MM15.SN.2.renamed", "Su13.BD.MLB.DD.1.renamed", "Su13.BD.MLB.SD.1.renamed", "Su13.BcD.MLB.DD.1", "Su13.BcD.MLB.SD.1", "MDPE1.P.514", "MINE1.P.514", "MOTE1.P.514", IL$Sample[1:28], IL$Sample[31:161])
-    ## These samples DO NOT have duplicates
-    ## raw
-
-otu_data$names <- row.names(otu_data)
-nodups <- otu_data[rownames(otu_data) %in% missing_dups,]
-    ## Collect only the samples that DO NOT have duplicates
-dups_only <- otu_data[!rownames(otu_data) %in% missing_dups,]
-    ## Collect only the samples that DO have duplicates
-dups_only$names = NULL
-nodups$names = NULL
-rowSums(dups_only)
-dups_half <- round(dups_only/2)
-    ## Here we're taking the average.
-norm_all <- rbind(dups_half, nodups)
-sums <- data.frame(rowSums(norm_all))
-colnames(sums) <- c("Totals")
-sums_range <- max(sums) -min(sums)
-paste(c("The range of sample read counts when scaled, merged (summed), averaged and then scaled is",sums_range))
-tnorm_all <- t(norm_all)
-otu_manual <- otu_table(tnorm_all, taxa_are_rows = TRUE)
-taxo <- tax_table(dups_merge)
-manual_merged <- merge_phyloseq(taxo, otu_manual)
-manual_merged <- prune_taxa(taxa_sums(manual_merged) > 0, manual_merged)
-    ## Everything looks good except for the sample data
-    ## Time to redo the sample data...again! x.x
 ```
 
 
 ### Trim & normalize data based on # of reads/sequence depth
 ```{r}
 # Look at # of reads
-ggplot(data.frame(sum=sample_sums(manual_merged)),aes(sum)) + 
-  geom_histogram(colour="white",fill="blue")+
-  ggtitle("Sample read counts")+xlab("total sequences")
+ggplot(data.frame(sum = sample_sums(verr.dupmerge)), aes(sum)) + 
+  geom_histogram(colour = "white", fill = "blue") +
+  ggtitle("Sample read counts") + xlab("total sequences")
 
 # Mean, max and min of sample read counts
-mins<-min(sample_sums(manual_merged))
-paste(c("The minimum sample read count is",mins))
-means<-mean(sample_sums(manual_merged))
-paste(c("The mean sample read count is",means))
-maxs<-max(sample_sums(manual_merged))
-paste(c("The max sample read count is",maxs))
-    ## Aside from the max being a lot smaller now, min & mean are relatively similar
-    ## to pruned (pre-duplicate merging)
+min(sample_sums(verr.dupmerge))
+mean(sample_sums(verr.dupmerge))
+max(sample_sums(verr.dupmerge))
 
-# This is the min # of reads in our pruned dataset
-n <- min(sample_sums(manual_merged))
+```
 
-# Function to normalize data
-scale_reads <- function(physeq,n){
-  physeq.scale <- transform_sample_counts(physeq, function(x) {round((n*x/sum(x)))})
-  #otu_table(physeq.scale) = round(otu_table(physeq.scale))
-  physeq.scale = prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
-  return(physeq.scale)
-}
+```{r}
 
 # Normalize our dataset!
-scaled <- scale_reads(manual_merged, n)   ### Scaled to 10,468
+scaled <- scale_reads(manual_merged)   ### Scaled to 10,468
 
 # Let's visualized our normalized dataset
-ggplot(data.frame(sum=sample_sums(scaled)),aes(sum)) + geom_histogram(colour="black",fill="deeppink")+ggtitle("Sample read counts")+xlab("total sequences")
-
-# mean, max and min of sample read counts
-mins<-min(sample_sums(scaled))
-paste(c("The minimum sample read count is",mins))
-means<-mean(sample_sums(scaled))
-paste(c("The mean sample read count is",means))
-maxs<-max(sample_sums(scaled))
-paste(c("The max sample read count is",maxs))
+ggplot(data.frame(sum = sample_sums(scaled)), aes(sum)) + 
+  geom_histogram(colour = "black", fill = "deeppink") +
+  ggtitle("Sample read counts") + 
+  xlab("total sequences")
 
 ```
 
-### Time to update sample data
-```{r}
-scaled.otu <- otu_table(scaled)
-scaled.names <- colnames(scaled.otu)
 
-############### Lake Michigan Sample Data ###############
-LM.names <- c(scaled.names[1:27], scaled.names[79:128], scaled.names[152:156], scaled.names[163:167], scaled.names[170:173])
-
-# Create matrix for Lake Michigan samples
-LM <- data.frame(matrix(NA,length(LM.names),2))
-
-# Add in Samples to LM matrix
-LM$Sample <- LM.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-LM$Group <- substr(LM$Sample, 9, 11)
-LM$Group[LM$Group == "MLB"] <- "Estuary"
-LM$Group[LM$Group == "MM1"] <- "Laurentian"
-LM$Group[LM$Group == ".ML"] <- "Estuary"
-LM$Group[LM$Group == ".MM"] <- "Laurentian"
-  
-# Add Lake column
-LM$Lake <- substr(LM$Sample, 9, 11)
-LM$Lake[LM$Lake == "MLB"] <- "Muskegon"
-LM$Lake[LM$Lake == "MM1"] <- "Michigan"
-LM$Lake[LM$Lake == ".ML"] <- "Muskegon"
-LM$Lake[LM$Lake == ".MM"] <- "Michigan"
-  
-# Add Date column
-LM$Date <- substr(LM$Sample, 1, 4)
-
-# Add Site column
-LM$Site <- substr(LM$Sample, 9, 13)
-LM$Site[LM$Site == "MLB.D"] <- "Buoy"
-LM$Site[LM$Site == "MLB.S"] <- "Buoy"
-LM$Site[LM$Site == ".MLB."] <- "Buoy"
-LM$Site[LM$Site == "MM110"] <- "Far"
-LM$Site[LM$Site == "MM15."] <- "Shore"
-LM$Site[LM$Site == ".MLB"] <- "Buoy"
-LM$Site[LM$Site == ".MM11"] <- "Far"
-LM$Site[LM$Site == ".MM15"] <- "Shore"
-LM$Site[LM$Site == ".MLB"] <- "Buoy"
-
-# Add Depth column
-LM$Depth <- substr(LM$Sample, 13,17)
-LM$Depth[LM$Depth == "DN"] <- "Bottom"
-LM$Depth[LM$Depth == "SN"] <- "Top"
-LM$Depth[LM$Depth == "0.DN"] <- "Bottom"
-LM$Depth[LM$Depth == "0.SD"] <- "Top"
-LM$Depth[LM$Depth == ".DN"] <- "Bottom"
-LM$Depth[LM$Depth == ".SD"] <- "Top"
-LM$Depth[LM$Depth == ".SN"] <- "Top"
-LM$Depth[LM$Depth == "10.DN"] <- "Bottom"
-LM$Depth[LM$Depth == "10.SD"] <- "Top"
-LM$Depth[LM$Depth == "10.SN"] <- "Top"
-LM$Depth[LM$Depth == "5.DN"] <- "Bottom"
-LM$Depth[LM$Depth == "5.SD"] <- "Top"
-LM$Depth[LM$Depth == "5.SN"] <- "Top"
-LM$Depth[LM$Depth == "0.SN"] <- "Top"
-LM$Depth[LM$Depth == "0.DD"] <- "Bottom"
-LM$Depth[LM$Depth == ".DD"] <- "Bottom"
-LM$Depth[LM$Depth == "10.DD"] <- "Bottom"
-LM$Depth[LM$Depth == "5.DD"] <- "Bottom"
-LM$Depth[LM$Depth == "DD"] <- "Bottom"
-LM$Depth[LM$Depth == "SD"] <- "Top"
-LM$Depth[LM$Depth == "0.DCM"] <- "DCM"
-LM$Depth[LM$Depth == "10.DC"] <- "DCM"
-LM$Depth[LM$Depth == "DN.1."] <- "Bottom"
-LM$Depth[LM$Depth == "SN.1."] <- "Top"
-LM$Depth[LM$Depth == "0.DN."] <- "Bottom"
-LM$Depth[LM$Depth == "0.SD."] <- "Top"
-LM$Depth[LM$Depth == "0.SN."] <- "Top"
-LM$Depth[LM$Depth == ".DN.1"] <- "Bottom"
-LM$Depth[LM$Depth == ".DN.2"] <- "Bottom"
-LM$Depth[LM$Depth == ".SD.1"] <- "Top"
-LM$Depth[LM$Depth == ".SD.2"] <- "Top"
-LM$Depth[LM$Depth == ".SN.1"] <- "Top"
-LM$Depth[LM$Depth == ".SN.2"] <- "Top"
-LM$Depth[LM$Depth == "5.DN."] <- "Bottom"
-LM$Depth[LM$Depth == "5.SD."] <- "Top"
-LM$Depth[LM$Depth == "5.SN."] <- "Top"
-LM$Depth[LM$Depth == "DN.2."] <- "Bottom"
-LM$Depth[LM$Depth == "SN.2."] <- "Top"
-LM$Depth[LM$Depth == "0.DD."] <- "Bottom"
-LM$Depth[LM$Depth == "DD.1."] <- "Bottom"
-LM$Depth[LM$Depth == "DD.2."] <- "Bottom"
-LM$Depth[LM$Depth == "SD.1."] <- "Top"
-LM$Depth[LM$Depth == "SD.2."] <- "Top"
-LM$Depth[LM$Depth == "5.DD."] <- "Bottom"
-
-# Add Fraction column
-LM$Fraction <- substr(LM$Sample, 6,7)
-LM$Fraction[LM$Fraction == "BD"] <- "Free"
-LM$Fraction[LM$Fraction == "ED"] <- "Particle"
-LM$Fraction[LM$Fraction == "Bc"] <- "cFree"
-LM$Fraction[LM$Fraction == "Ec"] <- "cParticle"
-
-# Remove blank columns
-LM$X1 = NULL
-LM$X2 = NULL
-
-
-
-############### Muskegon Lake Sample Data ###############
-ML.names <- c(scaled.names[28:78], scaled.names[157:159])
-
-# Create matrix for Muskegon Lake samples
-ML <- data.frame(matrix(NA,length(ML.names),2))
-
-# Add in Samples to LM matrix
-ML$Sample <- ML.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-ML$Group <- c(rep("Estuary"))
-  
-# Add Lake column
-ML$Lake <- c(rep("Muskegon"))
-  
-# Add Date column
-ML$Date <- substr(ML$Sample, 7, 11)
-ML$Date[ML$Date == ".514"] <- "Sp14"
-ML$Date[ML$Date == ".714"] <- "Su14"
-ML$Date[ML$Date == ".914"] <- "Fa14"
-ML$Date[ML$Date == "514"] <- "Sp14"
-ML$Date[ML$Date == "714"] <- "Su14"
-ML$Date[ML$Date == "914"] <- "Fa14"
-
-#Add Site column
-ML$Site <- substr(ML$Sample, 2, 3)
-ML$Site[ML$Site == "IN"] <- "Inlet"
-ML$Site[ML$Site == "BR"] <- "Bear"
-ML$Site[ML$Site == "OT"] <- "Outlet"
-ML$Site[ML$Site == "DP"] <- "Deep"
-
-# Add Depth column
-ML$Depth <- substr(ML$Sample, 4,4)
-ML$Depth[ML$Depth == "E"] <- "Top"
-ML$Depth[ML$Depth == "H"] <- "Bottom"
-ML$Depth[ML$Depth == "."] <- "Sediment"
-
-#Add Fraction column
-ML$Fraction <- substr(ML$Sample, 6,6)
-ML$Fraction[ML$Fraction == "F"] <- "Free"
-ML$Fraction[ML$Fraction == "P"] <- "Particle"
-ML$Fraction[ML$Fraction == "."] <- "Sediment"
-
-# Remove blank columns
-ML$X1 = NULL
-ML$X2 = NULL
-
-
-
-############### Thunder Bay Sample Data ###############
-TB.names <- c(scaled.names[160:162], scaled.names[168:169])
-
-# Create matrix for Thunder Bay samples
-TB <- data.frame(matrix(NA,length(TB.names),2))
-
-# Add in Samples to LM matrix
-TB$Sample <- TB.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-TB$Group <- c(rep("Laurentian"))
-  
-# Add Lake column
-TB$Lake <- c(rep("Huron"))
-  
-# Add Date column
-TB$Date <- substr(TB$Sample, 1, 4)
-
-# Add Site column
-TB$Site <- substr(TB$Sample, 9,14)
-
-# Add Depth column
-TB$Depth <- substr(TB$Sample, 13, 14)
-TB$Depth[TB$Depth == "SD"] <- "Top"
-TB$Depth[TB$Depth == "SN"] <- "Top"
-TB$Depth[TB$Depth == "DN"] <- "Bottom"
-TB$Depth[TB$Depth == "0S"] <- "Top"
-TB$Depth[TB$Depth == "2D"] <- "Bottom"
-TB$Depth[TB$Depth == "2S"] <- "Top"
-TB$Depth[TB$Depth == "8D"] <- "Bottom"
-TB$Depth[TB$Depth == "6S"] <- "Top"
-
-# Add Fraction column
-TB$Fraction <- substr(TB$Sample, 6,9)
-TB$Fraction[TB$Fraction == "BD.T"] <- "Free"
-TB$Fraction[TB$Fraction == "BcD."] <- "cFree"
-TB$Fraction[TB$Fraction == "ED.T"] <- "Particle"
-
-# Remove blank columns
-TB$X1 = NULL
-TB$X2 = NULL
-
-
-
-############### Inland Lake Sample Data ###############
-IL.names <- c(scaled.names[129:151], scaled.names[174:267])
-
-# Create matrix for Inland Lake samples
-IL <- data.frame(matrix(NA,length(IL.names),2))
-
-# Add in Samples to LM matrix
-IL$Sample <- IL.names
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-IL$Group <- c(rep("Inland"))
-  
-# Add Lake column
-IL$Lake <- substr(IL$Sample,5,7)
-IL$Lake <- c("Heron", rep("North",2), rep("Bruin",4), rep("Whitmore",4), rep("Independence",4), rep("Bruin",4), rep("Whitmore",2), rep("Independence",2), rep("Bishop",8), rep("Woodland",8), rep("BigSeven",8), rep("Heron", 6), rep("Lobdell",8), rep("North",8), rep("Bruin",8), rep("Halfmoon",8), rep("Cedar",8), rep("Sand",8), rep("Whitmore",8), rep("Independence",6), rep("Whitmore",2))
-  
-# Add Date column
-IL$Date <- c("Su14", rep("Fa14",14), rep("Sp15",8), rep("Su14",92), rep("Sp15",2))
-  
-  c(rep("Su14",94), rep("Fa14",28), rep("Sp15",18))
-      ##### THIS IS NOT ACCURATE. YOU HAVE TO UPDATE!!!!!
-
-#Add Site column
-IL$Site <- c("Bottom", rep("Top",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), "Top", "Bottom", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Top", "Bottom")
-
-#Add Depth column
-IL$Depth <- c("Bottom", rep("Top",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), rep("Bottom",2), rep("Top",2), "Top", "Bottom", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Bottom", "Outlet", "Outlet", "Inlet", "Inlet", "Top", "Top", "Bottom", "Outlet", "Top", "Bottom")
-IL$Depth[IL$Depth == "Inlet"] <- "Top"
-IL$Depth[IL$Depth == "Outlet"] <- "Top"
-
-#Add Fraction column
-IL$Fraction <- substr(IL$Sample, 9,9)
-IL$Fraction[IL$Fraction == "F"] <- "Free"
-IL$Fraction[IL$Fraction == "P"] <- "Particle"
-
-#Remove blank columns
-IL$X1 = NULL
-IL$X2 = NULL
-
-############### Make final sample data table ###############
-sampleinfo <- data.frame(matrix(NA,length(scaled.names),2))
-
-# Add in Samples to LM matrix
-sampleinfo$Sample <- c(LM$Sample, ML$Sample, TB$Sample, IL$Sample)
-
-# Add Group (which group of lakes; Great, Estuary, Inland) column
-sampleinfo$Group <- c(LM$Group, ML$Group, TB$Group, IL$Group)
-  
-# Add Lake column
-sampleinfo$Lake <- c(LM$Lake, ML$Lake, TB$Lake, IL$Lake)
-  
-# Add Date column
-sampleinfo$Date <- c(LM$Date, ML$Date, TB$Date, IL$Date)
-
-# Add Site column
-sampleinfo$Site <- c(LM$Site, ML$Site, TB$Site, IL$Site)
-
-# Add Depth column
-sampleinfo$Depth <- c(LM$Depth, ML$Depth, TB$Depth, IL$Depth)
-
-# Add Fraction column
-sampleinfo$Fraction <- c(LM$Fraction, ML$Fraction, TB$Fraction, IL$Fraction)
-
-# Add Season column
-sampleinfo$Season <- substr(sampleinfo$Date, 1,2)
-sampleinfo$Season[sampleinfo$Season == "Sp"] <- "Spring"
-sampleinfo$Season[sampleinfo$Season == "Su"] <- "Summer"
-sampleinfo$Season[sampleinfo$Season == "Fa"] <- "Fall"
-
-# Add Origin column
-sampleinfo$Origin <- substr(sampleinfo$Fraction, 1, 10)
-sampleinfo$Origin[sampleinfo$Origin == "Free"] <- "Water"
-sampleinfo$Origin[sampleinfo$Origin == "cFree"] <- "Water"
-sampleinfo$Origin[sampleinfo$Origin == "Particle"] <- "Water"
-sampleinfo$Origin[sampleinfo$Origin == "cParticle"] <- "Water"
-
-# Remove blank columns
-sampleinfo$X1 = NULL
-sampleinfo$X2 = NULL
-
-write.table(sampleinfo, "sampleinfo", sep = "\t")
-
-```
-
-### Add updated sample data to most recent phyloseq object
-```{r}
-info <- "sampleinfo"
-info <- import_qiime_sample_data(info)
-final <- merge_phyloseq(scaled,info)
-    ## For some reason, the sample_data comes up NA when you View
-    ## But if you do sample_data(info), it comes up fine
-    ## Weird
-```
-
-### Time to remove the cDNA samples
-```{r}
-final <- subset_samples(final, Fraction != "cFree")
-final <- subset_samples(final, Fraction != "cParticle")
-final <- subset_samples(final, Lake != "Huron")
-```
 
 ### Let's take a look at the phyla in our normalized dataset
-```{r}
+```{r, fig.height = 5, fig.width = 8.5}
+
 # Merges things that have the same taxanomic rank
-good_phylum<-tax_glom(final,taxrank = "Phylum")
+good_phylum <- tax_glom(final, taxrank = "Phylum")
 
 # Transforms each merged phylum count to rel abun
 phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
 
 # If a phylum has <1% rel abun, change that to 0%
-otu_table(phylum.99)[otu_table(phylum.99)<.01] <- 0
+otu_table(phylum.99)[otu_table(phylum.99) < 0.01] <- 0
 
 # Remove anything with 0% rel abun
 phylum.99 = prune_taxa(taxa_sums(phylum.99)>0,phylum.99)
 
 # Create rank abundance of OTUs
-
-tiff("top5.tiff", width = 8.5, height = 5, units = "in", res = 500)
-barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),las=2,cex.axis=.7, space=F, names.arg=c("Proteobacteria", "Bacteroidetes","Actinobacteria","Verrucomicrobia", "Cyanobacteria"), col = c("khaki1", "mediumorchid3", "firebrick3", "lightslateblue", "chartreuse3"), main = "Top 5 Bacterial Phyla", xlab = "Phylum", ylab = "Relative Abundance (%)", ylim = c(0, 35), las=0)
-    ## 1 = Proteobacteria
-    ## 2 = Bacteroidetes
-    ## 3 = Actinobacteria
-    ## 4 = Verrucomicrobia!
-    ## Unclassified at phylum level = 9th most abundant
-dev.off()
+barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
+  las = 2,
+  cex.axis = 0.7, 
+  space = F, 
+  names.arg = c("Proteobacteria", "Bacteroidetes","Actinobacteria","Verrucomicrobia", "Cyanobacteria"), 
+  col = c("khaki1", "mediumorchid3", "firebrick3", "lightslateblue", "chartreuse3"), 
+  main = "Top 5 Bacterial Phyla", 
+  xlab = "Phylum", 
+  ylab = "Relative Abundance (%)", 
+  ylim = c(0, 35), 
+  las=0
+)
 ```
 
 ### STACKED BAR PLOT OF GROUPS
