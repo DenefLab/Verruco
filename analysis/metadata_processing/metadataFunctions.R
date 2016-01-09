@@ -1,4 +1,5 @@
 # Functions to make metadata for Verruco project
+library(dplyr)
 library(qdap)
 
 #########################################################################
@@ -22,11 +23,18 @@ makeLMLake <- function(x) {
 		NA))
 }
 
-makeLMSite <- function(x) {
+makeLMStation <- function(x) {
 	ifelse(grepl("MLB", x), "Buoy", 
 	ifelse(grepl("M110", x), "Far",
 	ifelse(grepl("M15", x), "Shore",
 		NA)))
+}
+
+makeLMSeason <- function(x) {
+  ifelse(grepl("Su", x), "Summer", 
+  ifelse(grepl("Sp", x), "Spring",
+  ifelse(grepl("Fa", x), "Fall",
+    NA)))
 }
 
 makeLMFraction <- function(x) {
@@ -53,8 +61,9 @@ makeMichiganData <- function(df) {
 		filter(Study == "LakeMichigan") %>%
 		mutate(Duplicates = makeLMnames(SampleID)) %>% 		
 		mutate(Group = makeLMGroup(SampleID)) %>%	
-		mutate(Site = "Michigan")  %>%				
-		mutate(Date = substr(SampleID, 1, 4)) %>%	
+		mutate(Station = makeLMStation(SampleID))  %>%	
+	  mutate(Season = makeLMSeason(SampleID)) %>%					
+	  mutate(Year = "2013") %>%
 		mutate(Lake = makeLMLake(SampleID)) %>%
 		mutate(Depth = makeLMDepth(SampleID)) %>%
 		mutate(Fraction = makeLMFraction(SampleID))
@@ -69,8 +78,8 @@ makeMichiganData <- function(df) {
 
 #Add Depth column
 makeILDepth <- function(df) {
-	ifelse(df$Site == "Epi" | df$Site == "Inlet", "Top",
-	ifelse(df$Site == "Hypo" | df$Site == "Outlet", "Bottom",
+	ifelse(df$Station == "Epi" | df$Station == "Inlet", "Top",
+	ifelse(df$Station == "Hypo" | df$Station == "Outlet", "Bottom",
 		NA))
 }
 
@@ -85,19 +94,26 @@ makeILFraction <- function(df) {
 
 makeInlandData <- function(full.df, inl.df) {
 
-	inl.df <- inl.df	# placeholder
-
-	df.inland <-
+	df.subset <-
 		full.df %>%	
-		filter(Study == "Inland") %>%	
-		#left_join(inl.df, by = c("SampleID" = "Sample")) %>%	# To be fixed	 	
+		filter(Study == "Inland" & Blank == "no") 
+
+	# Grap substring of SampleID, removing fraction
+	df.subset$sampnum <- substr(df.subset$SampleID, 1, 7)
+
+	joined.df <- left_join(df.subset, inl.df, by = c("sampnum" = "Sample"))
+
+	newdf.inland <- 
+		df.subset %>%	 	
 		mutate(Duplicates = SampleID) %>% 		# No duplicates in this study
 		mutate(Group = "Inland") %>%					
-		mutate(Site = NA) %>%					# To be fixed
-		mutate(Date = NA) %>%					# To be fixed
-		mutate(Lake = NA) %>%					# To be fixed
-		mutate(Depth = NA) %>%		# To be fixed
-		mutate(Fraction = makeILFraction(.))
+		mutate(Station = joined.df$Station) %>%					
+		mutate(Season = joined.df$Season) %>%					
+		mutate(Year = joined.df$Year) %>%
+		mutate(Lake = joined.df$Lake) %>%					
+		mutate(Depth = makeILDepth(joined.df)) %>%		
+		mutate(Fraction = makeILFraction(.)) %>%
+	  select(-sampnum)
 }
 
 
@@ -108,13 +124,14 @@ makeInlandData <- function(full.df, inl.df) {
 #########################################################################
 
 
-# Add Date column
-makeMuskDate <- function(x) {
-	ifelse(grepl("514", x), "Sp14",
-	ifelse(grepl("714", x), "Su14",
-	ifelse(grepl("914", x), "Fa14",
+# Add Season column
+makeMuskSeason <- function(x) {
+	ifelse(grepl("514", x), "Spring",
+	ifelse(grepl("714", x), "Summer",
+	ifelse(grepl("914", x), "Fall",
 		NA)))
 }
+
 
 
 #Add Site column
@@ -139,7 +156,7 @@ makeMuskDepth <- function(x) {
 makeMuskFraction <- function(x) {
 	# Extract the letter between the two periods (i.e the 2nd column)
 	x <- as.character(x)
-	fract <- matrix(unlist(strsplit(x, "[.]")), ncol = 3, byrow = TRUE)[,2]
+	fract <- matrix(unlist(strsplit(x, "[.]")), ncol = 3, byrow = TRUE)[ ,2]
 	
 	# Conditional
 	ifelse(fract == "F", "Free",
@@ -156,8 +173,9 @@ makeMuskegonData <- function(df) {
 		filter(Study == "Muskegon") %>%
 		mutate(Duplicates = SampleID) %>%
 		mutate(Group = "Estuary") %>%
-		mutate(Site = makeMuskSite(SampleID)) %>%
-		mutate(Date = makeMuskDate(SampleID)) %>%
+		mutate(Station = makeMuskSite(SampleID)) %>%
+		mutate(Season = makeMuskSeason(SampleID)) %>%
+		mutate(Year = "2014") %>%
 		mutate(Lake = "Muskegon") %>%
 		mutate(Depth = makeMuskDepth(SampleID)) %>%
 		mutate(Fraction = makeMuskFraction(SampleID))
@@ -188,19 +206,27 @@ makeTBFraction <- function(x) {
 		NA)))	
 }
 
+# Add Season column
+makeTBSeason <- function(x) {
+	ifelse(grepl("Sp", x), "Spring",
+	ifelse(grepl("Su", x), "Summer",
+		NA))
+}
+
 
 makeTbData <- function(df) {
 
 	df.TB <-
 		df %>% 
-		filter(Study == "ThunderBay")%>%
+		filter(Study == "ThunderBay") %>%
 		mutate(Duplicates = SampleID) %>%		# No duplicates in this study
 		mutate(Group = "Laurentian") %>%
-		mutate(Site = char2end(id, ".", 2)) %>%
-		mutate(Date = substr(SampleID, 1, 4)) %>%
+		mutate(Station = char2end(SampleID, ".", 2)) %>%
+		mutate(Season = makeTBSeason(SampleID)) %>%
+		mutate(Year = "2012") %>%
 		mutate(Lake = "Huron") %>%
-		mutate(Depth = makeTBDepth(id)) %>%
-		mutate(Fraction = makeTBFraction(id))		
+		mutate(Depth = makeTBDepth(SampleID)) %>%
+		mutate(Fraction = makeTBFraction(SampleID))		
 
 }
 
@@ -213,11 +239,12 @@ makeTbData <- function(df) {
 makeNonData <- function(df) {
 	df.none <-
 		df %>%
-		filter(is.na(Study)) %>%
+		filter(is.na(Study) | Blank == "yes") %>%
 		mutate(Duplicates = NA) %>%		
 		mutate(Group = NA) %>%
-		mutate(Site = NA) %>%
-		mutate(Date = NA) %>%
+		mutate(Station = NA) %>%
+		mutate(Season = NA) %>%
+		mutate(Year = NA) %>%
 		mutate(Lake = NA) %>%
 		mutate(Depth = NA) %>%
 		mutate(Fraction = NA)
