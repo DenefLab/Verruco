@@ -51,8 +51,12 @@ map <- read.csv(mapfile)
 map <- sample_data(map)
 rownames(map) <- map$SampleID
 mothur.merge <- merge_phyloseq(mothurdata, map)
-  
+```
 
+
+
+### Filter data
+```{r}
 # Filter out non-samples (i.e. water, mock) and non-bacteria
 verruco <-
   mothur.merge %>%
@@ -63,8 +67,8 @@ verruco <-
     ) %>%
     subset_samples(
       Blank == "no" &
-      !Fraction %in% c("cFree", "cParticle") &
-      Lake != "Huron" #?????????????????????
+      !Fraction %in% c("cFree", "cParticle") & 
+      Lake != "Huron" 
     ) 
 
 # Also prune out taxa which were only present in removed samples
@@ -78,7 +82,8 @@ verruco <- prune_taxa(taxa_sums(verruco) > 0, verruco)
 # Look at # of reads
 ggplot(data.frame(sum = sample_sums(verruco)), aes(sum)) + 
   geom_histogram(colour = "white", fill = "blue") + 
-  ggtitle("Sample read counts") + xlab("total sequences")
+  ggtitle("Sample read counts") + 
+  xlab("total sequences")
 
 # Min, Mean, Max of sample read counts
 min(sample_sums(verruco))
@@ -112,7 +117,8 @@ sample_data(verr.dupmerge) <- duplicate.metadata
 # Look at # of reads
 ggplot(data.frame(sum = sample_sums(verr.dupmerge)), aes(sum)) + 
   geom_histogram(colour = "white", fill = "blue") +
-  ggtitle("Sample read counts") + xlab("total sequences")
+  ggtitle("Sample read counts") + 
+  xlab("total sequences")
 
 # Mean, max and min of sample read counts
 min(sample_sums(verr.dupmerge))
@@ -149,20 +155,20 @@ phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
 otu_table(phylum.99)[otu_table(phylum.99) < 0.01] <- 0
 
 # Remove anything with 0% rel abun
-phylum.99 = prune_taxa(taxa_sums(phylum.99)>0,phylum.99)
+phylum.99 = prune_taxa(taxa_sums(phylum.99) > 0, phylum.99)
 
 # Create rank abundance of OTUs
 barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
   las = 2,
   cex.axis = 0.7, 
   space = F, 
-  names.arg = c("Proteobacteria", "Bacteroidetes","Actinobacteria","Verrucomicrobia", "Cyanobacteria"), 
+  names.arg = c("Proteobacteria", "Bacteroidetes","Actinobacteria", "Verrucomicrobia", "Cyanobacteria"), 
   col = c("khaki1", "mediumorchid3", "firebrick3", "lightslateblue", "chartreuse3"), 
   main = "Top 5 Bacterial Phyla", 
   xlab = "Phylum", 
   ylab = "Relative Abundance (%)", 
   ylim = c(0, 35), 
-  las=0
+  las = 0
 )
 ```
 
@@ -171,8 +177,9 @@ barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
 ################# TIME TO CREATE STACKED BAR PLOT OF GROUPS #################
 
 # Merge samples by group
-phy.group<-merge_samples(phylum.99, "Group")
-    ## But this only sums them
+phy.group <- merge_samples(phylum.99, "Group")
+
+## But this only sums them
 phy.samp <- data.frame(sample_data(phylum.99))
 
 # Average groups
@@ -195,7 +202,7 @@ phy.group.merge <- merge_phyloseq(phy.tax, phy.otu, phy.samp)
 ########### MAKE OBJECT TO BE USED IN GGPLOT ###########
 phylum_long <- psmelt(phy.group.merge)
 phylum_sort <- arrange(phylum_long, Phylum)
-phylum_sort$Sample <- factor(phylum_sort$Sample, levels=c("Laurentian","Estuary","Inland"))
+phylum_sort$Sample <- factor(phylum_sort$Sample, levels = c("Laurentian", "Estuary", "Inland"))
 
 # Set phylum plotting colors
 phylum.colors <- c(Acidobacteria = "lightblue1", Actinobacteria = "firebrick3", Armatimonadetes = "salmon", "BD1-5" = "gold", Bacteroidetes = "mediumorchid3", "Candidate_division_OD1" = "tan", "Candidate_division_OP3" = "grey76", "Candidate_division_OP8" = "darkolivegreen1", "Candidate_division_SR1" = "cornflowerblue", "Candidate_division_WS3" = "purple4", Clamydiae = "violetred1", Chlorobi = "goldenrod", Chloroflexi = "firebrick4", Cyanobacteria = "chartreuse3", Fibrobacteres = "black", Firmicutes = "white", Gemmatimonadetes = "grey", Lentisphaerae = "yellow", "NPL-UPA2" = "hotpink", Nitrospirae = "midnightblue", Planctomycetes = "deepskyblue", Proteobacteria = "khaki1", Spirochaetae = "coral1", "TM6" = "slategray1", Verrucomicrobia = "lightslateblue", unclassified = "green4")
@@ -229,17 +236,17 @@ dev.off()
 
 ### LOOKING AT INTRA-VERRUCO COMMUNITY
 ```{r}
-phy.Ver <- subset_taxa(phylum.99,Phylum=="Verrucomicrobia")
+phy.Ver <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
 # min, max, & mean
-mins<-min(sample_sums(phy.Ver))
-paste(c("The minimum sample read count is",mins))
-means<-mean(sample_sums(phy.Ver))
-paste(c("The mean sample read count is",means))
-maxs<-max(sample_sums(phy.Ver))
-paste(c("The max sample read count is",maxs))
+mins <- min(sample_sums(phy.Ver))
+paste(c("The minimum sample read count is", mins))
+means <- mean(sample_sums(phy.Ver))
+paste(c("The mean sample read count is", means))
+maxs <- max(sample_sums(phy.Ver))
+paste(c("The max sample read count is", maxs))
 
 # Merge samples by Group
-phy.group.Ver<-merge_samples(phy.Ver, "Group")
+phy.group.Ver <- merge_samples(phy.Ver, "Group")
 
 # Average groups
 group.Ver <- data.frame(otu_table(phy.group.Ver))
@@ -254,17 +261,17 @@ group.Ver[3,] <- (group.Ver[3,]/45)
 group.Ver$Lake_Type <- rownames(group.Ver)
 
 # Really crappy bar plot
-ggplot(data=group.Ver, aes(x=Lake_Type, y=Otu000064)) +
-                      geom_bar(stat="identity", fill="dark grey", colour="black") 
+ggplot(data = group.Ver, aes(x = Lake_Type, y = Otu000064)) +
+  geom_bar(stat = "identity", fill = "dark grey", colour = "black") 
 
 # Unclassifed phylum
 phy.unclas <- subset_taxa(phylum.99, Phylum == "unclassified")
 # min, max, & mean
-mins<-min(sample_sums(phy.unclas))
+mins <- min(sample_sums(phy.unclas))
 paste(c("The minimum sample read count is",mins))
-means<-mean(sample_sums(phy.unclas))
+means <- mean(sample_sums(phy.unclas))
 paste(c("The mean sample read count is",means))
-maxs<-max(sample_sums(phy.unclas))
+maxs <- max(sample_sums(phy.unclas))
 paste(c("The max sample read count is",maxs))
 
 
@@ -274,7 +281,7 @@ paste(c("The max sample read count is",maxs))
 ### Separate out Verrucos
 ```{r}
 # Phyloseq object of ALL Verruco OTUs
-Ver <- subset_taxa(final,Phylum=="Verrucomicrobia")
+Ver <- subset_taxa(final, Phylum == "Verrucomicrobia")
 
 # For additional analysis -> Removing Sediment samples
 phy.Ver.water <- subset_samples(phy.Ver, Fraction != "Sediment")
@@ -284,7 +291,10 @@ phy.Ver.water <- subset_samples(phy.Ver, Fraction != "Sediment")
 ### Making phy.Ver normal
 ```{r}
 phy.Ver.otu <- as.numeric(otu_table(phy.Ver))
-hist(phy.Ver.otu,breaks=c(0.0, 0.025,0.05,0.075,0.1,0.125,0.15,0.175,0.2,0.225,0.25,0.275,0.3,0.325,0.35,0.375,0.4,0.425,0.45,0.475,0.5), xlab = "Relative Abundance", main = "Original Histogram")
+hist(phy.Ver.otu,
+  breaks = seq(0, 0.5, by = 0.025), 
+  xlab = "Relative Abundance", 
+  main = "Original Histogram")
     ## NOT NORMAL
     ## SKEWED RIGHT
 qqnorm(phy.Ver.otu)
@@ -294,7 +304,7 @@ qqline(phy.Ver.otu)
 # Test for normality
 shapiro.test(phy.Ver.otu)
     ## DEF not normal (p-value = 0)
-ks.test(phy.Ver.otu, "pnorm", mean=mean(phy.Ver.otu), sd=sd(phy.Ver.otu))
+ks.test(phy.Ver.otu, "pnorm", mean = mean(phy.Ver.otu), sd = sd(phy.Ver.otu))
     # NOT NORMAL (p-value = 0.01615)
 
 ##### Log Transformation #####
@@ -318,7 +328,11 @@ ks.test(log.ver, "pnorm", mean=mean(log.ver), sd=sd(log.ver))
 
 ####### Repeat for phy.Ver.water #######
 phy.Ver.water.otu <- as.numeric(otu_table(phy.Ver.water))
-hist(phy.Ver.water.otu,breaks=c(0.0, 0.025,0.05,0.075,0.1,0.125,0.15,0.175,0.2,0.225,0.25,0.275,0.3,0.325,0.35,0.375,0.4,0.425,0.45,0.475,0.5), xlab = "Relative Abundance", main = "Original Histogram")
+hist(phy.Ver.water.otu, 
+  breaks = seq(0, .5, by = 0.025), 
+  xlab = "Relative Abundance", 
+  main = "Original Histogram"
+)
     ## NOT NORMAL
     ## SKEWED RIGHT
 qqnorm(phy.Ver.water.otu)
@@ -328,12 +342,12 @@ qqline(phy.Ver.water.otu)
 # Test for normality
 shapiro.test(phy.Ver.water.otu)
     ## DEF not normal (p-value = 0)
-ks.test(phy.Ver.water.otu, "pnorm", mean=mean(phy.Ver.water.otu), sd=sd(phy.Ver.water.otu))
+ks.test(phy.Ver.water.otu, "pnorm", mean = mean(phy.Ver.water.otu), sd = sd(phy.Ver.water.otu))
     # NOT NORMAL (p-value = 0.0275)
 
 ##### Log Transformation #####
 log.ver.water <- log(phy.Ver.water.otu)
-hist(log.ver.water, breaks=18, main = "Log-Transformed Histogram", xlab = "Log(Relative Abundance)")
+hist(log.ver.water, breaks = 18, main = "Log-Transformed Histogram", xlab = "Log(Relative Abundance)")
     ## LOOKS BEAUTIFUL!
 qqnorm(log.ver.water)
 qqline(log.ver.water)
@@ -341,7 +355,7 @@ qqline(log.ver.water)
 shapiro.test(log.ver.water)
     ## p-value = 0.05037
     ## Barely non-significant...I want a bigger p-value
-ks.test(log.ver.water, "pnorm", mean=mean(log.ver.water), sd=sd(log.ver.water))
+ks.test(log.ver.water, "pnorm", mean = mean(log.ver.water), sd = sd(log.ver.water))
     ## p-value = 0.5383
     ## This is A LOT better
 
@@ -350,10 +364,10 @@ ks.test(log.ver.water, "pnorm", mean=mean(log.ver.water), sd=sd(log.ver.water))
 
 ################ Import normal data in phy.Ver phyloseq object ################
 phy.Ver.otu <- data.frame(otu_table(phy.Ver))
-phy.Ver.otu[1,] <- log.ver
+phy.Ver.otu[1, ] <- log.ver
 
 phy.Ver.water.otu <- data.frame(otu_table(phy.Ver.water))
-phy.Ver.water.otu[1,] <- log.ver.water
+phy.Ver.water.otu[1, ] <- log.ver.water
 
 ################# THIS IS THE VERRUCO PHYLUM PHYLOSEQ OBJECT YOU'LL USE IN THE FUTURE #################
 otu <- otu_table(phy.Ver.otu, taxa_are_rows = TRUE)
@@ -850,44 +864,6 @@ nmds_soren_quad <- ggplot(nmds_soren, aes(MDS1, MDS2, color = quadrant, shape = 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-#nmds_bc_quad <- ggplot(nmds_bray, aes(MDS1*10, MDS2*10, color = quadrant, shape = ProdLevel)) +
- # xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") + 
-  #geom_point(size= 6, alpha=0.9) + theme_bw() +   geom_point(colour="white", size = 2) +
-  #annotate("text", label = "B", x = (min(nmds_bray$MDS1*10) + 0.05), y = (max(nmds_bray$MDS2*10) -0.02), face = "bold",size = 10, colour = "black") +
-  #annotate("text", label = "Stress = 0.17", x = (max(nmds_bray$MDS1*10) -0.2), y = (max(nmds_bray$MDS2*10) -0.02), size = 6, colour = "black") +
- # scale_color_manual(name = "Habitat", breaks=c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"),
- #                    labels = c("Free-Living Epilimnion", "Free-Living Mixed",  "Free-Living Hypolimnion", "Particle-Associated Epilimnion", "Particle-Associated Mixed", "Particle-Associated Hypolimnion"), 
-  #                   values = c("darkgreen", "mediumblue", "purple3", "green", "deepskyblue", "orchid1")) +
-  #scale_shape_manual(name = "Nutrient Level", breaks = c("Productive", "Unproductive"), 
-                     #labels = c("High", "Low"),
-                     #values = c(15, 17)) +
-#   guides(shape = guide_legend(order=1), color = guide_legend(order=2)) +
-#   scale_y_continuous(breaks=seq(-0.6, 0.6, 0.3), lim = c(-0.6,0.7)) +
-#   theme(axis.text.x = element_text(colour="black", vjust=0.5, size=14), 
-#         axis.text.y = element_text(colour="black", vjust=0.5, size=14),
-#         axis.title.x = element_text(face="bold", size=16),
-#         axis.title.y = element_text(face="bold", size=16),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size = 12),
-#         plot.title = element_text(size = 16, face="bold"),
-#         ###LEGEND TOP RIGHT CORNER
-#         legend.position = "right");  nmds_bc_quad
-
-
-
-
 ############################ PREPARING FOR ADONIS ############################
 test.otu <- data.frame(otu_table(Ver.rel))
 test.otu <- t(test.otu)
@@ -906,7 +882,7 @@ adonis.group <- adonis(test.bray ~ Group, test.sample)
     ## SIGNIFICANT (p-value = 0.001)
     ## R2 = 0.11273
 beta.tax = betadisper(test.bray, test.sample$Group)
-p=permutest(beta.tax)
+p <- permutest(beta.tax)
 p$tab
     ## Not significant (p-value = 0.911)
     ## F = 0.0925504
@@ -919,8 +895,8 @@ le.samp <- data.frame(sample_data(le.phy))
 adonis.group <- adonis(le.bray ~ Group, le.samp)
     ## LAURENTIAN & ESTUARY ARE SIGNIFICANT (p-value = 0.001)
     ## R2 = 0.11037
-beta.tax = betadisper(le.bray, le.samp$Group)
-p=permutest(beta.tax)
+beta.tax <- betadisper(le.bray, le.samp$Group)
+p <- permutest(beta.tax)
 p$tab
     ## Not significant (p-value = 0.756)
     ## F = 0.1158866
@@ -1026,8 +1002,8 @@ ps.samp <- data.frame(sample_data(ps.phy))
 adonis.fraction <- adonis(ps.bray ~ Fraction, ps.samp)
     ## PARTICLE VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
     ## R2 = 0.14117
-beta.tax = betadisper(ps.bray, ps.samp$Fraction)
-p=permutest(beta.tax)
+beta.tax <- betadisper(ps.bray, ps.samp$Fraction)
+p <- permutest(beta.tax)
 p$tab
     ## SIGNIFICANT (p-value = 0.001)
     ## F = 52.04351
@@ -1040,8 +1016,8 @@ fs.samp <- data.frame(sample_data(fs.phy))
 adonis.fraction <- adonis(fs.bray ~ Fraction, fs.samp)
     ## FREE VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
     ## R2 = 0.18408
-beta.tax = betadisper(fs.bray, fs.samp$Fraction)
-p=permutest(beta.tax)
+beta.tax <- betadisper(fs.bray, fs.samp$Fraction)
+p <- permutest(beta.tax)
 p$tab
     ## SIGNIFICANT (p-value = 0.01)
     ## F = 23.51907
@@ -1197,28 +1173,6 @@ plot_ordination(Ver.rel, Ver.nmds, type="Sample", color="Group", title="Group")
 Ver.rel.otu <- data.frame(otu_table(Ver.rel))
 Ver.rel.otu.bray <- vegdist(Ver.rel.otu, method="bray")
 adonis.group <- adonis(Ver.rel.otu.bray~Group, as(sample_data(Ver.rel),"data.frame"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ```
@@ -1441,25 +1395,6 @@ ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
 
 
 
-
-
-
-#ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
-  #geom_bar(stat="identity", position=position_dodge(),  fill = "magenta4", colour = "black") +
-  #theme_bw() + ggtitle("Phyla Above 0.1% in All Samples") +
-  #xlab("Phylum") + ylab("Mean Relative Abundance (%)") +
-  geom_errorbar(aes(ymin = PercentPhy -se, ymax = PercentPhy +se), width = 0.25) + coord_flip() +
-  #theme(axis.title.x = element_text(face="bold", size=16),
-   #     axis.text.x = element_text(angle=0, colour = "black", size=14),
-    #    axis.text.y = element_text(colour = "black", size=14),
-     #   axis.title.y = element_text(face="bold", size=16),
-      #  plot.title = element_text(face="bold", size = 20),
-       # legend.title = element_text(size=12, face="bold"),
-        #legend.text = element_text(size = 12),
-        #legend.position="none"); abund_plot
-
-
-
 #good_phylum_proteo <-tax_glom(merged_final,taxrank = "Phylum")
 goodsamps_phylum <- tax_glom(good_phylum_proteo,taxrank = "Phylum")
 goodsamps_phy_melt <- psmelt(goodsamps_phylum)  ##  Melt it into a dataframe 
@@ -1505,10 +1440,6 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
         legend.position="none"); abund_plot
 
 
-
-
-
-
 ```
 
 
@@ -1521,29 +1452,4 @@ nacols <- function(df) {
   colnames(df)[unlist(lapply(df, function(x) any(is.na(x))))]
 }
 ```
-
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
 
