@@ -18,6 +18,16 @@ library(dplyr)
 library(scales)
 library(grid)
 library(reshape2)
+library(phangorn)
+library(phytools)
+library(DESeq)
+library(DESeq2)
+library(pander)
+library(ade4)
+library(labdsv)
+#library(shiny)
+#library(shinyFiles)
+#library(samr)
 theme_set(theme_bw())
 set.seed(1)
 ```
@@ -25,12 +35,24 @@ set.seed(1)
 ### Import Data
 ```{r}
 load("VerrucoData.RData")
-
 ```
 
 
-### Trim & normalize data based on # of reads/sequence depth
-```{r}
+### Visualize overall phyloseq object
+```{r verruco.visualize}
+# Check the sequencing depth of each sample 
+sums_verruco <- data.frame(colSums(otu_table(verruco)))
+colnames(sums_verruco) <- "Sample_TotalSeqs"
+sums_verruco$sample <- row.names(sums_verruco)
+sums_verruco <- arrange(sums_verruco, Sample_TotalSeqs)
+
+# Create a plot of the number of sequences per sample
+ggplot(sums_verruco, aes(x=reorder(sample,Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("Number of Sequences per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("Total Number of Sequences per Sample") + 
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
+
 # Look at # of reads
 ggplot(data.frame(sum = sample_sums(verruco)), aes(sum)) + 
   geom_histogram(colour = "white", fill = "blue") + 
@@ -45,7 +67,7 @@ max(sample_sums(verruco))
 
 
 ### Merge Duplicates & create new phyloseq object
-```{r}
+```{r merge.dups}
 # Merges duplicates
 verr.dupmerge <- merge_samples(verruco, "Duplicates")
 
@@ -63,9 +85,21 @@ sample_data(verr.dupmerge) <- duplicate.metadata
 
 ```
 
+### Visualize merged dataset
+```{r visualize.verr.dupmerge}
+# Check the sequencing depth of each sample 
+sums_dupmerge <- data.frame(rowSums(otu_table(verr.dupmerge)))
+colnames(sums_dupmerge) <- "Sample_TotalSeqs"
+sums_dupmerge$sample <- row.names(sums_dupmerge)
+sums_dupmerge <- arrange(sums_dupmerge, Sample_TotalSeqs)
 
-### Trim & normalize data based on # of reads/sequence depth
-```{r}
+# Create a plot of the number of sequences per sample
+ggplot(sums_dupmerge, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("Number of Sequences per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("Total Number of Sequences per Sample") + 
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
+
 # Look at # of reads
 ggplot(data.frame(sum = sample_sums(verr.dupmerge)), aes(sum)) + 
   geom_histogram(colour = "white", fill = "blue") +
@@ -76,29 +110,74 @@ ggplot(data.frame(sum = sample_sums(verr.dupmerge)), aes(sum)) +
 min(sample_sums(verr.dupmerge))
 mean(sample_sums(verr.dupmerge))
 max(sample_sums(verr.dupmerge))
-
 ```
 
-```{r}
+
+### Trim & normalize data based on # of reads/sequence depth
+```{r scale.data}
+# Function to normalize data
+scale_reads <- function(physeq,n){
+  physeq.scale <- transform_sample_counts(physeq, function(x) {round((n*x/sum(x)))})
+  #otu_table(physeq.scale) = round(otu_table(physeq.scale))
+  physeq.scale = prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
+  return(physeq.scale)
+}
 
 # Normalize our dataset!
-scaled <- scale_reads(manual_merged)   ### Scaled to 10,468
+scaled <- scale_reads(verr.dupmerge,10468)   ### Scaled to 10,468 (minumum sample)
+sample_data(scaled)$Group <- ordered(sample_data(scaled)$Group, levels=c("Laurentian", 
+                                                                   "Estuary","Inland"))
+sample_data(scaled)$Fraction <- ordered(sample_data(scaled)$Fraction,
+                                     levels = c("Particle","Free","Sediment"))
+sample_data(scaled)$Depth <- ordered(sample_data(scaled)$Depth,
+                                  levels = c("Top","DCM", "Bottom","Sediment"))
+sample_data(scaled)$Season <- ordered(sample_data(scaled)$Season,
+                                   levels = c("Spring","Summer","Fall"))
+
+# Check the sequencing depth of each sample 
+sums_scaled <- data.frame(rowSums(otu_table(scaled)))
+colnames(sums_scaled) <- "Sample_TotalSeqs"
+sums_scaled$SampleID <- row.names(sums_scaled)
+sums_scaled <- arrange(sums_scaled, Sample_TotalSeqs)
+
+# Create a plot of the number of sequences per sample
+ggplot(sums_scaled, aes(x=SampleID, y = Sample_TotalSeqs)) + 
+  ylab("Number of Sequences per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("Total Number of Sequences per Sample") + 
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
 
 # Let's visualized our normalized dataset
 ggplot(data.frame(sum = sample_sums(scaled)), aes(sum)) + 
   geom_histogram(colour = "black", fill = "deeppink") +
   ggtitle("Sample read counts") + 
   xlab("total sequences")
+```
 
+
+### Rank abundance curve of top 300 OTUs
+```{r rankabund}
+### Get top 500 most abundant OTUs
+top300.taxa <- sort(taxa_sums(scaled), TRUE)[1:300]
+top300.OTUs <- prune_taxa(names(top300.taxa), scaled)
+top300.sums <- data.frame(taxa_sums(top300.OTUs))
+
+ggplot(top300.sums,aes(x=row.names(top300.sums), y=taxa_sums.top300.OTUs.)) + 
+  ylab("Number of Sequences per OTU") + scale_x_discrete(expand = c(0,0)) + 
+  scale_y_continuous(expand = c(0,0)) + theme_classic() +
+  geom_bar(stat="identity",colour="black",fill="darkturquoise")  + xlab("OTU Rank") + 
+  ggtitle("Rank Abundance Curve of the Top 300 OTUs") + 
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
 ```
 
 
 
 ### Let's take a look at the phyla in our normalized dataset
-```{r, fig.height = 5, fig.width = 8.5}
+```{r phyla.level, fig.height = 5, fig.width = 8.5}
 
 # Merges things that have the same taxanomic rank
-good_phylum <- tax_glom(final, taxrank = "Phylum")
+good_phylum <- tax_glom(scaled, taxrank = "Phylum")
 
 # Transforms each merged phylum count to rel abun
 phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
@@ -110,7 +189,7 @@ otu_table(phylum.99)[otu_table(phylum.99) < 0.01] <- 0
 phylum.99 = prune_taxa(taxa_sums(phylum.99) > 0, phylum.99)
 
 # Create rank abundance of OTUs
-barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
+top5phyla.barplot <- barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
   las = 2,
   cex.axis = 0.7, 
   space = F, 
@@ -122,17 +201,19 @@ barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
   ylim = c(0, 35), 
   las = 0
 )
+
 ```
 
 ### STACKED BAR PLOT OF GROUPS
-```{r}
+```{r, fig.width = 7, fig.height = 8}
 ################# TIME TO CREATE STACKED BAR PLOT OF GROUPS #################
 
 # Merge samples by group
 phy.group <- merge_samples(phylum.99, "Group")
 
+
 ## But this only sums them
-phy.samp <- data.frame(sample_data(phylum.99))
+phy.samp <- data.frame(sample_data(phy.group))
 
 # Average groups
 phy.otu <- data.frame(otu_table(phy.group))
@@ -150,14 +231,34 @@ phy.tax <- tax_table(phy.group)
 phy.samp <- sample_data(phy.group)
 phy.group.merge <- merge_phyloseq(phy.tax, phy.otu, phy.samp)
     ## Makes new phyloseq object of 3 groups: Estuary, Inland, Laurentian
+# Remove taxa with a relative abundane of less than 1%
+otu_table(phy.group.merge)[otu_table(phy.group.merge) < 1] <- 0
+phy.group.merge <- prune_taxa(taxa_sums(phy.group.merge) > 0, phy.group.merge)
+
+
+
         
 ########### MAKE OBJECT TO BE USED IN GGPLOT ###########
 phylum_long <- psmelt(phy.group.merge)
 phylum_sort <- arrange(phylum_long, Phylum)
 phylum_sort$Sample <- factor(phylum_sort$Sample, levels = c("Laurentian", "Estuary", "Inland"))
 
-# Set phylum plotting colors
-phylum.colors <- c(Acidobacteria = "lightblue1", Actinobacteria = "firebrick3", Armatimonadetes = "salmon", "BD1-5" = "gold", Bacteroidetes = "mediumorchid3", "Candidate_division_OD1" = "tan", "Candidate_division_OP3" = "grey76", "Candidate_division_OP8" = "darkolivegreen1", "Candidate_division_SR1" = "cornflowerblue", "Candidate_division_WS3" = "purple4", Clamydiae = "violetred1", Chlorobi = "goldenrod", Chloroflexi = "firebrick4", Cyanobacteria = "chartreuse3", Fibrobacteres = "black", Firmicutes = "white", Gemmatimonadetes = "grey", Lentisphaerae = "yellow", "NPL-UPA2" = "hotpink", Nitrospirae = "midnightblue", Planctomycetes = "deepskyblue", Proteobacteria = "khaki1", Spirochaetae = "coral1", "TM6" = "slategray1", Verrucomicrobia = "lightslateblue", unclassified = "green4")
+# Set phylum plotting colors for 12 taxa
+phylum.colors <- c(Acidobacteria="lightblue1",
+                   Actinobacteria="firebrick",
+                   Armatimonadetes="salmon",
+                   Bacteroidetes="mediumorchid3",
+                   Chlorobi="gold",
+                   Chloroflexi="#ff7f00",
+                   Cyanobacteria="#33a02c",
+                   Nitrospirae="midnightblue",
+                   Planctomycetes="deepskyblue",
+                   Proteobacteria="khaki1",
+                   Verrucomicrobia="lightslateblue",
+                   unclassified="#662506")
+
+# Set phylum plotting colors for 26 taxa
+#phylum.colors <- c(Acidobacteria = "lightblue1", Actinobacteria = "firebrick3", Armatimonadetes = "salmon", "BD1-5" = "gold", Bacteroidetes = "mediumorchid3", "Candidate_division_OD1" = "tan", "Candidate_division_OP3" = "grey76", "Candidate_division_OP8" = "darkolivegreen1", "Candidate_division_SR1" = "cornflowerblue", "Candidate_division_WS3" = "purple4", Clamydiae = "violetred1", Chlorobi = "goldenrod", Chloroflexi = "firebrick4", Cyanobacteria = "chartreuse3", Fibrobacteres = "black", Firmicutes = "white", Gemmatimonadetes = "grey", Lentisphaerae = "yellow", "NPL-UPA2" = "hotpink", Nitrospirae = "midnightblue", Planctomycetes = "deepskyblue", Proteobacteria = "khaki1", Spirochaetae = "coral1", "TM6" = "slategray1", Verrucomicrobia = "lightslateblue", unclassified = "green4")
   
   #c(Proteobacteria = "deepskyblue", Actinobacteria = "royalblue", Cyanobacteria = "chartreuse3", Bacteroidetes = "darkorange", Planctomycetes = "mediumorchid3", Chloroflexi = "darkgreen", Verrucomicrobia = "purple4", Armatimonadetes = "red", "NPL-UPA2"="#652926", Chlorobi = "cyan2", Gemmatimonadetes = "black", Acidobacteria = "grey76", "Candidate_division_OP3" = "hotpink", Nitrospirae = "blue", "Candidate_division_OD1" = "brown", Spirochaetae = "gold3", "Candidate_division_OP8" = "goldenrod1", Chlamydiae = "violet", Lentisphaerae = "yellow1", "BD1-5" = "chartreuse", "TM6" = "olivedrab", unclassified = "grey", Firmicutes = "blue4", "Candidate_division_WS3"= "magenta", Fibrobacteres = "darkred", "Candidate_division_SR1" = "tan3" )
   
@@ -165,7 +266,7 @@ phylum.colors <- c(Acidobacteria = "lightblue1", Actinobacteria = "firebrick3", 
 
 # GGPLOT it
 
-tiff("stackedbar.tiff", width = 7, height = 8, units = "in", res = 500)
+#tiff("stackbar.group.tiff", width = 7, height = 8, units = "in", res = 500)
 ggplot(phylum_sort, aes(x=Sample, y=Abundance, fill=Phylum)) +
           geom_bar(stat="identity", position="fill", color="black") +
           scale_y_continuous(labels = percent_format()) +
@@ -180,15 +281,16 @@ ggplot(phylum_sort, aes(x=Sample, y=Abundance, fill=Phylum)) +
                 legend.position="right") +
           guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) + 
           xlab("Group") +
-          ylab("Relative Abundance (taxa>0.1%)") +
+          ylab("Relative Abundance (taxa>1%)") +
           ggtitle("Lake Bacterial Community Composition")
-dev.off()
+#dev.off()
 
 ```
 
 ### LOOKING AT INTRA-VERRUCO COMMUNITY
 ```{r}
 phy.Ver <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
+# This is the relative abundance of Verrucos in each sample
 # min, max, & mean
 mins <- min(sample_sums(phy.Ver))
 paste(c("The minimum sample read count is", mins))
@@ -213,11 +315,13 @@ group.Ver[3,] <- (group.Ver[3,]/45)
 group.Ver$Lake_Type <- rownames(group.Ver)
 
 # Really crappy bar plot
+# Averaged relative abundance of Verrucos in each group of lake
 ggplot(data = group.Ver, aes(x = Lake_Type, y = Otu000064)) +
   geom_bar(stat = "identity", fill = "dark grey", colour = "black") 
 
 # Unclassifed phylum
 phy.unclas <- subset_taxa(phylum.99, Phylum == "unclassified")
+# Relative abundance of unclassified taxa in each sample
 # min, max, & mean
 mins <- min(sample_sums(phy.unclas))
 paste(c("The minimum sample read count is",mins))
@@ -233,7 +337,21 @@ paste(c("The max sample read count is",maxs))
 ### Separate out Verrucos
 ```{r}
 # Phyloseq object of ALL Verruco OTUs
-Ver <- subset_taxa(final, Phylum == "Verrucomicrobia")
+Ver <- subset_taxa(scaled, Phylum == "Verrucomicrobia")
+
+# Check the sequencing depth of Verrucos each sample 
+sums_Ver <- data.frame(rowSums(otu_table(Ver)))
+colnames(sums_Ver) <- "Sample_TotalSeqs"
+sums_Ver$sample <- row.names(sums_Ver)
+sums_Ver <- arrange(sums_Ver, Sample_TotalSeqs)
+summary(sums_Ver)
+
+####  Create a plot of the number of Verruco sequences per sample
+ggplot(sums_Ver, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("Number of Sequences per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("Total Number of Sequences per Sample") + 
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
 
 # For additional analysis -> Removing Sediment samples
 phy.Ver.water <- subset_samples(phy.Ver, Fraction != "Sediment")
@@ -428,14 +546,12 @@ pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$
 
 
 ################### REMOVING SED DOESN'T HAVE AN EFFECT ON SIG BY GROUP OR LAKE ###################
-
-
 ```
 
-### Time to transform your ENTIRE VERRUCO COMMUNITY DATA to become normal
+### Verruco Relative Abundaunce to test normality
 ```{r}
 # Transforms each merged phylum count to rel abun
-Ver.rel = transform_sample_counts(Ver, function(x){x/sum(x)})
+Ver.rel <- transform_sample_counts(Ver, function(x){x/sum(x)})
 
 # If a phylum has <1% rel abun, change that to 0%
 otu_table(Ver.rel)[otu_table(Ver.rel)<.01] <- 0
@@ -480,654 +596,1236 @@ ks.test(Ver.log, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
     ## p=value = 0
     ## Not normal
 
-#################### Verruco Intra-Phyla Rel Abun is NOT NORMAL ####################
+#################### Verruco Intra-Phylum Rel Abun is NOT NORMAL ####################
 
 ```
 
-### NMDS
+
+
+### NMDS (Bray-Curtis)
 ```{r}
-nowinOTU <- otu_table(Ver.rel)
-norm.bray <- vegdist(nowinOTU, method = "bray", binary = FALSE)
-    ## Calculates Bray-Curtis distances
+nmds.bray <- ordinate(
+  physeq = Ver.rel, 
+  method = "NMDS", 
+  distance = "bray"
+)
+    # Stress = 0.2112829
+
+### Color = Depth, Shape = Group
+plot_ordination(
+  physeq = Ver.rel,
+  ordination = nmds.bray,
+  color = "Depth",
+  shape = "Group") + 
+  scale_color_manual(values = c("indianred1","green3","mediumpurple2", "skyblue")) +
+  scale_shape_manual(values = c(15,17,16)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+
+
+### Color = Group, Shape = Depth
+bray.nmds.group.depth <- plot_ordination(
+  physeq = Ver.rel,
+  ordination = nmds.bray,
+  color = "Group",
+  shape = "Depth") + 
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  ggtitle("Bray-Curtis Dissimilarity") +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+
+
+### Color = Fraction, Shape = Group
+plot_ordination(
+  physeq = Ver.rel,
+  ordination = nmds.bray,
+  color = "Fraction",
+  shape = "Depth") + 
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+
+
+### Color = Season, Shape = Group
+plot_ordination(
+  physeq = Ver.rel,
+  ordination = nmds.bray,
+  color = "Season",
+  shape = "Group") + 
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  scale_shape_manual(values = c(15,17,16)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+
+
+### Facet = Group, Color = Fraction, Shape = Season
+plot_ordination(
+  physeq = Ver.rel,
+  ordination = nmds.bray,
+  color = "Fraction",
+  shape = "Season") + 
+  scale_color_manual(values = c("blue3","gold","tan3")) +
+  facet_wrap(facets = ~Group) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+  
+
+
+### Facet = Group, Color = Season, Shape = Fraction
+bray.nmds.facet <- plot_ordination(
+  physeq = Ver.rel,
+  ordination = nmds.bray,
+  color = "Season",
+  shape = "Fraction") + 
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  facet_wrap(facets = ~Group) +
+  ggtitle("Bray-Curtis Dissimilarity") +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+```
+
+
+
+### NMDS (Sorensen)
+``` {r soren}
+###################################### SORENSEN NMDS ######################################
 nowinOTU.df <- data.frame(otu_table(Ver.rel))
-norm.soren <- vegdist(nowinOTU.df, method = "bray", binary = TRUE)
-    ## Calculates Sorensen Indicies
-
-
-################### Start on the NMDS (Bray-Curtis) ###################
-nmds.bray <- metaMDS(t(nowinOTU), distance="bray")
-    ## NMDS from vegan package
-    ## stress - 0.2230533
-nmds.bray <- data.frame(nmds.bray$points)
-nmds.bray$Names <- row.names(nmds.bray)
-
-### Creating dataframe
+nmds.soren <- metaMDS(nowinOTU.df, distance="bray", binary=TRUE)
+  # stress = 0.1934691 
+nmds.soren <- data.frame(nmds.soren$points)
+nmds.soren$names <- row.names(nmds.soren)
 nowinSamp <- data.frame(sample_data(Ver.rel))
-nmds.bray$Group <- nowinSamp$Group
-nmds.bray$Lake <- nowinSamp$Lake
-nmds.bray$Date <- nowinSamp$Date
-nmds.bray$Site <- nowinSamp$Site
-nmds.bray$Depth <- nowinSamp$Depth
-nmds.bray$Fraction <- nowinSamp$Fraction
-nmds.bray$Season <- nowinSamp$Season
-
-### Order factors
-nmds.bray$Group<- ordered(nmds.bray$Group, levels = c("Laurentian", "Estuary", "Inland"))
-nmds.bray$Lake<- ordered(nmds.bray$Lake, levels = c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
-nmds.bray$Fraction<- ordered(nmds.bray$Fraction, levels = c("Particle", "Free", "Sediment"))
-nmds.bray$Depth<- ordered(nmds.bray$Depth, levels = c("Top", "DCM", "Bottom", "Sediment"))
-nmds.bray$Season<- ordered(nmds.bray$Season, levels = c("Spring", "Summer", "Fall"))
+nmds.soren$Group <- nowinSamp$Group
+nmds.soren$Lake <- nowinSamp$Lake
+nmds.soren$Date <- nowinSamp$Date
+nmds.soren$Site <- nowinSamp$Site
+nmds.soren$Depth <- nowinSamp$Depth
+nmds.soren$Fraction <- nowinSamp$Fraction
+nmds.soren$Season <- nowinSamp$Season
 
 
 
-
-
-
-####### GROUP #######
-tiff("nmds.group.depth.tiff", width = 6.5, height = 5, units = "in", res = 500)
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Group, shape = Depth)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
-  geom_point(size=2,alpha = 1) + theme_bw() +
-  scale_color_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
-                     labels = c("Laurentian","Estuary","Inland"),
-                     values = c("indianred1","green3","mediumpurple2")) +
-  scale_shape_manual(name = "Depth", breaks = c("Top", "DCM", "Bottom", "Sediment"),
-                     labels = c("Top", "DCM", "Bottom", "Sediment"),
-                     values = c(17, 5, 16, 4)) +
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-dev.off()
-
-
-
-
-
-
-### Color by Depth, Shape by Group;; I don't really like this plot very much
-tiff("nmds.colordepth.shapegroup.tiff", width = 6.5, height = 5, units = "in", res = 500)
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Depth, shape = Group)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
-  geom_point(size=2,alpha = 1) + theme_bw() +
-  scale_shape_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
-                     labels = c("Laurentian","Estuary","Inland"),
-                     values = c(5,16,4)) +
+### Color = Depth, Shape = Group
+ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Depth, shape = Group,)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+  geom_point(size = 2, alpha = 1) + theme_bw() +
   scale_color_manual(name = "Depth", breaks = c("Top", "DCM", "Bottom", "Sediment"),
                      labels = c("Top", "DCM", "Bottom", "Sediment"),
                      values = c("indianred1","green3","mediumpurple2", "skyblue")) +
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-dev.off()
-
-
-
-
-### Color by Fraction, Shape by Group;; This plot isn't half bad
-tiff("nmds.colorfrac.shapegroup.tiff", width = 6.5, height = 5, units = "in", res = 500)
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Fraction, shape = Group)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
-  geom_point(size=2,alpha = 1) + theme_bw() +
   scale_shape_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
                      labels = c("Laurentian","Estuary","Inland"),
-                     values = c(5,16,4)) +
-  scale_color_manual(name = "Fraction", breaks = c("Particle","Free","Sediment"),
-                     labels = c("Particle","Free","Sediment"),
-                     values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-dev.off()
+                     values = c(15,17,16)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+
+### Color = Group, Shape = Depth
+soren.nmds.group.depth <- ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Group, shape = Depth,)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+  geom_point(size = 2, alpha = 1) + theme_bw() +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
 
 
 
-### Color by Season, Shape by Group;; This plot isn't half bad
-tiff("nmds.colorseason.shapegroup.tiff", width = 6.5, height = 5, units = "in", res = 500)
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Season, shape = Group)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
-  geom_point(size=2,alpha = 1) + theme_bw() +
-  scale_shape_manual(name = "Group", breaks = c("Laurentian","Estuary","Inland"),
-                     labels = c("Laurentian","Estuary","Inland"),
-                     values = c(5,16,4)) +
-  scale_color_manual(name = "Season", breaks = c("Spring","Summer","Fall"),
-                     labels = c("Spring","Summer","Fall"),
-                     values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-dev.off()
+
+### Color = Fraction, Shape = Depth
+ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Fraction, shape = Depth,)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+  geom_point(size = 2, alpha = 1) + theme_bw() +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  scale_shape_manual(values = c(17, 5, 16, 4)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3))) 
 
 
-
-### Color by Group, Shape by Season, Size by Fraction
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Group, shape = Season, size = Fraction)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
-  geom_point(alpha = 1) + theme_bw() +
-  scale_color_manual(name = "Lake Type", breaks = c("Laurentian","Estuary","Inland"),
-                     labels = c("Laurentian","Estuary","Inland"),
-                     values = c("indianred1","green3","mediumpurple2")) +
-  scale_shape_manual(name = "Season", breaks = c("Spring", "Summer", "Fall"),
-                     labels = c("Spring", "Summer", "Fall"),
-                     values = c(4, 16, 17)) +
-  scale_size_manual(name = "Fraction", breaks = c("Particle","Free", "Sediment"),
-                    labels = c("Particle","Free","Sediment"),
-                    values = c(4, 2, 1)) +
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-
-### Facet by Group, Color by Fraction, Shape by Season
-tiff("nmds.facet.tiff", width = 6.5, height = 5, units = "in", res = 500)
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season, size = Fraction)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+### Facet = Group, Color = Fraction, Shape = Season
+ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season,)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
   geom_point(size = 2, alpha = 1) + theme_bw() +
   facet_grid(.~Group) +
-  scale_color_manual(name = "Fraction", breaks = c("Particle","Free","Sediment"),
-                     labels = c("Particle","Free","Sediment"),
-                     values = c("blue3","gold", "tan3")) +
-  scale_shape_manual(name = "Season", breaks = c("Spring", "Summer", "Fall"),
-                     labels = c("Spring", "Summer", "Fall"),
-                     values = c(4, 16, 17)) +
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-dev.off()
+  scale_color_manual(values = c("blue3","gold", "tan3")) +
+  scale_shape_manual(values = c(17, 16, 15)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
 
-### Facet by Group, Color by Fraction, Shape by Season
-ggplot(nmds.bray, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season, size = Depth)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Bray-Curtis Dissimilarity") +
+
+
+### Facet = Group, Color = Season, Shape = Fraction
+soren.nmds.facet <- ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Season, shape = Fraction,)) +
+  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
   geom_point(size = 2, alpha = 1) + theme_bw() +
   facet_grid(.~Group) +
-  scale_color_manual(name = "Fraction", breaks = c("Particle","Free","Sediment"),
-                     labels = c("Particle","Free","Sediment"),
-                     values = c("blue3","gold", "tan3")) +
-  scale_shape_manual(name = "Season", breaks = c("Spring", "Summer", "Fall"),
-                     labels = c("Spring", "Summer", "Fall"),
-                     values = c(4, 16, 17)) +
-  scale_size_manual(name = "Depth", breaks = c("Top","DCM","Bottom","Sediment"),
-                    labels = c("Top","DCM","Bottom","Sediment"),
-                    values = c(9, 7, 5, 3)) + 
-  theme(axis.title.x = element_text(size=16, face="bold"),
-        axis.text.x = element_text(angle=50, colour="black", vjust=1, hjust=1, size=14),
-        axis.text.y = element_text(colour="black", size=14),
-        plot.title = element_text(size=18),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size = 13),
-        legend.position = "right") +
-  guides(fill=guide_legend(order = 1, keywidth = 1, keyheight = 1), color = guide_legend(order=3)) +
-  xlab("NMDS1") +
-  ylab("NMDS2") +
-  ggtitle("Bray-Curtis Dissimilarity")
-
-
-
-
-
-
-
-
-################################ SORENSEN  ################################
-### Bray-Curtis is weighted (abundance matters)
-### Sorensen is unweighted (abundance does not matter)
-
-plot(hclust(norm.soren), main = "Sorensen Distance")
-    ## lolwutisthis
-
-soren.pcoa <- pcoa(norm.soren)
-soren.pcoa2 <- soren.pcoa$vectors
-soren.pcoa3 <- data.frame(soren.pcoa2[, 1:3])
-soren.pcoa3$Names <- row.names(soren.pcoa3)
-soren.pcoa3$Group <- nowinSamp$Group
-soren.pcoa3$Lake <- nowinSamp$Lake
-soren.pcoa3$Date <- nowinSamp$Date
-soren.pcoa3$Site <- nowinSamp$Site
-soren.pcoa3$Depth <- nowinSamp$Depth
-soren.pcoa3$Fraction <- nowinSamp$Fraction
-soren.pcoa3$Season <- nowinSamp$Season
-
-
-
-#soren_pcoa <- pcoa(norm.soren)
-#soren_pcoa2 <- soren_pcoa$vectors
-#soren_pcoa3 <- data.frame(soren_pcoa2[, 1:3])
-#soren_pcoa3$names <- row.names(soren_pcoa3)
-soren_pcoa4 <- makeCategories_dups(soren_pcoa3)
-soren_pcoa4$quadrant <- factor(soren_pcoa4$quadrant,levels = c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"))
-### Let's extract the values of each axis for the pcoa
-soren_values <- soren_pcoa$values
-soren_rel_eigens <- soren_values$Relative_eig
-soren_rel_eigen1 <- soren_rel_eigens[1]
-soren_rel_eigen1_percent <- round(soren_rel_eigen1 * 100, digits = 1)
-soren_rel_eigen2 <- soren_rel_eigens[2]
-soren_rel_eigen2_percent <- round(soren_rel_eigen2 * 100, digits = 1)
-soren_axis1 <- paste("PCoA1:",soren_rel_eigen1_percent,"%")
-soren_axis2 <- paste("PCoA2:",soren_rel_eigen2_percent,"%")
-
-pcoa_soren <- ggplot(soren_pcoa4, aes(Axis.1 * -1, Axis.2 * -1, color = quadrant, shape = trophicstate)) +
-  xlab(soren_axis1) + ylab(soren_axis2) + #ggtitle("Bray-Curtis: Trophic State") +
-  geom_point(size= 6, alpha=0.9) + theme_bw() + #ylim(1, -1) + xlim(1, -1) +
-  scale_color_manual(name = "Habitat", breaks=c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"),
-                     labels = c("Free-Living Epilimnion", "Free-Living Mixed",  "Free-Living Hypolimnion", "Particle-Associated Epilimnion", "Particle-Associated Mixed", "Particle-Associated Hypolimnion"), 
-                     values = c("purple3", "mediumblue", "darkgreen", "orchid1", "deepskyblue", "green")) +
-  scale_shape_manual(name = "Trophic State", breaks = c("Eutrophic", "Mesotrophic", "Oligotrophic", "Mixed"), 
-                     labels = c("Eutrophic", "Mesotrophic", "Oligotrophic", "Mixed"),
-                     values = c(15, 19, 17)) +
-  theme(axis.text.x = element_text(colour="black", vjust=0.5, size=14), 
-        axis.text.y = element_text(colour="black", vjust=0.5, size=14),
-        axis.title.x = element_text(face="bold", size=16),
-        axis.title.y = element_text(face="bold", size=16),
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
         legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        ###LEGEND TOP RIGHT CORNER
-        legend.position = "right"); pcoa_soren
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+```
+
+
+
+### Create NMDS comparison plots
+```{r compare.nmds}
+#tiff("nmds.compare.tiff", width = 14, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+print(bray.nmds.group.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(bray.nmds.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(soren.nmds.group.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+print(soren.nmds.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+#dev.off()
+
+### Bray-Curtis seems to cluster a bit more clearly than Sorensen
+
+```
 
 
 
 
-###################################### SORENSEN NMDS ######################################
-nmds.soren <- metaMDS(nowinOTU, distance="bray", binary=T)
 
 
 
+### PCoA (Bray-Curtis)
+```{r pcoa, echo=FALSE}
+Ver.bray <- phyloseq::distance(physeq = Ver.rel, method = "bray")
+
+Ver.pcoa <-
+  ordinate(
+    physeq = Ver.rel,
+    method = "PCoA",
+    distance = "bray"
+  )
 
 
+#To determine approximately how much variation the axes should explain:
+#Ver.pcoa$values
+#look for broken stick value
 
-##### Below is Marian's code of an NMDS of Sorensen Index #####
-nmds_soren <- metaMDS(nowinOTU, distance="bray", binary = TRUE)
-nmds_soren <- data.frame(nmds_soren$points) #http://strata.uga.edu/software/pdf/mdsTutorial.pdf
-nmds_soren$names<-row.names(nmds_soren) #new names column
-nmds_soren <- makeCategories_dups(nmds_soren) #will add our categorical information:  lakenames, limnion, filter, quadrant and trophicstate
-nmds_soren$ProdLevel <- as.character(nmds_soren$trophicstate)
-nmds_soren$ProdLevel[nmds_soren$trophicstate == "Eutrophic"] <- "Productive"
-nmds_soren$ProdLevel[nmds_soren$trophicstate == "Mesotrophic"] <- "Productive"
-nmds_soren$ProdLevel[nmds_soren$trophicstate == "Oligotrophic"] <- "Unproductive"
-nmds_soren$quadrant <- factor(nmds_soren$quadrant,levels = c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"))
-
-nmds_soren_quad <- ggplot(nmds_soren, aes(MDS1, MDS2, color = quadrant, shape = ProdLevel)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sørensen Dissimilarity") +
-  geom_point(size= 6, alpha=0.9) + theme_bw() +   geom_point(colour="white", size = 2) +
-  annotate("text", label = "A", x = (min(nmds_soren$MDS1) + 0.05), y = (max(nmds_soren$MDS2) -0.02), face = "bold",size = 10, colour = "black") +
-  annotate("text", label = "Stress = 0.14", x = (max(nmds_soren$MDS1) -0.18), y = (max(nmds_soren$MDS2) -0.01), size = 6, colour = "black") +
-  scale_color_manual(name = "Habitat", breaks=c("Free Epilimnion", "Free Mixed",  "Free Hypolimnion", "Particle Epilimnion", "Particle Mixed", "Particle Hypolimnion"),
-                     labels = c("Free-Living Epilimnion", "Free-Living Mixed",  "Free-Living Hypolimnion", "Particle-Associated Epilimnion", "Particle-Associated Mixed", "Particle-Associated Hypolimnion"), 
-                     values = c("darkgreen", "mediumblue", "purple3", "green", "deepskyblue", "orchid1")) +
-  scale_shape_manual(name = "Nutrient Level", breaks = c("Productive", "Unproductive"), 
-                     labels = c("High", "Low"),
-                     values = c(15, 17)) +
-  guides(shape = guide_legend(order=1), color = guide_legend(order=2)) +
-  theme(axis.text.x = element_text(colour="black", vjust=0.5, size=14), 
-        axis.text.y = element_text(colour="black", vjust=0.5, size=14),
-        axis.title.x = element_text(face="bold", size=16),
-        axis.title.y = element_text(face="bold", size=16),
+### Depth
+plot_ordination(
+  physeq = Ver.rel, 
+  ordination = Ver.pcoa, 
+  color = "Depth",
+  axes = c(1, 2),
+  title = "Bray-Curtis Dissimilarity") +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
         legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        plot.title = element_text(size = 16, face="bold"),
-        ###LEGEND TOP RIGHT CORNER
-        legend.position = "none");  nmds_soren_quad
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+### Group
+plot_ordination(
+  physeq = Ver.rel, 
+  ordination = Ver.pcoa, 
+  color = "Group",
+  axes = c(2,3),
+  title = "Bray-Curtis Dissimilarity") +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+### Color = Group, Shape = Depth
+bray.pcoa.group.depth <- plot_ordination(
+  physeq = Ver.rel, 
+  ordination = Ver.pcoa, 
+  color = "Group",
+  shape = "Depth",
+  axes = c(2,3),
+  title = "Bray-Curtis Dissimilarity") +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+# Fraction PCoA
+plot_ordination(
+  physeq = Ver.rel, 
+  ordination = Ver.pcoa, 
+  color = "Fraction",
+  shape = "Season",
+  axes = c(1, 3),
+  title = "Bray-Curtis Dissimilarity") +
+  facet_wrap(facets = ~Group) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+# Season PCoA
+bray.pcoa.facet <- plot_ordination(
+  physeq = Ver.rel, 
+  ordination = Ver.pcoa, 
+  color = "Season",
+  shape = "Fraction",
+  axes = c(1,2),
+  title = "Bray-Curtis Dissimilarity") +
+  facet_wrap(facets = ~Group) +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+```
 
 
 
+### PCoA (Sorensen)
+``` {r pcoa.sorensen}
+test <- dsvdis(nowinOTU.df, index="sorensen")
+soren.pcoa<- ordinate(physeq = Ver.rel, method = "PCoA", distance = test)
 
-############################ PREPARING FOR ADONIS ############################
-test.otu <- data.frame(otu_table(Ver.rel))
-test.otu <- t(test.otu)
-test.bray <- vegdist(test.otu, method = "bray")
-    ## ROWS = SAMPLES
-    ## COLS = OTUs
-    ## IF IT'S NOT SET UP LIKE THIS, IT WON'T WORK!
-test.sample <- data.frame(sample_data(Ver.rel))
+### Depth
+plot_ordination(
+  physeq = Ver.rel, 
+  ordination = soren.pcoa, 
+  color = "Depth",
+  axes = c(1,2),
+  title = "Sorensen Dissimilarity") +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold"))
+
+
+### Group
+plot_ordination(
+  physeq = Ver.rel, 
+  ordination = soren.pcoa, 
+  color = "Group",
+  axes = c(2,3),
+  title = "Sorensen Dissimilarity") +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold"))
+
+
+### Color = Group, Shape = Depth
+soren.pcoa.group.depth <- plot_ordination(
+  physeq = Ver.rel, 
+  ordination = soren.pcoa, 
+  color = "Group",
+  shape = "Depth",
+  axes = c(2,3),
+  title = "Sorensen Dissimilarity") +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+
+### Facet = Group, Color = Fraction, Shape = Season
+plot_ordination(
+  physeq = Ver.rel, 
+  ordination = soren.pcoa, 
+  color = "Fraction",
+  shape = "Season",
+  axes = c(1, 3),
+  title = "Sorensen Dissimilarity") +
+  facet_wrap(facets = ~Group) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+### Facet = Group, Color = Season, Shape = Fraction
+soren.pcoa.facet <- plot_ordination(
+  physeq = Ver.rel, 
+  ordination = Ver.pcoa, 
+  color = "Season",
+  shape = "Fraction",
+  axes = c(1,2),
+  title = "Sorensen Dissimilarity") +
+  facet_wrap(facets = ~Group) +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+```
+
+
+### Create PCoA comparison plots
+```{r compare.pcoa}
+tiff("pcoa.compare.tiff", width = 14, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+print(bray.pcoa.group.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(soren.pcoa.group.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+print(soren.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+dev.off()
+
+### Bray-Curtis seems to cluster a bit more clearly than Sorensen
+
+```
 
 
 
-################################# ADONIS ADONIS ADONIS ADONIS ADONIS ################################# 
+### PERMANOVA/Adonis
+```{r permanova, echo=FALSE}
+sampledf <- data.frame(sample_data(Ver.rel))
 
-####################### Group #######################
-adonis.group <- adonis(test.bray ~ Group, test.sample)
-    ## SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.11273
-beta.tax = betadisper(test.bray, test.sample$Group)
+##### Depth #####
+adonis(Ver.bray ~ Depth, data=sampledf)
+  ## R2 = 0.12755
+  ## p-value = 0.001
+beta.tax = betadisper(d=Ver.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-    ## Not significant (p-value = 0.911)
-    ## F = 0.0925504
+  # p-value = 0.001
+  # F = 19.08252
 
-### Laurentian & Estuary ###
-le.phy <- subset_samples(Ver.rel, Group != "Inland")
-le.otu <- t(data.frame(otu_table(le.phy)))
-le.bray <- vegdist(le.otu, method = "bray")
-le.samp <- data.frame(sample_data(le.phy))
-adonis.group <- adonis(le.bray ~ Group, le.samp)
-    ## LAURENTIAN & ESTUARY ARE SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.11037
-beta.tax <- betadisper(le.bray, le.samp$Group)
+# Top vs. Bottom
+adonis.tb <- subset_samples(physeq = Ver.rel, Depth != "DCM")
+adonis.tb <- subset_samples(physeq = adonis.tb, Depth != "Sediment")
+adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
+adonis.tb <- data.frame(sample_data(adonis.tb))
+adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
+  # p-value = 0.003
+  # R2 = 0.01201
+beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-    ## Not significant (p-value = 0.756)
-    ## F = 0.1158866
+  # p-value = 0.317
+  # F = 1.021386
 
-### Laurentian & Inland ###
-li.phy <- subset_samples(Ver.rel, Group != "Estuary")
-li.otu <- t(data.frame(otu_table(li.phy)))
-li.bray <- vegdist(li.otu, method = "bray")
-li.samp <- data.frame(sample_data(li.phy))
-adonis.group <- adonis(li.bray ~ Group, li.samp)
-    ## LAURENTIAN & ESTUARY ARE SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.08129
-beta.tax = betadisper(li.bray, li.samp$Group)
-p=permutest(beta.tax)
-p$tab
-    ## Not significant (p-value = 0.861)
-    ## F = 0.03344
-
-### Laurentian & Inland ###
-li.phy <- subset_samples(Ver.rel, Group != "Estuary")
-li.otu <- t(data.frame(otu_table(li.phy)))
-li.bray <- vegdist(li.otu, method = "bray")
-li.samp <- data.frame(sample_data(li.phy))
-adonis.group <- adonis(li.bray ~ Group, li.samp)
-    ## LAURENTIAN & INLAND ARE SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.08129
-beta.tax = betadisper(li.bray, li.samp$Group)
-p=permutest(beta.tax)
-p$tab
-    ## Not significant (p-value = 0.861)
-    ## F = 0.03344
-
-### Estuary & Inland ###
-ei.phy <- subset_samples(Ver.rel, Group != "Laurentian")
-ei.otu <- t(data.frame(otu_table(ei.phy)))
-ei.bray <- vegdist(ei.otu, method = "bray")
-ei.samp <- data.frame(sample_data(ei.phy))
-adonis.group <- adonis(ei.bray ~ Group, ei.samp)
-    ## ESTUARY AND INLAND ARE SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.07519
-beta.tax = betadisper(ei.bray, ei.samp$Group)
-p=permutest(beta.tax)
-p$tab
-    ## Not significant (p-value = 0.733)
-    ## F = 0.1042774
-
-
-
-####################### Lake #######################
-adonis.lake <- adonis(test.bray ~ Lake, test.sample)
-    ## SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.25706
-beta.tax = betadisper(test.bray, test.sample$Lake)
-p=permutest(beta.tax)
-p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 3.319597
-
-### All Inland Lakes ###
-in.phy <- subset_samples(Ver.rel, Group != "Laurentian")
-in.phy <- subset_samples(in.phy, Group != "Estuary")
-in.otu <- t(data.frame(otu_table(in.phy)))
-in.bray <- vegdist(in.otu, method = "bray")
-in.samp <- data.frame(sample_data(in.phy))
-adonis.lake <- adonis(in.bray ~ Lake, in.samp)
-    ## ALL INLAND LAKES ARE SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.30286
-beta.tax = betadisper(in.bray, in.samp$Lake)
-p=permutest(beta.tax)
-p$tab
-    ## Not significant (p-value = 0.186)
-    ## F = 1.366156
-
-####################### Fraction #######################
-adonis.fraction <- adonis(test.bray ~ Fraction, test.sample)
-    ## SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.16876
-beta.tax = betadisper(test.bray, test.sample$Fraction)
-p=permutest(beta.tax)
-p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 27.38858
-
-### Particle vs. Free ###
-pf.phy <- subset_samples(Ver.rel, Fraction != "Sediment")
-pf.otu <- t(data.frame(otu_table(pf.phy)))
-pf.bray <- vegdist(pf.otu, method = "bray")
-pf.samp <- data.frame(sample_data(pf.phy))
-adonis.fraction <- adonis(pf.bray ~ Fraction, pf.samp)
-    ## PARTICLE VS. FREE IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.09636
-beta.tax = betadisper(pf.bray, pf.samp$Fraction)
-p=permutest(beta.tax)
-p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 17.77422
-
-### Particle vs. Sediment ###
-ps.phy <- subset_samples(Ver.rel, Fraction != "Free")
-ps.otu <- t(data.frame(otu_table(ps.phy)))
-ps.bray <- vegdist(ps.otu, method = "bray")
-ps.samp <- data.frame(sample_data(ps.phy))
-adonis.fraction <- adonis(ps.bray ~ Fraction, ps.samp)
-    ## PARTICLE VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.14117
-beta.tax <- betadisper(ps.bray, ps.samp$Fraction)
+# Top vs. Sediment
+adonis.ts <- subset_samples(physeq = Ver.rel, Depth != "DCM")
+adonis.ts <- subset_samples(physeq = adonis.ts, Depth != "Bottom")
+adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
+adonis.ts <- data.frame(sample_data(adonis.ts))
+adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
+  # p-value = 0.001
+  # R2 = 0.19255
+beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 52.04351
+  # p-value = 0.001
+  # F = 48.59091
 
-### Free vs. Sediment ###
-fs.phy <- subset_samples(Ver.rel, Fraction != "Particle")
-fs.otu <- t(data.frame(otu_table(fs.phy)))
-fs.bray <- vegdist(fs.otu, method = "bray")
-fs.samp <- data.frame(sample_data(fs.phy))
-adonis.fraction <- adonis(fs.bray ~ Fraction, fs.samp)
-    ## FREE VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.18408
-beta.tax <- betadisper(fs.bray, fs.samp$Fraction)
+# Bottom vs. Sediment
+adonis.bs <- subset_samples(physeq = Ver.rel, Depth != "DCM")
+adonis.bs <- subset_samples(physeq = adonis.bs, Depth != "Top")
+adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
+adonis.bs <- data.frame(sample_data(adonis.bs))
+adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
+  # p-value = 0.001
+  # R2 = 0.18178
+beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.01)
-    ## F = 23.51907
+  # p-value = 0.001
+  # F = 46.04348 
 
-### Water vs. Sediment ###
-ws.otu <- t(data.frame(otu_table(Ver.rel)))
-ws.bray <- vegdist(ws.otu, method = "bray")
-ws.samp <- data.frame(sample_data(Ver.rel))
-adonis.fraction <- adonis(ws.bray ~ Origin, ws.samp)
-    ## WATER VS. SEDIMENT IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.08182
-beta.tax = betadisper(fs.bray, fs.samp$Fraction)
-p=permutest(beta.tax)
+print("Depth accounts for 12.76% of the data variation. The variance between water column samples and sediment samples is significantly different. However, the variance within water column samples is not significantly different. As visualized on the PCoA, sediment samples are tightly clustered together compared to the less tightly clustered water samples. As a result, despite a significant variance difference in Depth samples, because sediment samples are clearly distinct from water samples, I believe that the PERMANOVA results are not skewed by sample variance difference.")
+print("Top and Bottom is significantly different, but R2 is so small (0.012) that this explains very little of the sample variation.")
+
+
+##### Group #####
+adonis(Ver.bray ~ Group, data=sampledf)
+  ## R2 = 0.10849
+  ## p-value = 0.001
+beta.tax = betadisper(Ver.bray, sampledf$Group)
+p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.01)
-    ## F = 23.51907
+  ## p-value = 0.895
+  ## F = 0.119105
 
-
-####################### Depth #######################
-adonis.depth <- adonis(test.bray ~ Depth, test.sample)
-    ## SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.11848
-beta.tax = betadisper(test.bray, test.sample$Depth)
-p=permutest(beta.tax)
+# Laurentian vs. Estuary
+adonis.scaled.le <- subset_samples(physeq = scaled, Group != "Inland")
+adonis.scaled.le.bray <- phyloseq::distance(physeq = adonis.scaled.le, method = "bray")
+adonis.scaled.le <- data.frame(sample_data(adonis.scaled.le))
+adonis(adonis.scaled.le.bray ~ Group, data=adonis.scaled.le)
+  # p-value = 0.001
+  # R2 = 0.07658 
+beta.tax = betadisper(d=adonis.scaled.le.bray, group=adonis.scaled.le$Group)
+p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 19.93423
+  # p-value = 0.081
+  # F = 3.716424
 
-### Top vs. DCM vs. Bottom ###
-tdb.phy <- subset_samples(Ver.rel, Depth != "Sediment")
-tdb.otu <- t(data.frame(otu_table(tdb.phy)))
-tdb.bray <- vegdist(tdb.otu, method = "bray")
-tdb.samp <- data.frame(sample_data(tdb.phy))
-adonis.depth <- adonis(tdb.bray ~ Depth, tdb.samp)
-    ## WATER COLUMN DEPTH IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.04064
-beta.tax = betadisper(tdb.bray, tdb.samp$Depth)
-p=permutest(beta.tax)
+# Laurentian vs. Inland
+adonis.scaled.li <- subset_samples(physeq = scaled, Group != "Estuary")
+adonis.scaled.li.bray <- phyloseq::distance(physeq = adonis.scaled.li, method = "bray")
+adonis.scaled.li <- data.frame(sample_data(adonis.scaled.li))
+adonis(adonis.scaled.li.bray ~ Group, data=adonis.scaled.li)
+  # p-value = 0.001
+  # R2 = 0.07212
+beta.tax = betadisper(d=adonis.scaled.li.bray, group=adonis.scaled.li$Group)
+p <- permutest(beta.tax)
 p$tab
-    ## Not significant (p-value = 0.134)
-    ## F = 1.990628
+  # p-value = 0.001
+  # F = 13.47688
 
-
-
-####################### Season #######################
-adonis.date <- adonis(test.bray ~ Season, test.sample)
-    ## SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.09073
-beta.tax = betadisper(test.bray, test.sample$Date)
-p=permutest(beta.tax)
+# Estuary vs. Inland
+adonis.scaled.ei <- subset_samples(physeq = scaled, Group != "Laurentian")
+adonis.scaled.ei.bray <- phyloseq::distance(physeq = adonis.scaled.ei, method = "bray")
+adonis.scaled.ei <- data.frame(sample_data(adonis.scaled.ei))
+adonis(adonis.scaled.ei.bray ~ Group, data=adonis.scaled.ei)
+  # p-value = 0.001
+  # R2 = 0.07689
+beta.tax = betadisper(d=adonis.scaled.ei.bray, group=adonis.scaled.ei$Group)
+p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 10.76313
+  # p-value = 0.96
+  # F = 0.002008325
 
-### Spring vs. Summer ###
-ss.phy <- subset_samples(Ver.rel, Season != "Fall")
-ss.otu <- t(data.frame(otu_table(ss.phy)))
-ss.bray <- vegdist(ss.otu, method = "bray")
-ss.samp <- data.frame(sample_data(ss.phy))
-adonis.date <- adonis(ss.bray ~ Date, ss.samp)
-    ## SPRING VS. SUMMER IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.18063
-beta.tax = betadisper(ss.bray, ss.samp$Date)
-p=permutest(beta.tax)
+
+
+
+
+##### Fraction #####
+adonis(Ver.bray ~ Fraction, data=sampledf)
+  ## p-value = 0.001
+  ## R2 = 0.19524
+beta.tax = betadisper(Ver.bray, sampledf$Fraction)
+p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 18.5581
+  ## P-value = 0.001
+  ## F = 29.76732
 
-### Spring vs. Fall###
-sf.phy <- subset_samples(Ver.rel, Date != "Summer")
-sf.otu <- t(data.frame(otu_table(sf.phy)))
-sf.bray <- vegdist(sf.otu, method = "bray")
-sf.samp <- data.frame(sample_data(sf.phy))
-adonis.date <- adonis(sf.bray ~ Date, sf.samp)
-    ## SPRING VS. FALL IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.18122
-beta.tax = betadisper(sf.bray, sf.samp$Date)
-p=permutest(beta.tax)
+# Particle vs. Free
+adonis.pf <- subset_samples(physeq = Ver.rel, Fraction != "Sediment")
+adonis.pf.bray <- phyloseq::distance(physeq = adonis.pf, method = "bray")
+adonis.pf <- data.frame(sample_data(adonis.pf))
+adonis(adonis.pf.bray ~ Fraction, data=adonis.pf)
+  # p-value = 0.001
+  # R2 = 0.09799
+beta.tax = betadisper(d=adonis.pf.bray, group=adonis.pf$Fraction)
+p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 10.76313
+  # p-value = 0.001
+  # F = 27.67899
 
-### Summer vs. Fall###
-sf.phy <- subset_samples(Ver.rel, Date != "Spring")
-sf.otu <- t(data.frame(otu_table(sf.phy)))
-sf.bray <- vegdist(sf.otu, method = "bray")
-sf.samp <- data.frame(sample_data(sf.phy))
-adonis.date <- adonis(sf.bray ~ Date, sf.samp)
-    ## SUMMER VS. FALL IS SIGNIFICANT (p-value = 0.001)
-    ## R2 = 0.18122
-beta.tax = betadisper(sf.bray, sf.samp$Date)
-p=permutest(beta.tax)
+# Particle vs. Sediment
+adonis.ps <- subset_samples(physeq = Ver.rel, Fraction != "Free")
+adonis.ps.bray <- phyloseq::distance(physeq = adonis.ps, method = "bray")
+adonis.ps <- data.frame(sample_data(adonis.ps))
+adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
+  # p-value = 0.001
+  # R2 = 0.17335
+beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
+p <- permutest(beta.tax)
 p$tab
-    ## SIGNIFICANT (p-value = 0.001)
-    ## F = 10.76313
+  # p-value = 0.001
+  # F = 49.36893
+
+# Free vs. Sediment
+adonis.fs <- subset_samples(physeq = Ver.rel, Fraction != "Particle")
+adonis.fs.bray <- phyloseq::distance(physeq = adonis.fs, method = "bray")
+adonis.fs <- data.frame(sample_data(adonis.fs))
+adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
+  # p-value = 0.001
+  # R2 = 0.24494
+beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 15.73037
+
+print("Fraction is only significant between Particle/Free vs. Sediment (so water vs. Sediment). Between Particle & Free, R2 = 0.98; however, fraction variance is significantly different")
 
 
-####################### Stacking factors for adonis! #######################
-adonis.stack <- adonis(test.bray ~ Lake + Fraction, test.sample)
-adonis.stack
-    ## Lake R2 = 0.25706
-    ## Fraction R2 = 0.17151
-adonis.stack <- adonis(test.bray ~ Fraction + Lake, test.sample)
-adonis.stack
-    ## Fraction R2 = 0.16876
-    ##Lake R2 = 0.25982
-adonis.stack <- adonis(test.bray ~ Lake + Fraction + Depth, test.sample)
-adonis.stack
-    ## Lake R2 = 0.25706
-    ## Fraction R2 = 0.17151
-    ## Depth R2 = 0.03
-adonis.stack <- adonis(test.bray ~ Lake + Depth + Fraction, test.sample)
-adonis.stack
-    ## Lake R2 = 0.25706
-    ## Depth R2 = 0.11440
-    ## Fraction R2 = 0.08719
-adonis.stack <- adonis(test.bray ~ Lake + Fraction + Depth + Season, test.sample)
-adonis.stack
-    ## Lake R2 = 0.25706
-    ## Fraction R2 = 0.17151
-    ## Depth R2 = 0.03
-    ## Season R2 = 0.06850
-adonis.stack <- adonis(test.bray ~ Lake + Fraction + Season + Depth, test.sample) ##### I LIKE THIS ONE!!
-adonis.stack
-    ## Lake R2 = 0.25706
-    ## Fraction R2 = 0.17151
-    ## Season R2 = 0.06940
-    ## Depth R2 = 0.02918
-    ## Residual R2 = 0.47285 ###########unstac## WE CAN EXPLAIN OVER 50% OF THE VARIATION!!!!!!!!!!
-adonis.stack <- adonis(test.bray ~ Lake + Season + Fraction + Depth, test.sample)
-adonis.stack
-    ## Lake R2 = 0.25706
-    ## Season R2 = 0.07250
-    ## Fraction R2 = 0.16841
-    ## Depth R2 = 0.02918
+##### Season #####
+adonis(Ver.bray ~ Season, data=sampledf)
+  ## p-value = 0.001
+  ## R2 = 0.09783
+beta.tax = betadisper(Ver.bray, sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  ## P-value = 0.01
+  ## F = 4.741428
 
-##### CORRESPONDS TO THE NMDS & RANK ABUNDANCE PLOTS!!! #####
-adonis.stack <- adonis(test.bray ~ Fraction + Group + Season + Depth, test.sample) 
-adonis.stack
-    ## Fraction R2 = 0.16876
-    ## Group R2 = 0.11422
-    ## Season R2 = 0.07149
-    ## Depth R2 = 0.02918
-    ## Residual R2 = 0.61652
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = Ver.rel, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # p-value = 0.001
+  # R2 = 0.09052
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 18.84919
+
+# Spring vs. Fall
+adonis.sf <- subset_samples(physeq = Ver.rel, Season != "Summer")
+adonis.sf.bray <- phyloseq::distance(physeq = adonis.sf, method = "bray")
+adonis.sf <- data.frame(sample_data(adonis.sf))
+adonis(adonis.sf.bray ~ Season, data=adonis.sf)
+  # p-value = 0.001
+  # R2 = 0.1431
+beta.tax = betadisper(d=adonis.sf.bray, group=adonis.sf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 27.70226
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = Ver.rel, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # p-value = 0.001
+  # R2 = 0.0301
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 15.59481
+
+
+##### Nested adonis #####
+adonis(Ver.bray ~ Depth + Group + Fraction + Season, data = sampledf)
+  ## Depth & Group have highest R2 (0.12755 & 0.11110 respectively)
+  ## Fraction (0.08329), Season (0.08176)
+  ## Residuals = 0.59631 
+  ## All p-values = 0.001
+
+## Raw data explains 0.361 (R2)
+  # Group, Depth, Fraction, Season (in order of R2)
+## Relative abundance explains 0.409 (R2)
+```
 
 
 
+### PCoA of Whole Bacterial Community
+```{r pcoa.bcc}
+scaled.bray <- phyloseq::distance(physeq=scaled, method="bray")
 
-############## PHYLOSEQ NMDS ##############
-#http://joey711.github.io/phyloseq/plot_ordination-examples
-Ver.nmds <- ordinate(Ver.rel, "NMDS", "bray")
-plot_ordination(Ver.rel, Ver.nmds, type="Sample", color="Group", title="Group")
-Ver.rel.otu <- data.frame(otu_table(Ver.rel))
-Ver.rel.otu.bray <- vegdist(Ver.rel.otu, method="bray")
-adonis.group <- adonis(Ver.rel.otu.bray~Group, as(sample_data(Ver.rel),"data.frame"))
+scaled.pcoa <- ordinate(physeq = scaled, method = "PCoA", distance="bray")
+
+### Color = Depth, Shape = Group
+plot_ordination(
+  physeq = scaled, 
+  ordination = scaled.pcoa, 
+  color = "Depth",
+  shape = "Group",
+  axes = c(1, 2),
+  title = "Bray-Curtis Dissimilarity") +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+
+### Color = Group, Shape = Depth
+bcc.pcoa.group.depth <- plot_ordination(
+  physeq = scaled, 
+  ordination = scaled.pcoa, 
+  color = "Group",
+  shape = "Depth",
+  axes = c(2, 3),
+  title = "Bray-Curtis Dissimilarity") +
+  scale_y_reverse()+
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+### Facet = Group, Color = Season, Shape = Fraction
+bcc.pcoa.facet <- plot_ordination(
+  physeq = scaled, 
+  ordination = scaled.pcoa, 
+  color = "Season",
+  shape = "Fraction",
+  axes = c(1,2),
+  title = "Bray-Curtis Dissimilarity") +
+  facet_wrap(facets = ~Group) +
+  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
 
 
 ```
+
+
+### Compare Whole Bacterial Community with Verruco Community
+```{r bcc.ver.pcoa}
+tiff("bcc.ver.compare.tiff", width = 14, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+print(bray.pcoa.group.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(bcc.pcoa.group.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+print(bcc.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+dev.off()
+
+```
+
+### PERMANOVA for Whole Bacterial Community
+```{r adonis.bcc}
+bcc.sampledf <- data.frame(sample_data(scaled))
+
+##### Depth #####
+adonis(scaled.bray ~ Depth, data=bcc.sampledf)
+  ## R2 = 0.12468
+  ## p-value = 0.001
+beta.tax = betadisper(d=scaled.bray, group=bcc.sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 11.40066 
+
+# Top vs. Bottom
+adonis.scaled.tb <- subset_samples(physeq = scaled, Depth != "DCM")
+adonis.scaled.tb <- subset_samples(physeq = adonis.scaled.tb, Depth != "Sediment")
+adonis.scaled.tb.bray <- phyloseq::distance(physeq = adonis.scaled.tb, method = "bray")
+adonis.scaled.tb <- data.frame(sample_data(adonis.scaled.tb))
+adonis(adonis.scaled.tb.bray ~ Depth, data=adonis.scaled.tb)
+  # p-value = 0.001
+  # R2 = 0.01989
+beta.tax = betadisper(d=adonis.scaled.tb.bray, group=adonis.scaled.tb$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.002
+  # F = 11.99703
+
+# Top vs. Sediment
+adonis.scaled.ts <- subset_samples(physeq = scaled, Depth != "DCM")
+adonis.scaled.ts <- subset_samples(physeq = adonis.scaled.ts, Depth != "Bottom")
+adonis.scaled.ts.bray <- phyloseq::distance(physeq = adonis.scaled.ts, method = "bray")
+adonis.scaled.ts <- data.frame(sample_data(adonis.scaled.ts))
+adonis(adonis.scaled.ts.bray ~ Depth, data=adonis.scaled.ts)
+  # p-value = 0.001
+  # R2 = 0.18956
+beta.tax = betadisper(d=adonis.scaled.ts.bray, group=adonis.scaled.ts$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.003
+  # F = 8.363528 
+
+# Bottom vs. Sediment
+adonis.scaled.bs <- subset_samples(physeq = scaled, Depth != "DCM")
+adonis.scaled.bs <- subset_samples(physeq = adonis.scaled.bs, Depth != "Top")
+adonis.scaled.bs.bray <- phyloseq::distance(physeq = adonis.scaled.bs, method = "bray")
+adonis.scaled.bs <- data.frame(sample_data(adonis.scaled.bs))
+adonis(adonis.scaled.bs.bray ~ Depth, data=adonis.scaled.bs)
+  # p-value = 0.001
+  # R2 = 0.15569 
+beta.tax = betadisper(d=adonis.scaled.bs.bray, group=adonis.scaled.bs$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 20.21171 
+
+
+##### Group #####
+adonis(scaled.bray ~ Group, data=bcc.sampledf)
+  ## R2 = 0.09852
+  ## p-value = 0.001
+beta.tax = betadisper(scaled.bray, bcc.sampledf$Group)
+p <- permutest(beta.tax)
+p$tab
+  ## p-value = 0.006
+  ## F = 4.864458
+
+# Laurentian vs. Estuary
+adonis.scaled.le <- subset_samples(physeq = scaled, Group != "Inland")
+adonis.scaled.le.bray <- phyloseq::distance(physeq = adonis.scaled.le, method = "bray")
+adonis.scaled.le <- data.frame(sample_data(adonis.scaled.le))
+adonis(adonis.scaled.le.bray ~ Group, data=adonis.scaled.le)
+  # p-value = 0.001
+  # R2 = 0.08753
+beta.tax = betadisper(d=adonis.scaled.le.bray, group=adonis.scaled.le$Group)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.703
+  # F = 0.1425916
+
+# Laurentian vs. Inland
+adonis.scaled.li <- subset_samples(physeq = Ver.rel, Group != "Estuary")
+adonis.scaled.li.bray <- phyloseq::distance(physeq = adonis.scaled.li, method = "bray")
+adonis.scaled.li <- data.frame(sample_data(adonis.scaled.li))
+adonis(adonis.scaled.li.bray ~ Group, data=adonis.scaled.li)
+  # p-value = 0.001
+  # R2 = 0.08059
+beta.tax = betadisper(d=adonis.scaled.li.bray, group=adonis.scaled.li$Group)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.513
+  # F = 0.3893777
+
+# Estuary vs. Inland
+adonis.ei <- subset_samples(physeq = Ver.rel, Group != "Laurentian")
+adonis.ei.bray <- phyloseq::distance(physeq = adonis.ei, method = "bray")
+adonis.ei <- data.frame(sample_data(adonis.ei))
+adonis(adonis.ei.bray ~ Group, data=adonis.ei)
+  # p-value = 0.001
+  # R2 = 0.07067
+beta.tax = betadisper(d=adonis.ei.bray, group=adonis.ei$Group)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.961
+  # F = 0.002008325 
+
+
+
+
+##### Fraction #####
+adonis(scaled.bray ~ Fraction, data=bcc.sampledf)
+  ## p-value = 0.001
+  ## R2 = 0.21837
+beta.tax = betadisper(scaled.bray, bcc.sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  ## P-value = 0.001
+  ## F = 53.14341 
+
+# Particle vs. Free
+adonis.scaled.pf <- subset_samples(physeq = scaled, Fraction != "Sediment")
+adonis.scaled.pf.bray <- phyloseq::distance(physeq = adonis.scaled.pf, method = "bray")
+adonis.scaled.pf <- data.frame(sample_data(adonis.scaled.pf))
+adonis(adonis.scaled.pf.bray ~ Fraction, data=adonis.scaled.pf)
+  # p-value = 0.001
+  # R2 = 0.13634
+beta.tax = betadisper(d=adonis.scaled.pf.bray, group=adonis.scaled.pf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 106.0687 
+
+# Particle vs. Sediment
+adonis.scaled.ps <- subset_samples(physeq = scaled, Fraction != "Free")
+adonis.scaled.ps.bray <- phyloseq::distance(physeq = adonis.scaled.ps, method = "bray")
+adonis.scaled.ps <- data.frame(sample_data(adonis.scaled.ps))
+adonis(adonis.scaled.ps.bray ~ Fraction, data=adonis.scaled.ps)
+  # p-value = 0.001
+  # R2 = 0.15058
+beta.tax = betadisper(d=adonis.scaled.ps.bray, group=adonis.scaled.ps$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 29.2068 
+
+# Free vs. Sediment
+adonis.scaled.fs <- subset_samples(physeq = scaled, Fraction != "Particle")
+adonis.scaled.fs.bray <- phyloseq::distance(physeq = adonis.scaled.fs, method = "bray")
+adonis.scaled.fs <- data.frame(sample_data(adonis.scaled.fs))
+adonis(adonis.scaled.fs.bray ~ Fraction, data=adonis.scaled.fs)
+  # p-value = 0.001
+  # R2 = 0.26093
+beta.tax = betadisper(d=adonis.scaled.fs.bray, group=adonis.scaled.fs$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.855
+  # F = 0.02365651
+
+
+##### Season #####
+adonis(scaled.bray ~ Season, data=bcc.sampledf)
+  ## p-value = 0.001
+  ## R2 = 0.0819 
+beta.tax = betadisper(scaled.bray, bcc.sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  ## P-value = 0.046
+  ## F = 2.889659
+
+# Spring vs. Summer
+adonis.scaled.ss <- subset_samples(physeq = scaled, Season != "Fall")
+adonis.scaled.ss.bray <- phyloseq::distance(physeq = adonis.scaled.ss, method = "bray")
+adonis.scaled.ss <- data.frame(sample_data(adonis.scaled.ss))
+adonis(adonis.scaled.ss.bray ~ Season, data=adonis.scaled.ss)
+  # p-value = 0.001
+  # R2 = 0.07834
+beta.tax = betadisper(d=adonis.scaled.ss.bray, group=adonis.scaled.ss$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 51.59802
+
+# Spring vs. Fall
+adonis.scaled.sf <- subset_samples(physeq = scaled, Season != "Summer")
+adonis.scaled.sf.bray <- phyloseq::distance(physeq = adonis.scaled.sf, method = "bray")
+adonis.scaled.sf <- data.frame(sample_data(adonis.scaled.sf))
+adonis(adonis.scaled.sf.bray ~ Season, data=adonis.scaled.sf)
+  # p-value = 0.001
+  # R2 = 0.09675 
+beta.tax = betadisper(d=adonis.scaled.sf.bray, group=adonis.scaled.sf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 22.58511 
+
+# Summer vs. Fall
+adonis.scaled.suf <- subset_samples(physeq = scaled, Season != "Spring")
+adonis.scaled.suf.bray <- phyloseq::distance(physeq = adonis.scaled.suf, method = "bray")
+adonis.scaled.suf <- data.frame(sample_data(adonis.scaled.suf))
+adonis(adonis.scaled.suf.bray ~ Season, data=adonis.scaled.suf)
+  # p-value = 0.001
+  # R2 = 0.03054
+beta.tax = betadisper(d=adonis.scaled.suf.bray, group=adonis.scaled.suf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 29.63419
+
+
+##### Nested adonis #####
+adonis(scaled.bray ~ Depth + Fraction + Group + Season, data = bcc.sampledf)
+  ## Depth & Fraction have highest R2 (0.12468 & 0.11545 respectively)
+  ## Group (0.09573), Season ( 0.06651)
+  ## Residuals = 0.59763 
+  ## All p-values = 0.001
+
+```
+
+
+### Procrustes Analyses (Verruco vs. Whole Bacterial community)
+```{r procrustes}
+procrust <- procrustes(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 12.43
+plot(procrust)
+plot(procrust,kind=2)
+pro <- protest(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3896
+  # correlation = 0.7813
+plot(pro)
+
+
+procrust2 <- procrustes(scaled.pcoa$vectors[,1:3], Ver.pcoa$vectors[,1:3], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 11.72
+plot(procrust2)
+plot(procrust2,kind=2)
+pro2 <- protest(scaled.pcoa$vectors[,1:3], Ver.pcoa$vectors[,1:3])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.2891
+  # correlation = 0.8431
+plot(pro2)
+
+
+procrust3 <- procrustes(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 7.538
+plot(procrust3)
+plot(procrust3,kind=2)
+pro3 <- protest(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3058
+  # correlation = 0.8332
+plot(pro2)
+
+
+
+
+### Prepare to make a prettier Procrustes plot
+# http://stackoverflow.com/questions/30325739/ggplot2-for-procrustes-rotation-in-vegan
+pro.df <- data.frame(Dimension1=procrust2$Yrot[,1], Dimension2=procrust2$Yrot[,2],
+                     xDimension1=procrust2$X[,1], xDimension2=procrust2$X[,2])
+pro.df$Depth <- sample_data(Ver)$Depth
+pro.df$Group <- sample_data(Ver)$Group
+pro.df$Fraction <- sample_data(Ver)$Fraction
+pro.df$Season <- sample_data(Ver)$Season
+
+### Make a prettier Procrustes plot
+# Basic
+ggplot(pro.df) +
+  geom_point(aes(x=Dimension1, y=Dimension2)) +
+  geom_point(aes(x=xDimension1, y=xDimension2)) +
+  geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
+               arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5)
+
+### Facet = Group, Color = Depth
+ggplot(pro.df) +
+  geom_point(aes(x=Dimension1, y=Dimension2, color=Depth, shape=Fraction)) +
+  geom_point(aes(x=xDimension1, y=xDimension2, color=Depth, shape=Fraction)) +
+  geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
+               arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5) +
+  facet_grid(~Group) +
+  scale_color_manual(values = c("indianred1","green3","mediumpurple2", "skyblue")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+### Facet = Group, Color = Fraction, Shape = Season
+ggplot(pro.df) +
+  geom_point(aes(x=Dimension1, y=Dimension2, color=Fraction, shape=Season)) +
+  geom_point(aes(x=xDimension1, y=xDimension2, color=Fraction, shape=Season)) +
+  geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
+               arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5) +
+  facet_grid(~Group) +
+  scale_color_manual(values = c("indianred1","skyblue","mediumpurple2")) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, override.aes=list(size=3)),
+         shape = guide_legend(order=2, override.aes=list(size=3)))
+
+
+```
+
+
+### Co-interia Analysis
+```{r cia}
+# https://pbil.univ-lyon1.fr/R/pdf/course6.pdf
+# http://pbil.univ-lyon1.fr/ade4/ade4-html/coinertia.html
+# https://www.bioconductor.org/help/course-materials/2014/BioC2014/IntAnalysis.html
+Ver.dudi <- dudi.pco(Ver.bray)
+3
+  # 3 axes since my Bray PCoA uses 3 axes
+scaled.dudi <- dudi.pco(scaled.bray)
+3
+  # 3 axes since my Bray PCoA uses 3 axes
+cia <- coinertia(scaled.dudi, Ver.dudi)
+3
+  # 3 axes since my Bray PCoA uses 3 axes
+  # RV = 0.7467593
+      # Closer to 1 means that the datasets are more similar
+summary(cia)
+plot(cia)
+rv.comp <- RV.rtest(scaled.dudi$tab, Ver.dudi$tab, 999)
+   # Observation = 0.7467594
+  # p-value = 0.001 
+hist(rv.comp$sim)
+
+
+tiff("coinertia.tiff", width=25, height=20, units="in", res=500)
+plot(cia)
+dev.off()
+
+
+
+lX = AxcX   Row scores (rows of scaled.dudi cols) 
+mX = NorS   Normed row scores (rows of scaled.dudi) 
+lY = AxcY   Row scores (rows of Ver.dudi) 
+mY = NorS   Normed row scores (rows of Ver.dudi)  
+
+
+s.label()
+
+
+s.label(res.pca$li, xax = 1, yax = 2)
+
+```
+
+
+
 
 ### RELATIVE ABUNDANCE UNSTACKED BAR PLOT
 ```{r}
@@ -1395,6 +2093,591 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 ```
 
 
+### Add Planctomycetes Outgroup to Phyloseq Object
+```{r outgroup, echo=FALSE}
+outgroup <- prune_taxa(names(taxa_sums(scaled)) == "Otu000037", x=scaled)
+Ver.out <- merge_phyloseq(Ver, outgroup)
+
+# Subset out top 50 most abundant Verruco OTUs
+top50ver = sort(taxa_sums(Ver), TRUE)[1:50]
+top50ver.names<-names(top50ver)
+write.csv(x=mostabund.names,file="topver", quote=F, row.names = F)
+```
+
+
+
+### DESeq
+```{r relabund, echo=FALSE}
+# DESeq bible: https://www.bioconductor.org/packages/3.3/bioc/vignettes/DESeq/inst/doc/DESeq.pdf
+# Phyloseq to DESeq2: http://joey711.github.io/phyloseq-extensions/DESeq2.html
+# Phyloseq to DESeq: http://joey711.github.io/phyloseq-extensions/DESeq.html
+
+
+### DESeq2 ###
+# Editing phyloseq object because there can be no 0's
+Ver.out.out1 <- otu_table(Ver.out) + 1
+Ver.out.samp <- sample_data(Ver.out)
+Ver.out.tax <- tax_table(Ver.out)
+Ver.out.1 <- merge_phyloseq(Ver.out.out1, Ver.out.samp, Ver.out.tax)
+
+
+# Let's look at Source (water vs. sed)
+Vsource <- phyloseq_to_deseq2(physeq = Ver.out.1, design = ~ Group+Season+Source)
+  # I left out Depth & Fraction because those all take into account water vs. sediment
+  # Looks the same whether you control or not
+Vsource <- DESeq(object = Vsource, test="Wald", fitType="local")
+plotDispEsts(object = Vsource)
+source.res <- results(Vsource, cooksCutoff=FALSE)
+  # Sediment = negative
+  # Water = positive
+#plotMA(source.res, main="DESeq2", ylim=c(-2,2))
+  # MA plot of DEseq results; red= p-value < 0.1
+  # You want this plot to be mostly symmetrical around the x-axis (at 0)
+#resMLE <- results(Vsource, addMLE=TRUE)
+#head(resMLE, 4)
+#plotMA(resMLE, MLE=TRUE, main="unshrunken LFC", ylim=c(-2,2))
+
+# Let's pull out all the OTUs that are overrepresented in Sediment
+source.ma <- as.matrix(source.res)
+sed <- which(source.res$log2FoldChange < 0)
+sed.otus <- rownames(source.ma[sed,])
+
+# Let's pull out all the OTUs that are overrepresented in Water
+water <- which(source.res$log2FoldChange > 0)
+water.otus <- rownames(source.ma[water,])
+
+# Getting ready to plot!
+alpha <- 0.01
+sigtab <- source.res[which(source.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.out.1)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+
+# Now let's isolate Verrucos in water
+Ver.water <- subset_samples(Ver.out.1, Depth != "Sediment")
+Ver.water <- subset_samples(Ver.water, Depth != "DCM")
+  # We want binary, so remove DCM too
+# Create DESeq2 object
+Vwd <- phyloseq_to_deseq2(physeq = Ver.water, design = ~ Group+Season+Depth )
+Vwd <- DESeq(object = Vwd, test="Wald", fitType="local")
+plotDispEsts(object = Vwd)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vwd.res <- results(Vwd, cooksCutoff=FALSE)
+  # Bottom = Negative
+  # Top = Positive
+#plotMA(Vwd.res, main="DESeq2", ylim=c(-2,2))
+  # MA plot of DEseq results; red= p-value < 0.1
+  # You want this plot to be mostly symmetrical around the x-axis (at 0)
+#resMLE <- results(Vwd, addMLE=TRUE)
+#head(resMLE, 4)
+#plotMA(resMLE, MLE=TRUE, main="unshrunken LFC", ylim=c(-2,2))
+
+# Let's pull out all the OTUs that are overrepresented in Bottom
+water.df <- data.frame(Vwd.res)
+water.bot <- which(water.df$log2FoldChange < 0)
+water.bot.otus <- rownames(water.df[water.bot,])
+# Let's pull out all the OTUs that are overrepresented in Top
+water.top <- which(water.df$log2FoldChange > 0)
+water.top.otus <- rownames(water.df[water.top,])
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- res[which(res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.water)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+# Verrucos in Bottom vs. Sediment
+Ver.bs <- subset_samples(Ver.out.1, Depth != "Top")
+Ver.bs <- subset_samples(Ver.bs, Depth != "DCM")
+# Create DESeq2 object
+Vbs <- phyloseq_to_deseq2(physeq = Ver.bs, design = ~ Group+Season+Depth )
+Vbs <- DESeq(object = Vbs, test="Wald", fitType="local")
+plotDispEsts(object = Vbs)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vbs.res <- results(Vbs, cooksCutoff=FALSE)
+  # Bottom = Negative
+  # Sediment = Positive
+# Let's pull out all the OTUs that are overrepresented in Bottom
+Vbs.df <- data.frame(Vbs.res)
+bs.bot <- which(Vbs.df$log2FoldChange < 0)
+bs.bot.otus <- rownames(Vbs.df[bs.bot,])
+# Let's pull out all the OTUs that are overrepresented in Sediment
+bs.sed <- which(Vbs.df$log2FoldChange > 0)
+bs.sed.otus <- rownames(Vbs.df[bs.sed,])
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- Vbs.res[which(Vbs.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.bs)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+# Verrucos in Sediment vs. Top
+Ver.st <- subset_samples(Ver.out.1, Depth != "Bottom")
+Ver.st <- subset_samples(Ver.bs, Depth != "DCM")
+# Create DESeq2 object
+Vst <- phyloseq_to_deseq2(physeq = Ver.st, design = ~ Group+Season+Depth )
+Vst <- DESeq(object = Vst, test="Wald", fitType="local")
+plotDispEsts(object = Vst)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vst.res <- results(Vst, cooksCutoff=FALSE)
+  # Sediment = Negative
+  # Top = Positive
+# Let's pull out all the OTUs that are overrepresented in Sediment
+Vst.df <- data.frame(Vst.res)
+st.sed <- which(Vst.df$log2FoldChange < 0)
+st.sed.otus <- rownames(Vst.df[st.sed,])
+
+# Let's pull out all the OTUs that are overrepresented in Top
+st.top <- which(Vst.df$log2FoldChange > 0)
+st.top.otus <- rownames(Vst.df[st.top,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- Vst.res[which(Vst.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.out.1)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+sed.otus1 <- intersect(water.bot.otus, bs.sed.otus)
+  # Which OTUs that prefer bottom, also prefer sed
+sed.otus2 <- intersect(water.top.otus, st.sed.otus)
+  # Which OTUs that prefer top, also prefer sed
+sed.otus <- c(sed.otus1, sed.otus2)
+  ## OTUs that are overrepresented in Sediment
+bot.otus <- setdiff(water.bot.otus, bs.sed.otus)
+  ## OTUs that are overrepresented in Bottom
+top.otus <- setdiff(water.top.otus, st.sed.otus)
+  ## OTUs that are overrepresented in Top
+
+
+
+### Group
+# Now let's isolate Verrucos in Estuary & Laurentian
+Vg.el <- subset_samples(Ver.out.1, Group != "Inland")
+# Create DESeq2 object
+Vg.el.d <- phyloseq_to_deseq2(physeq = Vg.el, design = ~ Depth+Season+Group)
+  # Depth & Fraction can't be controlled for together because they both include sediment
+  # Not a big difference between controlling for one or the either
+  # I'll choose to control for depth because that accounts for more of the variation
+Vg.el.d <- DESeq(object = Vg.el.d, test="Wald", fitType="local")
+plotDispEsts(object = Vg.el.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vg.el.res <- results(Vg.el.d, cooksCutoff=FALSE)
+  # Estuary = Negative
+  # Laurentian = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Estuary
+Ver.el <- data.frame(Vg.el.res)
+Ver.el.est <- which(Ver.el$log2FoldChange < 0)
+Ver.el.est.otus <- rownames(Ver.el[Ver.el.est,])
+
+# Let's pull out all the OTUs that are overrepresented in Laurentian
+Ver.el.lau <- which(Ver.el$log2FoldChange > 0)
+Ver.el.lau.otus <- rownames(Ver.el[Ver.el.lau,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- Vg.el.res[which(Vg.el.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.out.1)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+# Now let's isolate Verrucos in Estuary & Inland
+Vg.ei <- subset_samples(Ver.out.1, Group != "Laurentian")
+# Create DESeq2 object
+Vg.ei.d <- phyloseq_to_deseq2(physeq = Vg.ei, design = ~ Depth+Season+Group )
+Vg.ei.d <- DESeq(object = Vg.ei.d, test="Wald", fitType="local")
+plotDispEsts(object = Vg.ei.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vg.ei.res <- results(Vg.ei.d, cooksCutoff=FALSE)
+  # Estuary = Negative
+  # Inland = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Estuary
+Ver.ei <- data.frame(Vg.ei.res)
+Ver.ei.est <- which(Ver.ei$log2FoldChange < 0)
+Ver.ei.est.otus <- rownames(Ver.ei[Ver.ei.est,])
+
+# Let's pull out all the OTUs that are overrepresented in Inland
+Ver.ei.inl <- which(Ver.ei$log2FoldChange > 0)
+Ver.ei.inl.otus <- rownames(Ver.ei[Ver.ei.inl,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- Vg.ei.res[which(Vg.ei.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.water)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+# Now let's isolate Verrucos in Laurentian & Inland
+Vg.li <- subset_samples(Ver.out.1, Group != "Estuary")
+# Create DESeq2 object
+Vg.li.d <- phyloseq_to_deseq2(physeq = Vg.li, design = ~Depth+Season+Group )
+Vg.li.d <- DESeq(object = Vg.li.d, test="Wald", fitType="local")
+plotDispEsts(object = Vg.li.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vg.li.res <- results(Vg.li.d, cooksCutoff=FALSE)
+  # Inland = Negative
+  # Laurentian = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Inland
+Ver.li <- data.frame(Vg.li.res)
+Ver.li.inl <- which(Ver.li$log2FoldChange < 0)
+Ver.li.inl.otus <- rownames(Ver.li[Ver.li.inl,])
+
+# Let's pull out all the OTUs that are overrepresented in Laurentian
+Ver.li.lau <- which(Ver.li$log2FoldChange > 0)
+Ver.li.lau.otus <- rownames(Ver.li[Ver.li.lau,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- Vg.li.res[which(Vg.li.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.water)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+est.otus <- intersect(Ver.el.est.otus, Ver.ei.est.otus)
+inl.otus <- intersect(Ver.ei.inl.otus, Ver.li.inl.otus)
+lau.otus <- intersect(Ver.el.lau.otus, Ver.li.lau.otus)
+
+
+
+
+####### Fraction
+# Now let's isolate Verrucos in Free & Particle (fractions, so no sediment but DCM is included)
+Vfrac <- subset_samples(Ver.out.1, Fraction != "Sediment")
+
+# Create DESeq2 object
+Vfrac.d <- phyloseq_to_deseq2(physeq = Vfrac, design = ~ Depth+Group+Season+Fraction )
+Vfrac.d <- DESeq(object = Vfrac.d, test="Wald", fitType="local")
+plotDispEsts(object = Vfrac.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+Vfrac.res <- results(Vfrac.d, cooksCutoff=FALSE)
+  # Free = Negative
+  # Particle = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Free
+Vfrac.data <- data.frame(Vfrac.res)
+V.free <- which(Vfrac.data$log2FoldChange < 0)
+free.otus <- rownames(Vfrac.data[V.free,])
+
+# Let's pull out all the OTUs that are overrepresented in Laurentian
+V.part <- which(Vfrac.data$log2FoldChange > 0)
+part.otus <- rownames(Vfrac.data[V.part,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- Vfrac.res[which(Vfrac.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Vfrac)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+
+
+
+
+####### Season
+# Now let's isolate Verrucos in Spring & Summer
+V.ss <- subset_samples(Ver.out.1, Season != "Fall")
+# Create DESeq2 object
+V.ss.d <- phyloseq_to_deseq2(physeq = V.ss, design = ~ Depth+Group+Season )
+V.ss.d <- DESeq(object = V.ss.d, test="Wald", fitType="local")
+plotDispEsts(object = V.ss.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+V.ss.res <- results(V.ss.d, cooksCutoff=FALSE)
+  # Spring = Negative
+  # Summer = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Free
+V.ss.data <- data.frame(V.ss.res)
+V.sp <- which(V.ss.data$log2FoldChange < 0)
+V.sp.otus <- rownames(V.ss.data[V.sp,])
+
+# Let's pull out all the OTUs that are overrepresented in Laurentian
+V.su <- which(V.ss.data$log2FoldChange > 0)
+V.su.otus <- rownames(V.ss.data[V.su,])
+
+# Getting ready to plot
+alpha <- 0.01
+  # Significance level
+sigtab <- V.ss.res[which(V.ss.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(V.ss)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+
+
+
+# Now let's isolate Verrucos in Spring & Fall
+V.spf <- subset_samples(Ver.out.1, Season != "Summer")
+# Create DESeq2 object
+V.spf.d <- phyloseq_to_deseq2(physeq = V.spf, design = ~ Depth+Group+Season )
+V.spf.d <- DESeq(object = V.spf.d, test="Wald", fitType="local")
+plotDispEsts(object = V.spf.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+V.spf.res <- results(V.spf.d, cooksCutoff=FALSE)
+  # Fall = Negative
+  # Spring = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Free
+V.spf.data <- data.frame(V.spf.res)
+V.spf.fa <- which(V.spf.data$log2FoldChange < 0)
+V.spf.fa.otus <- rownames(V.spf.data[V.spf.fa,])
+
+# Let's pull out all the OTUs that are overrepresented in Laurentian
+V.spf.sp <- which(V.spf.data$log2FoldChange > 0)
+V.spf.sp.otus <- rownames(V.spf.data[V.spf.sp,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- V.spf.res[which(V.spf.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(V.spf)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+
+
+
+# Now let's isolate Verrucos in Summer & Fall
+V.suf <- subset_samples(Ver.out.1, Season != "Spring")
+# Create DESeq2 object
+V.suf.d <- phyloseq_to_deseq2(physeq = V.suf, design = ~ Depth+Group+Season )
+V.suf.d <- DESeq(object = V.suf.d, test="Wald", fitType="local")
+plotDispEsts(object = V.suf.d)
+  # Dispersion increases over normalized mean count, so use fitType = "local"
+    # https://support.bioconductor.org/p/63244/
+# Summarize results
+V.suf.res <- results(V.suf.d, cooksCutoff=FALSE)
+  # Fall = Negative
+  # Summer = Positive
+
+# Let's pull out all the OTUs that are overrepresented in Free
+V.suf.data <- data.frame(V.suf.res)
+V.suf.fa <- which(V.suf.data$log2FoldChange < 0)
+V.suf.fa.otus <- rownames(V.suf.data[V.suf.fa,])
+
+# Let's pull out all the OTUs that are overrepresented in Laurentian
+V.suf.su <- which(V.suf.data$log2FoldChange > 0)
+V.suf.su.otus <- rownames(V.suf.data[V.suf.su,])
+
+# Getting ready to plot
+alpha <- 0.01
+sigtab <- V.suf.res[which(V.suf.res$padj < alpha),]
+sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(V.suf)[rownames(sigtab),], "matrix"))
+ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer (palette="Set1")
+
+sp.otus <- intersect(V.sp.otus,V.spf.sp.otus)
+su.otus <- intersect(V.su.otus,V.suf.su.otus)
+fa.otus <- intersect(V.spf.fa.otus,V.suf.fa.otus)
+```
+
+
+
+### Create ecoIDs
+```{r ecoID}
+#http://stackoverflow.com/questions/10298662/find-elements-not-in-smaller-character-vector-list-but-in-big-list
+Ver.otus <- rownames(tax_table(Ver.out.1))
+
+Group.label <- rownames(tax_table(Ver.out.1))
+Group.label[Group.label %in% est.otus] <- paste("E", Group.label[Group.label %in% est.otus])
+Group.label[Group.label %in% inl.otus] <- paste("I", Group.label[Group.label %in% inl.otus])
+Group.label[Group.label %in% lau.otus] <- paste("L", Group.label[Group.label %in% lau.otus])
+# 1244 labels; 79 OTUs have no preference
+
+Depth.label <- rownames(tax_table(Ver.out.1))
+Depth.label[Depth.label %in% bot.otus] <- paste("B", Depth.label[Depth.label %in% bot.otus])
+Depth.label[Depth.label %in% sed.otus] <- paste("S", Depth.label[Depth.label %in% sed.otus])
+Depth.label[Depth.label %in% top.otus] <- paste("T", Depth.label[Depth.label %in% top.otus])
+# 1323 labels; all OTUs have preference
+
+Fraction.label <- rownames(tax_table(Ver.out.1))
+Fraction.label[Fraction.label %in% free.otus] <- paste("F", Fraction.label[Fraction.label %in%
+                                                                             free.otus])
+Fraction.label[Fraction.label %in% part.otus] <- paste("P", Fraction.label[Fraction.label %in%
+                                                                             part.otus])
+# 1323 labels; all OTUs have preference
+
+Season.label <- rownames(tax_table(Ver.out.1))
+Season.label[Season.label %in% sp.otus] <- paste("C_", Season.label[Season.label %in% sp.otus])
+Season.label[Season.label %in% su.otus] <- paste("V_", Season.label[Season.label %in% su.otus])
+Season.label[Season.label %in% fa.otus] <- paste("A_", Season.label[Season.label %in% fa.otus])
+# 1320 labels; 3 OTUs have no preference
+
+group.split <- data.frame(strsplit(Group.label, " "), stringsAsFactors=FALSE)
+colnames(group.split) <- Ver.otus
+depth.split <- data.frame(strsplit(Depth.label, " "), stringsAsFactors=FALSE)
+colnames(depth.split) <- Ver.otus
+fraction.split <- data.frame(strsplit(Fraction.label, " "), stringsAsFactors=FALSE)
+colnames(fraction.split) <- Ver.otus
+season.split <- data.frame(strsplit(Season.label, " "), stringsAsFactors=FALSE)
+colnames(season.split) <- Ver.otus
+group.split[3,] <- depth.split[1,]
+group.split[4,] <- fraction.split[1,]
+group.split[5,] <- season.split[1,]
+group.split <- group.split[-2,]
+# Now to rename the OTUs with no preference in one of the ecological factors
+nopref <- which(substr(group.split[1,],1,1) == "O")
+group.split[1,nopref] <- 0
+nopref <- which(substr(group.split[2,],1,1) == "O")
+group.split[2,nopref] <- 0
+nopref <- which(substr(group.split[3,],1,1) == "O")
+group.split[3,nopref] <- 0
+nopref <- which(substr(group.split[4,],1,1) == "O")
+group.split[4,nopref] <- "0_"
+group.split[5,] <- paste(group.split[2,], group.split[1,], group.split[3,], group.split[4,],
+                         colnames(group.split))
+write.csv(group.split[5,], file="Ecology_Otu", row.names=FALSE, quote=FALSE)
+```
+
+### Create updated phyloseq object with EcoID
+```{r ecoid.phyloseq}
+##### Create new phyloseq object with EcoIDs
+eco.label<- read.csv("Ecology_Otu", header=F)
+eco.label <- t(eco.label)
+otu <- otu_table(Ver.out.1)
+samp <- sample_data(Ver.out.1)
+tax <- data.frame(tax_table(Ver.out.1))
+tax$EcoID <- eco.label
+group.split <- t(group.split)
+tax$Pref.Depth <- group.split[,3]
+tax$Pref.Group <- group.split[,1]
+tax$Pref.Fraction <- group.split[,4]
+tax$Pref.Season <- group.split[,5]
+tax <- as.matrix(tax)
+tax <- tax_table(tax)
+eco.ver <- merge_phyloseq(otu, samp, tax)
+newick <- read.newick(file="ver.outgroup.tre")
+  # Outgroup = Planctomycetes Otu000037
+newick_phy <- phy_tree(newick)
+#test <- import_mothur(mothur_tree_file=newick)
+Ver.tree<-merge_phyloseq(eco.ver,newick_phy)
+#plot_tree(Ver.tree, color="Class")
+Ver.50 <- prune_taxa(mostabund.names, Ver.tree)
+#plot_tree(Ver.50, color="Class")
+```
+
+### Create labels for IToL!
+```{r, itol}
+### IToL Label Functions
+color.id <- function(x) {
+  ifelse(grepl("OPB35_soil_group",x),"#e41a1c",
+  ifelse(grepl("Opitutae",x), "#377eb8",
+  ifelse(grepl("Spartobacteria",x), "#4daf4a",
+  ifelse(grepl("S-BQ2-57_soil_group",x), "#984ea3",
+  ifelse(grepl("Verrucomicrobia_Incertae_Sedis",x), "#ff7f00",
+  ifelse(grepl("Verrucomicrobiae",x), "#ffd92f",
+  ifelse(grepl("unclassified",x), "#a65628",
+  ifelse(grepl("UA11",x), "#f781bf",
+         NA))))))))
+}
+
+depth.id <- function(x) {
+  depth <- substr(x$EcoID,1,1)
+  ifelse(grepl("T",depth), "1,-1,-1",
+  ifelse(grepl("B",depth), "-1,1,-1",
+  ifelse(grepl("S",depth), "-1,-1,1",
+  ifelse(grepl("0",depth), "-1,-1,-1",
+  NA))))
+}
+
+group.id <- function(x) {
+  group <- substr(x$EcoID,2,2)
+  ifelse(grepl("E",group), "1,-1,-1",
+  ifelse(grepl("I",group), "-1,1,-1",
+  ifelse(grepl("L",group), "-1,-1,1",
+  ifelse(grepl("0", group), "-1,-1,-1",
+  NA))))
+}
+
+fraction.id <- function(x) {
+  fraction <- substr(x$EcoID,3,3)
+  ifelse(grepl("F",fraction), "1,-1",
+  ifelse(grepl("P",fraction), "-1,1",
+  ifelse(grepl("0",fraction), "-1,-1",
+  NA)))
+}
+
+season.id <- function(x) {
+  season <- substr(x$EcoID,4,4)
+  ifelse(grepl("C",season), "1,-1,-1",
+  ifelse(grepl("V",season), "-1,1,-1",
+  ifelse(grepl("A",season), "-1,-1,1",
+  ifelse(grepl("0", season), "-1,-1,-1",
+  NA))))
+}
+
+### Create IToL COLOR labels
+Ver.only <- prune_taxa(names(taxa_sums(Ver.tree)) != "Otu000037", x=Ver.tree)
+all <- data.frame(tax_table(Ver.only))
+color.all <- data.frame(all$Species)
+color.all$Class <- all$Class
+color.all$color <- color.id(color.all$Class)
+color.all$label <- paste(color.all$all.Species,"range",color.all$color,color.all$Class)
+write.csv(color.all$label,file="all.ver.color",row.names=FALSE,quote=FALSE)
+
+### Create IToL ECOID Labels
+ecoid.all <- data.frame(all$Species)
+ecoid.all$EcoID <- all$EcoID
+depth.itol <- depth.id(ecoid.all)
+ecoid.all$depth.label <- depth.itol
+group.itol <- group.id(ecoid.all)
+ecoid.all$group.label <- group.itol
+fraction.itol <- fraction.id(ecoid.all)
+ecoid.all$fraction.label <- fraction.itol
+season.itol <- season.id(ecoid.all)
+ecoid.all$season.label <- season.itol
+ecoid.all$itol.label <- paste(ecoid.all$all.Species, ecoid.all$depth.label, ecoid.all$group.label,
+                              ecoid.all$fraction.label, ecoid.all$season.label)
+write.csv(ecoid.all$itol.label,"EcoID.IToL.label", row.names=FALSE, quote=FALSE)
+```
+
+### Create dataset for ITOL for top 100 Verruco OTUS
+```{r ITOL.100}
+# Subset out top 100 most abundant Verruco OTUs
+top100ver = sort(taxa_sums(Ver.only), TRUE)[1:100]
+print(top100ver)
+top100ver.names<-names(top100ver)
+
+Ver.100 <- prune_taxa(mostabund.names, Ver.only)
+#write.tree(phy_tree(Ver.100), file="Ver.100.tre")
+```
+
+
+### Prep for AdaptML   ###### THIS PART NEEDS TO BE UPDATED !!!!!!!! ######
+```{r adaptML}
+adaptml <- Ver.tree
+adaptml.otu <- data.frame(otu_table(adaptml))
+adaptml.tax <- data.frame(tax_table(adaptml))
+taxa_names(adaptml) <- tax_table(adaptml)[,8]
+write.tree(phy_tree(adaptml),"adaptml.tre")
+```
 
 
 ### Extra Functions
@@ -1402,6 +2685,74 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 ################# FUNCTION TO FIND NAS IN A DATAFRAME #################
 nacols <- function(df) {
   colnames(df)[unlist(lapply(df, function(x) any(is.na(x))))]
+}
+
+deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.01){
+  data_pruned <- prune_taxa(taxa_sums(data) > cutoff, data)
+  de_data <- phyloseq_to_deseq2(data_pruned, valuetest)
+  de_data2 <- DESeq(de_data, test="Wald", fitType="local")
+  res_data <- results(de_data2, cooksCutoff = FALSE)
+  sig_data <- res_data[which(res_data$padj < alpha), ]
+  sigtab_sherm <- cbind(as(sig_data, "data.frame"), as(tax_table(data_pruned)[rownames(sig_data), ], "matrix"))
+} 
+
+plot_deSEQ <- function(deSEQdata, title){
+  y = tapply(deSEQdata$log2FoldChange, deSEQdata$Genus, function(x) max(x))
+  y = sort(y, TRUE)
+  deSEQdata$Genus = factor(as.character(deSEQdata$Genus), levels=names(y))
+  ggplot(deSEQdata, aes(x=Genus, y=log2FoldChange, color=Phylum)) + 
+    geom_point(size=6) +  ggtitle(title) +  
+    scale_color_manual(values = phylum.colors,name="Phylum") +
+    scale_y_continuous(breaks=seq(-15,15,1)) + 
+    theme(axis.title.x = element_text(face="bold", size=16),
+          axis.text.x = element_text(angle=30, colour = "black", vjust=1, hjust = 1, size=12),
+          axis.text.y = element_text(colour = "black", size=16),
+          axis.title.y = element_text(face="bold", size=16),
+          plot.title = element_text(face="bold", size = 20),
+          legend.title = element_text(size=12, face="bold"),
+          legend.text = element_text(size = 12),
+          strip.background = element_rect(colour="black"),
+          legend.position="right")
+}
+
+
+
+phyloseq_to_adonis <- function(physeq, distmat = NULL, dist = "bray", formula) {
+  if(!is.null(distmat)){
+    phydist <- distmat
+  } else {
+    phydist <- phyloseq::distance(physeq, dist)
+  }
+  metadata <- as(sample_data(physeq), "data.frame")
+  
+  # Adonis test
+  f <- reformulate(formula, response = "phydist")
+  adonis.test <- adonis(f, data = metadata)
+  print(adonis.test)
+  
+  # Run homogeneity of dispersion test if there is only 1 variable
+  if (length(formula) == 1) {
+    group <- metadata[,formula]
+    beta <- betadisper(phydist, group)
+    disper.test = permutest(beta)
+    print(disper.test)
+  
+    l <- list(
+      dist = phydist, 
+      formula = f, 
+      adonis = adonis.test, 
+      disper = disper.test
+    )
+    
+  } else {
+    
+    l <- list(
+      dist = phydist, 
+      formula = f, 
+      adonis = adonis.test
+    )
+  }
+  return (l)
 }
 ```
 
