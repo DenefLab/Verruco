@@ -11,7 +11,7 @@ mapfile = "verruco_metadata_duplicates.csv"
 # Import mothur data
 mothurdata = import_mothur(
   mothur_shared_file = sharedfile, 
-  mothur_constaxonomy_file = taxfile
+  mothur_constaxonomy_file = taxfile,
 )
 
 # Add the OTU number as a column in the taxonomy file
@@ -31,6 +31,18 @@ map <- sample_data(map)
 rownames(map) <- map$SampleID
 mothur.merge <- merge_phyloseq(mothurdata, map)
 
+
+
+# Names in original mothur file vs. VerrucoData file
+# To be used to created phylogenetic tree in mothur
+orig.names <- sample_names(mothur.merge)
+ver.names <- sample_names(mothurdata)
+dif.names <- setdiff(orig.names, ver.names)
+#sub.names <- gsub(pattern = "[.]", replacement = "-", x = dif.names)
+#sub.names <- data.frame(sub.names)
+writeLines(text = dif.names,con = "mothur.remove.groups")
+
+
 # Filter out non-samples (i.e. water, mock) and non-bacteria
 verruco <-
   mothur.merge %>%
@@ -40,7 +52,7 @@ verruco <-
       Class != "Chloroplast"
   ) %>%
   subset_samples(
-    Blank == "no" &
+      Blank == "no" &
       !Fraction %in% c("cFree", "cParticle") & 
       Lake != "Huron" 
   ) 
@@ -48,4 +60,5 @@ verruco <-
 # Also prune out taxa which were only present in removed samples
 verruco <- prune_taxa(taxa_sums(verruco) > 0, verruco)
 
-save(verruco, file = "VerrucoData.RData")
+#save(verruco, file = "VerrucoData.RData")
+
