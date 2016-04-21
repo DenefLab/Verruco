@@ -2093,19 +2093,6 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 ```
 
 
-### Add Planctomycetes Outgroup to Phyloseq Object
-```{r outgroup, echo=FALSE}
-outgroup <- prune_taxa(names(taxa_sums(scaled)) == "Otu000037", x=scaled)
-Ver.out <- merge_phyloseq(Ver, outgroup)
-
-# Subset out top 50 most abundant Verruco OTUs
-top50ver = sort(taxa_sums(Ver), TRUE)[1:50]
-top50ver.names<-names(top50ver)
-write.csv(x=mostabund.names,file="topver", quote=F, row.names = F)
-```
-
-
-
 ### DESeq
 ```{r relabund, echo=FALSE}
 # DESeq bible: https://www.bioconductor.org/packages/3.3/bioc/vignettes/DESeq/inst/doc/DESeq.pdf
@@ -2669,15 +2656,6 @@ Ver.100 <- prune_taxa(mostabund.names, Ver.only)
 #write.tree(phy_tree(Ver.100), file="Ver.100.tre")
 ```
 
-
-### Prep for AdaptML   ###### THIS PART NEEDS TO BE UPDATED !!!!!!!! ######
-```{r adaptML}
-adaptml <- Ver.tree
-adaptml.otu <- data.frame(otu_table(adaptml))
-adaptml.tax <- data.frame(tax_table(adaptml))
-taxa_names(adaptml) <- tax_table(adaptml)[,8]
-write.tree(phy_tree(adaptml),"adaptml.tre")
-```
 
 
 ### Extra Functions
