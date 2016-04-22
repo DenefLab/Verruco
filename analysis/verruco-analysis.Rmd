@@ -125,8 +125,8 @@ scale_reads <- function(physeq,n){
 
 # Normalize our dataset!
 scaled <- scale_reads(verr.dupmerge,10468)   ### Scaled to 10,468 (minumum sample)
-sample_data(scaled)$Group <- ordered(sample_data(scaled)$Group, levels=c("Laurentian", 
-                                                                   "Estuary","Inland"))
+sample_data(scaled)$Group <- ordered(sample_data(scaled)$Group,
+                                     levels=c("Laurentian","Estuary","Inland"))
 sample_data(scaled)$Fraction <- ordered(sample_data(scaled)$Fraction,
                                      levels = c("Particle","Free","Sediment"))
 sample_data(scaled)$Depth <- ordered(sample_data(scaled)$Depth,
@@ -1825,8 +1825,6 @@ s.label(res.pca$li, xax = 1, yax = 2)
 ```
 
 
-
-
 ### RELATIVE ABUNDANCE UNSTACKED BAR PLOT
 ```{r}
 classVer <- tax_glom(Ver, taxrank = "Class")
@@ -2094,7 +2092,7 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 
 
 ### DESeq
-```{r relabund, echo=FALSE}
+```{r deseq, echo=FALSE}
 # DESeq bible: https://www.bioconductor.org/packages/3.3/bioc/vignettes/DESeq/inst/doc/DESeq.pdf
 # Phyloseq to DESeq2: http://joey711.github.io/phyloseq-extensions/DESeq2.html
 # Phyloseq to DESeq: http://joey711.github.io/phyloseq-extensions/DESeq.html
@@ -2102,138 +2100,73 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 
 ### DESeq2 ###
 # Editing phyloseq object because there can be no 0's
-Ver.out.out1 <- otu_table(Ver.out) + 1
-Ver.out.samp <- sample_data(Ver.out)
-Ver.out.tax <- tax_table(Ver.out)
-Ver.out.1 <- merge_phyloseq(Ver.out.out1, Ver.out.samp, Ver.out.tax)
+Ver1 <- otu_table(Ver) + 1
+Ver.samp <- sample_data(Ver)
+Ver.tax <- tax_table(Ver)
+Ver1 <- merge_phyloseq(Ver1, Ver.samp, Ver.tax)
 
 
 # Let's look at Source (water vs. sed)
-Vsource <- phyloseq_to_deseq2(physeq = Ver.out.1, design = ~ Group+Season+Source)
+source <- deSEQ(data=Ver1, valuetest= ~Group+Season+Source, alpha=0.05)
   # I left out Depth & Fraction because those all take into account water vs. sediment
-  # Looks the same whether you control or not
-Vsource <- DESeq(object = Vsource, test="Wald", fitType="local")
-plotDispEsts(object = Vsource)
-source.res <- results(Vsource, cooksCutoff=FALSE)
-  # Sediment = negative
-  # Water = positive
-#plotMA(source.res, main="DESeq2", ylim=c(-2,2))
-  # MA plot of DEseq results; red= p-value < 0.1
-  # You want this plot to be mostly symmetrical around the x-axis (at 0)
-#resMLE <- results(Vsource, addMLE=TRUE)
-#head(resMLE, 4)
-#plotMA(resMLE, MLE=TRUE, main="unshrunken LFC", ylim=c(-2,2))
 
-# Let's pull out all the OTUs that are overrepresented in Sediment
-source.ma <- as.matrix(source.res)
-sed <- which(source.res$log2FoldChange < 0)
-sed.otus <- rownames(source.ma[sed,])
+### Separate sediment & water samples
+sed <- which(source$log2FoldChange < 0)
+sed.otus <- rownames(source[sed,])
+water <- which(test$log2FoldChange > 0)
+water.otus <- rownames(source[water,])
 
-# Let's pull out all the OTUs that are overrepresented in Water
-water <- which(source.res$log2FoldChange > 0)
-water.otus <- rownames(source.ma[water,])
-
-# Getting ready to plot!
-alpha <- 0.01
-sigtab <- source.res[which(source.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.out.1)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
+ggplot(source, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
 
 
 # Now let's isolate Verrucos in water
-Ver.water <- subset_samples(Ver.out.1, Depth != "Sediment")
+Ver.water <- subset_samples(Ver1, Depth != "Sediment")
 Ver.water <- subset_samples(Ver.water, Depth != "DCM")
   # We want binary, so remove DCM too
-# Create DESeq2 object
-Vwd <- phyloseq_to_deseq2(physeq = Ver.water, design = ~ Group+Season+Depth )
-Vwd <- DESeq(object = Vwd, test="Wald", fitType="local")
-plotDispEsts(object = Vwd)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vwd.res <- results(Vwd, cooksCutoff=FALSE)
-  # Bottom = Negative
-  # Top = Positive
-#plotMA(Vwd.res, main="DESeq2", ylim=c(-2,2))
-  # MA plot of DEseq results; red= p-value < 0.1
-  # You want this plot to be mostly symmetrical around the x-axis (at 0)
-#resMLE <- results(Vwd, addMLE=TRUE)
-#head(resMLE, 4)
-#plotMA(resMLE, MLE=TRUE, main="unshrunken LFC", ylim=c(-2,2))
+watercol <- deSEQ(data=Ver.water, valuetest= ~Group+Season+Depth, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Bottom
-water.df <- data.frame(Vwd.res)
-water.bot <- which(water.df$log2FoldChange < 0)
-water.bot.otus <- rownames(water.df[water.bot,])
-# Let's pull out all the OTUs that are overrepresented in Top
-water.top <- which(water.df$log2FoldChange > 0)
-water.top.otus <- rownames(water.df[water.top,])
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- res[which(res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.water)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+### Separate sediment & water samples
+water.bot <- which(watercol$log2FoldChange < 0)
+water.bot.otus <- rownames(watercol[water.bot,])
+water.top <- which(watercol$log2FoldChange > 0)
+water.top.otus <- rownames(watercol[water.top,])
+
+ggplot(watercol, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer (palette="Set1")
 
 
 # Verrucos in Bottom vs. Sediment
-Ver.bs <- subset_samples(Ver.out.1, Depth != "Top")
+Ver.bs <- subset_samples(Ver1, Depth != "Top")
 Ver.bs <- subset_samples(Ver.bs, Depth != "DCM")
-# Create DESeq2 object
-Vbs <- phyloseq_to_deseq2(physeq = Ver.bs, design = ~ Group+Season+Depth )
-Vbs <- DESeq(object = Vbs, test="Wald", fitType="local")
-plotDispEsts(object = Vbs)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vbs.res <- results(Vbs, cooksCutoff=FALSE)
-  # Bottom = Negative
-  # Sediment = Positive
-# Let's pull out all the OTUs that are overrepresented in Bottom
-Vbs.df <- data.frame(Vbs.res)
-bs.bot <- which(Vbs.df$log2FoldChange < 0)
-bs.bot.otus <- rownames(Vbs.df[bs.bot,])
-# Let's pull out all the OTUs that are overrepresented in Sediment
-bs.sed <- which(Vbs.df$log2FoldChange > 0)
-bs.sed.otus <- rownames(Vbs.df[bs.sed,])
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- Vbs.res[which(Vbs.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.bs)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
+Vbs <- deSEQ(data=Ver.bs, valuetest= ~Group+Season+Depth, alpha=0.05)
+
+### Separate sediment & water samples
+bs.bot <- which(Vbs$log2FoldChange < 0)
+bs.bot.otus <- rownames(Vbs[bs.bot,])
+bs.sed <- which(Vbs$log2FoldChange > 0)
+bs.sed.otus <- rownames(Vbs[bs.sed,])
+
+ggplot(Vbs, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
+
 
 
 # Verrucos in Sediment vs. Top
-Ver.st <- subset_samples(Ver.out.1, Depth != "Bottom")
-Ver.st <- subset_samples(Ver.bs, Depth != "DCM")
-# Create DESeq2 object
-Vst <- phyloseq_to_deseq2(physeq = Ver.st, design = ~ Group+Season+Depth )
-Vst <- DESeq(object = Vst, test="Wald", fitType="local")
-plotDispEsts(object = Vst)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vst.res <- results(Vst, cooksCutoff=FALSE)
-  # Sediment = Negative
-  # Top = Positive
-# Let's pull out all the OTUs that are overrepresented in Sediment
-Vst.df <- data.frame(Vst.res)
-st.sed <- which(Vst.df$log2FoldChange < 0)
-st.sed.otus <- rownames(Vst.df[st.sed,])
+Ver.st <- subset_samples(Ver1, Depth != "Bottom")
+Ver.st <- subset_samples(Ver.st, Depth != "DCM")
+Vst <- deSEQ(data=Ver.st, valuetest= ~Group+Season+Depth, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Top
-st.top <- which(Vst.df$log2FoldChange > 0)
-st.top.otus <- rownames(Vst.df[st.top,])
+### Separate sediment & water samples
+st.sed <- which(Vst$log2FoldChange < 0)
+st.sed.otus <- rownames(Vst[st.sed,])
+st.top <- which(Vst$log2FoldChange > 0)
+st.top.otus <- rownames(Vst[st.top,])
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- Vst.res[which(Vst.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.out.1)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
+ggplot(Vst, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
+
 
 sed.otus1 <- intersect(water.bot.otus, bs.sed.otus)
   # Which OTUs that prefer bottom, also prefer sed
@@ -2241,143 +2174,82 @@ sed.otus2 <- intersect(water.top.otus, st.sed.otus)
   # Which OTUs that prefer top, also prefer sed
 sed.otus <- c(sed.otus1, sed.otus2)
   ## OTUs that are overrepresented in Sediment
-bot.otus <- setdiff(water.bot.otus, bs.sed.otus)
+bot.otus <- intersect(water.bot.otus, bs.bot.otus)
   ## OTUs that are overrepresented in Bottom
-top.otus <- setdiff(water.top.otus, st.sed.otus)
+top.otus <- intersect(water.top.otus, st.top.otus)
   ## OTUs that are overrepresented in Top
 
 
 
 ### Group
 # Now let's isolate Verrucos in Estuary & Laurentian
-Vg.el <- subset_samples(Ver.out.1, Group != "Inland")
-# Create DESeq2 object
-Vg.el.d <- phyloseq_to_deseq2(physeq = Vg.el, design = ~ Depth+Season+Group)
-  # Depth & Fraction can't be controlled for together because they both include sediment
-  # Not a big difference between controlling for one or the either
-  # I'll choose to control for depth because that accounts for more of the variation
-Vg.el.d <- DESeq(object = Vg.el.d, test="Wald", fitType="local")
-plotDispEsts(object = Vg.el.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vg.el.res <- results(Vg.el.d, cooksCutoff=FALSE)
-  # Estuary = Negative
-  # Laurentian = Positive
+V.el <- subset_samples(Ver1, Group != "Inland")
+Vel <- deSEQ(data=V.el, valuetest= ~Depth+Season+Group, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Estuary
-Ver.el <- data.frame(Vg.el.res)
-Ver.el.est <- which(Ver.el$log2FoldChange < 0)
-Ver.el.est.otus <- rownames(Ver.el[Ver.el.est,])
+### Separate sediment & water samples
+Vel.est <- which(Vel$log2FoldChange < 0)
+Vel.est.otus <- rownames(Vel[Vel.est,])
+Vel.lau <- which(Vel$log2FoldChange > 0)
+Vel.lau.otus <- rownames(Vel[Vel.lau,])
 
-# Let's pull out all the OTUs that are overrepresented in Laurentian
-Ver.el.lau <- which(Ver.el$log2FoldChange > 0)
-Ver.el.lau.otus <- rownames(Ver.el[Ver.el.lau,])
+ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- Vg.el.res[which(Vg.el.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.out.1)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
 
 
 # Now let's isolate Verrucos in Estuary & Inland
-Vg.ei <- subset_samples(Ver.out.1, Group != "Laurentian")
-# Create DESeq2 object
-Vg.ei.d <- phyloseq_to_deseq2(physeq = Vg.ei, design = ~ Depth+Season+Group )
-Vg.ei.d <- DESeq(object = Vg.ei.d, test="Wald", fitType="local")
-plotDispEsts(object = Vg.ei.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vg.ei.res <- results(Vg.ei.d, cooksCutoff=FALSE)
-  # Estuary = Negative
-  # Inland = Positive
+V.ei <- subset_samples(Ver1, Group != "Laurentian")
+Vei <- deSEQ(data=V.ei, valuetest= ~Depth+Season+Group, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Estuary
-Ver.ei <- data.frame(Vg.ei.res)
-Ver.ei.est <- which(Ver.ei$log2FoldChange < 0)
-Ver.ei.est.otus <- rownames(Ver.ei[Ver.ei.est,])
+### Separate sediment & water samples
+Vei.est <- which(Vei$log2FoldChange < 0)
+Vei.est.otus <- rownames(Vei[Vel.est,])
+Vei.inl <- which(Vei$log2FoldChange > 0)
+Vei.inl.otus <- rownames(Vei[Vei.inl,])
 
-# Let's pull out all the OTUs that are overrepresented in Inland
-Ver.ei.inl <- which(Ver.ei$log2FoldChange > 0)
-Ver.ei.inl.otus <- rownames(Ver.ei[Ver.ei.inl,])
+ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- Vg.ei.res[which(Vg.ei.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.water)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
+
 
 
 # Now let's isolate Verrucos in Laurentian & Inland
-Vg.li <- subset_samples(Ver.out.1, Group != "Estuary")
-# Create DESeq2 object
-Vg.li.d <- phyloseq_to_deseq2(physeq = Vg.li, design = ~Depth+Season+Group )
-Vg.li.d <- DESeq(object = Vg.li.d, test="Wald", fitType="local")
-plotDispEsts(object = Vg.li.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vg.li.res <- results(Vg.li.d, cooksCutoff=FALSE)
-  # Inland = Negative
-  # Laurentian = Positive
+V.li <- subset_samples(Ver1, Group != "Estuary")
+Vli <- deSEQ(data=V.li, valuetest= ~Depth+Season+Group, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Inland
-Ver.li <- data.frame(Vg.li.res)
-Ver.li.inl <- which(Ver.li$log2FoldChange < 0)
-Ver.li.inl.otus <- rownames(Ver.li[Ver.li.inl,])
+### Separate sediment & water samples
+Vli.inl <- which(Vli$log2FoldChange < 0)
+Vli.inl.otus <- rownames(Vli[Vli.inl,])
+Vli.lau <- which(Vel$log2FoldChange > 0)
+Vli.lau.otus <- rownames(Vli[Vli.lau,])
 
-# Let's pull out all the OTUs that are overrepresented in Laurentian
-Ver.li.lau <- which(Ver.li$log2FoldChange > 0)
-Ver.li.lau.otus <- rownames(Ver.li[Ver.li.lau,])
+ggplot(Vli, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- Vg.li.res[which(Vg.li.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Ver.water)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
 
-est.otus <- intersect(Ver.el.est.otus, Ver.ei.est.otus)
-inl.otus <- intersect(Ver.ei.inl.otus, Ver.li.inl.otus)
-lau.otus <- intersect(Ver.el.lau.otus, Ver.li.lau.otus)
+### Group Otus ###
+est.otus <- intersect(Vel.est.otus, Vei.est.otus)
+inl.otus <- intersect(Vei.inl.otus, Vli.inl.otus)
+lau.otus <- intersect(Vel.lau.otus, Vli.lau.otus)
 
 
 
 
 ####### Fraction
 # Now let's isolate Verrucos in Free & Particle (fractions, so no sediment but DCM is included)
-Vfrac <- subset_samples(Ver.out.1, Fraction != "Sediment")
+V.frac <- subset_samples(Ver1, Fraction != "Sediment")
+Vfrac <- deSEQ(data=V.frac, valuetest= ~Depth+Group+Season+Fraction, alpha=0.05)
 
-# Create DESeq2 object
-Vfrac.d <- phyloseq_to_deseq2(physeq = Vfrac, design = ~ Depth+Group+Season+Fraction )
-Vfrac.d <- DESeq(object = Vfrac.d, test="Wald", fitType="local")
-plotDispEsts(object = Vfrac.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-Vfrac.res <- results(Vfrac.d, cooksCutoff=FALSE)
-  # Free = Negative
-  # Particle = Positive
+### Separate sediment & water samples
+Vfrac.free <- which(Vfrac$log2FoldChange < 0)
+free.otus <- rownames(Vfrac[Vfrac.free,])
+Vfrac.part <- which(Vfrac$log2FoldChange > 0)
+part.otus <- rownames(Vfrac[Vfrac.part,])
 
-# Let's pull out all the OTUs that are overrepresented in Free
-Vfrac.data <- data.frame(Vfrac.res)
-V.free <- which(Vfrac.data$log2FoldChange < 0)
-free.otus <- rownames(Vfrac.data[V.free,])
+ggplot(Vfrac, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Let's pull out all the OTUs that are overrepresented in Laurentian
-V.part <- which(Vfrac.data$log2FoldChange > 0)
-part.otus <- rownames(Vfrac.data[V.part,])
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- Vfrac.res[which(Vfrac.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(Vfrac)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
 
 
 
@@ -2386,103 +2258,61 @@ ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
 
 ####### Season
 # Now let's isolate Verrucos in Spring & Summer
-V.ss <- subset_samples(Ver.out.1, Season != "Fall")
-# Create DESeq2 object
-V.ss.d <- phyloseq_to_deseq2(physeq = V.ss, design = ~ Depth+Group+Season )
-V.ss.d <- DESeq(object = V.ss.d, test="Wald", fitType="local")
-plotDispEsts(object = V.ss.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-V.ss.res <- results(V.ss.d, cooksCutoff=FALSE)
-  # Spring = Negative
-  # Summer = Positive
+V.ss <- subset_samples(Ver1, Season != "Fall")
+Vss <- deSEQ(data=V.ss, valuetest= ~Depth+Group+Season, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Free
-V.ss.data <- data.frame(V.ss.res)
-V.sp <- which(V.ss.data$log2FoldChange < 0)
-V.sp.otus <- rownames(V.ss.data[V.sp,])
+### Separate sediment & water samples
+Vss.sp <- which(Vss$log2FoldChange < 0)
+Vss.sp.otus <- rownames(Vss[Vss.sp,])
+Vss.su <- which(Vss$log2FoldChange > 0)
+Vss.su.otus <- rownames(Vss[Vss.su,])
 
-# Let's pull out all the OTUs that are overrepresented in Laurentian
-V.su <- which(V.ss.data$log2FoldChange > 0)
-V.su.otus <- rownames(V.ss.data[V.su,])
+ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Getting ready to plot
-alpha <- 0.01
-  # Significance level
-sigtab <- V.ss.res[which(V.ss.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(V.ss)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
 
 
 
 
 
 # Now let's isolate Verrucos in Spring & Fall
-V.spf <- subset_samples(Ver.out.1, Season != "Summer")
-# Create DESeq2 object
-V.spf.d <- phyloseq_to_deseq2(physeq = V.spf, design = ~ Depth+Group+Season )
-V.spf.d <- DESeq(object = V.spf.d, test="Wald", fitType="local")
-plotDispEsts(object = V.spf.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-V.spf.res <- results(V.spf.d, cooksCutoff=FALSE)
-  # Fall = Negative
-  # Spring = Positive
+V.spf <- subset_samples(Ver1, Season != "Summer")
+Vspf <- deSEQ(data=V.spf, valuetest= ~Depth+Group+Season, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Free
-V.spf.data <- data.frame(V.spf.res)
-V.spf.fa <- which(V.spf.data$log2FoldChange < 0)
-V.spf.fa.otus <- rownames(V.spf.data[V.spf.fa,])
+### Separate sediment & water samples
+Vspf.fa <- which(Vspf$log2FoldChange < 0)
+Vspf.fa.otus <- rownames(Vspf[Vspf.fa,])
+Vspf.sp <- which(Vspf$log2FoldChange > 0)
+Vspf.sp.otus <- rownames(Vspf[Vspf.sp,])
 
-# Let's pull out all the OTUs that are overrepresented in Laurentian
-V.spf.sp <- which(V.spf.data$log2FoldChange > 0)
-V.spf.sp.otus <- rownames(V.spf.data[V.spf.sp,])
+ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- V.spf.res[which(V.spf.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(V.spf)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
+
+
+
 
 
 
 
 # Now let's isolate Verrucos in Summer & Fall
-V.suf <- subset_samples(Ver.out.1, Season != "Spring")
-# Create DESeq2 object
-V.suf.d <- phyloseq_to_deseq2(physeq = V.suf, design = ~ Depth+Group+Season )
-V.suf.d <- DESeq(object = V.suf.d, test="Wald", fitType="local")
-plotDispEsts(object = V.suf.d)
-  # Dispersion increases over normalized mean count, so use fitType = "local"
-    # https://support.bioconductor.org/p/63244/
-# Summarize results
-V.suf.res <- results(V.suf.d, cooksCutoff=FALSE)
-  # Fall = Negative
-  # Summer = Positive
+V.suf <- subset_samples(Ver1, Season != "Spring")
+Vsuf <- deSEQ(data=V.suf, valuetest= ~Depth+Group+Season, alpha=0.05)
 
-# Let's pull out all the OTUs that are overrepresented in Free
-V.suf.data <- data.frame(V.suf.res)
-V.suf.fa <- which(V.suf.data$log2FoldChange < 0)
-V.suf.fa.otus <- rownames(V.suf.data[V.suf.fa,])
+### Separate sediment & water samples
+Vsuf.fa <- which(Vsuf$log2FoldChange < 0)
+Vsuf.fa.otus <- rownames(Vsuf[Vsuf.fa,])
+Vsuf.su <- which(Vsuf$log2FoldChange > 0)
+Vsuf.su.otus <- rownames(Vsuf[Vsuf.su,])
 
-# Let's pull out all the OTUs that are overrepresented in Laurentian
-V.suf.su <- which(V.suf.data$log2FoldChange > 0)
-V.suf.su.otus <- rownames(V.suf.data[V.suf.su,])
+ggplot(Vsuf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1")
 
-# Getting ready to plot
-alpha <- 0.01
-sigtab <- V.suf.res[which(V.suf.res$padj < alpha),]
-sigtab <- cbind(as(sigtab, "data.frame"), as(tax_table(V.suf)[rownames(sigtab),], "matrix"))
-ggplot(sigtab, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
 
-sp.otus <- intersect(V.sp.otus,V.spf.sp.otus)
-su.otus <- intersect(V.su.otus,V.suf.su.otus)
-fa.otus <- intersect(V.spf.fa.otus,V.suf.fa.otus)
+
+sp.otus <- intersect(Vss.sp.otus,Vspf.sp.otus)
+su.otus <- intersect(Vss.su.otus,Vsuf.su.otus)
+fa.otus <- intersect(Vspf.fa.otus,Vsuf.fa.otus)
 ```
 
 
@@ -2490,32 +2320,32 @@ fa.otus <- intersect(V.spf.fa.otus,V.suf.fa.otus)
 ### Create ecoIDs
 ```{r ecoID}
 #http://stackoverflow.com/questions/10298662/find-elements-not-in-smaller-character-vector-list-but-in-big-list
-Ver.otus <- rownames(tax_table(Ver.out.1))
+Ver.otus <- rownames(tax_table(Ver1))
 
-Group.label <- rownames(tax_table(Ver.out.1))
+Group.label <- rownames(tax_table(Ver1))
 Group.label[Group.label %in% est.otus] <- paste("E", Group.label[Group.label %in% est.otus])
 Group.label[Group.label %in% inl.otus] <- paste("I", Group.label[Group.label %in% inl.otus])
 Group.label[Group.label %in% lau.otus] <- paste("L", Group.label[Group.label %in% lau.otus])
-# 1244 labels; 79 OTUs have no preference
+# 57 labels; 1265 OTUs have no preference
 
-Depth.label <- rownames(tax_table(Ver.out.1))
+Depth.label <- rownames(tax_table(Ver1))
 Depth.label[Depth.label %in% bot.otus] <- paste("B", Depth.label[Depth.label %in% bot.otus])
 Depth.label[Depth.label %in% sed.otus] <- paste("S", Depth.label[Depth.label %in% sed.otus])
 Depth.label[Depth.label %in% top.otus] <- paste("T", Depth.label[Depth.label %in% top.otus])
-# 1323 labels; all OTUs have preference
+# 107 labels; 1215 OTUs have no preference
 
-Fraction.label <- rownames(tax_table(Ver.out.1))
+Fraction.label <- rownames(tax_table(Ver1))
 Fraction.label[Fraction.label %in% free.otus] <- paste("F", Fraction.label[Fraction.label %in%
                                                                              free.otus])
 Fraction.label[Fraction.label %in% part.otus] <- paste("P", Fraction.label[Fraction.label %in%
                                                                              part.otus])
-# 1323 labels; all OTUs have preference
+# 80 labels; 1242 OTUs have no preference
 
-Season.label <- rownames(tax_table(Ver.out.1))
+Season.label <- rownames(tax_table(Ver1))
 Season.label[Season.label %in% sp.otus] <- paste("C_", Season.label[Season.label %in% sp.otus])
 Season.label[Season.label %in% su.otus] <- paste("V_", Season.label[Season.label %in% su.otus])
 Season.label[Season.label %in% fa.otus] <- paste("A_", Season.label[Season.label %in% fa.otus])
-# 1320 labels; 3 OTUs have no preference
+# 56 labels; 1266 OTUs have no preference
 
 group.split <- data.frame(strsplit(Group.label, " "), stringsAsFactors=FALSE)
 colnames(group.split) <- Ver.otus
@@ -2548,9 +2378,9 @@ write.csv(group.split[5,], file="Ecology_Otu", row.names=FALSE, quote=FALSE)
 ##### Create new phyloseq object with EcoIDs
 eco.label<- read.csv("Ecology_Otu", header=F)
 eco.label <- t(eco.label)
-otu <- otu_table(Ver.out.1)
-samp <- sample_data(Ver.out.1)
-tax <- data.frame(tax_table(Ver.out.1))
+otu <- otu_table(Ver1)
+samp <- sample_data(Ver1)
+tax <- data.frame(tax_table(Ver1))
 tax$EcoID <- eco.label
 group.split <- t(group.split)
 tax$Pref.Depth <- group.split[,3]
@@ -2560,14 +2390,11 @@ tax$Pref.Season <- group.split[,5]
 tax <- as.matrix(tax)
 tax <- tax_table(tax)
 eco.ver <- merge_phyloseq(otu, samp, tax)
-newick <- read.newick(file="ver.outgroup.tre")
-  # Outgroup = Planctomycetes Otu000037
+newick <- read.newick(file="ver.tre")
 newick_phy <- phy_tree(newick)
 #test <- import_mothur(mothur_tree_file=newick)
 Ver.tree<-merge_phyloseq(eco.ver,newick_phy)
 #plot_tree(Ver.tree, color="Class")
-Ver.50 <- prune_taxa(mostabund.names, Ver.tree)
-#plot_tree(Ver.50, color="Class")
 ```
 
 ### Create labels for IToL!
@@ -2580,8 +2407,8 @@ color.id <- function(x) {
   ifelse(grepl("S-BQ2-57_soil_group",x), "#984ea3",
   ifelse(grepl("Verrucomicrobia_Incertae_Sedis",x), "#ff7f00",
   ifelse(grepl("Verrucomicrobiae",x), "#ffd92f",
-  ifelse(grepl("unclassified",x), "#a65628",
-  ifelse(grepl("UA11",x), "#f781bf",
+  ifelse(grepl("unclassified",x), "#f1a3a9",
+  ifelse(grepl("UA11",x), "#fff5eb",
          NA))))))))
 }
 
@@ -2596,17 +2423,17 @@ depth.id <- function(x) {
 
 group.id <- function(x) {
   group <- substr(x$EcoID,2,2)
-  ifelse(grepl("E",group), "1,-1,-1",
-  ifelse(grepl("I",group), "-1,1,-1",
-  ifelse(grepl("L",group), "-1,-1,1",
+  ifelse(grepl("L",group), "1,-1,-1",
+  ifelse(grepl("E",group), "-1,1,-1",
+  ifelse(grepl("I",group), "-1,-1,1",
   ifelse(grepl("0", group), "-1,-1,-1",
   NA))))
 }
 
 fraction.id <- function(x) {
   fraction <- substr(x$EcoID,3,3)
-  ifelse(grepl("F",fraction), "1,-1",
-  ifelse(grepl("P",fraction), "-1,1",
+  ifelse(grepl("P",fraction), "1,-1",
+  ifelse(grepl("F",fraction), "-1,1",
   ifelse(grepl("0",fraction), "-1,-1",
   NA)))
 }
@@ -2621,8 +2448,7 @@ season.id <- function(x) {
 }
 
 ### Create IToL COLOR labels
-Ver.only <- prune_taxa(names(taxa_sums(Ver.tree)) != "Otu000037", x=Ver.tree)
-all <- data.frame(tax_table(Ver.only))
+all <- data.frame(tax_table(Ver.tree))
 color.all <- data.frame(all$Species)
 color.all$Class <- all$Class
 color.all$color <- color.id(color.all$Class)
@@ -2645,16 +2471,199 @@ ecoid.all$itol.label <- paste(ecoid.all$all.Species, ecoid.all$depth.label, ecoi
 write.csv(ecoid.all$itol.label,"EcoID.IToL.label", row.names=FALSE, quote=FALSE)
 ```
 
+
+### Subset only significant EcoID Verrucos
+```{r itol.sig}
+nosig <- which(substr(ecoid.all$EcoID,1,4)=="0000")
+nosig.otus <- as.character(ecoid.all$all.Species[nosig])
+sig.otus <- Ver.otus[!Ver.otus %in% nosig.otus]
+only.sig <- prune_taxa(sig.otus, Ver.tree)
+write.tree(phy_tree(only.sig), file="ver.sig.tre")
+
+```
+
+
+### Create dataset for ITOL for top 50 Verruco OTUS
+```{r ITOL.100}
+# Subset out top 100 most abundant Verruco OTUs
+top50ver = sort(taxa_sums(Ver), TRUE)[1:50]
+print(top50ver)
+top50ver.names<-names(top50ver)
+
+Ver.50 <- prune_taxa(mostabund.names, Ver)
+#write.tree(phy_tree(Ver.50), file="ver.50.tre")
+```
+
+
 ### Create dataset for ITOL for top 100 Verruco OTUS
 ```{r ITOL.100}
 # Subset out top 100 most abundant Verruco OTUs
-top100ver = sort(taxa_sums(Ver.only), TRUE)[1:100]
+top100ver = sort(taxa_sums(Ver), TRUE)[1:100]
 print(top100ver)
 top100ver.names<-names(top100ver)
 
-Ver.100 <- prune_taxa(mostabund.names, Ver.only)
-#write.tree(phy_tree(Ver.100), file="Ver.100.tre")
+Ver.100 <- prune_taxa(mostabund.names, Ver)
+#write.tree(phy_tree(Ver.100), file="ver.100.tre")
 ```
+
+
+
+### ConsenTRAIT
+```{r consenTRAIT}
+### Prep labels
+labels<- read.csv("EcoID.IToL.label", header=F)
+for(i in 2:12) {
+  labels[,i] <- ifelse(grepl("-1",labels[,i]), "0", "1")
+  print(labels)
+}
+
+for(i in 2:12) {
+  labels[,i] <- as.numeric(labels[,i])
+  print(labels)
+}
+
+
+
+
+
+
+############## Below is ConsenTRAIT script ##############
+
+
+
+library("data.table")
+library("adephylo")
+library("ape")
+
+args <- commandArgs(TRUE)
+
+
+tree_all <- read.newick(file="ver.tre")
+table <- labels
+
+#loading Newick tree (multitree) - replace to read.nexus if using nexus tress
+#tree_all = read.tree(args[1],keep.multi = TRUE)
+#Loading trait table w. no headers
+#table = read.table("table", sep = ",", header=FALSE)
+
+
+
+#Starting script
+Mean_all<-matrix(nrow=ncol(table)-1,ncol=100)
+
+for (m in 1:length(tree_all)) {#loop through all trees
+
+  tree<-tree_all
+# testing if table and tree contain the same entries - else drop tips
+  z<-subset(tree$tip.label,!(tree$tip.label %in% table[,1]))
+  if (length(z) > 0) {
+    drop.tip(tree,z)
+  }
+
+#rooting tree with first taxon - change if different root
+  root_tree<-root(tree,1,resolve.root=T)
+#replacing negative branch lengths - e.g., from PHYLIP
+  root_tree$edge.length[root_tree$edge.length <= 0] =  0.00001
+  subtree<-subtrees(root_tree, wait=FALSE)
+
+
+  cluster_mean<-numeric(length=0)
+
+# loop through all traits
+  for (j in 2:ncol(table)) {
+     print(c("Analyzing",j,"!!!!!!!!!!!!!!!!!!!!!!!"))
+     #Loading trait table
+     table_tmp<-table[,c(1,j)]
+     colnames(table_tmp)[1]<-"ID";
+     colnames(table_tmp)[2]<-"Trait";
+     
+# removing all entries not in tree 
+    table_tmp2<-data.table(table_tmp)
+     setkey(table_tmp2,ID)
+     table2<-table_tmp2[intersect(table_tmp2$ID,root_tree$tip.label)]
+     setkey(table2,ID)
+
+     #initializing result vectors and file names
+     positives<-vector(mode="list",length=0)
+     cluster_size<-numeric(length=0)
+     cluster_size_file<-paste("R_cluster_size_",j,".txt",sep="")
+
+     cluster_dist<-numeric(length=0)
+     cluster_dist_file<-paste("R_cluster_dist_",j,".txt",sep="")
+
+#initalizing files
+     if (m == 1) {
+         cat(c("trait","tree","distance","cluster_size"), file = cluster_size_file, sep = "\t", fill = FALSE, labels = NULL,append = FALSE)
+         cat("\n", file = cluster_size_file, fill = FALSE, labels = NULL,append = TRUE)
+
+         cat(c("trait","tree","distance"), file = cluster_dist_file, sep = "\t", fill = FALSE, labels = NULL,append = FALSE)
+         cat("\n", file = cluster_dist_file, fill = FALSE, labels = NULL,append = TRUE)
+     }
+
+
+
+
+
+
+     #loop through all subtrees and determining if any subtrees have >90% positives
+     for (i in 1:length(subtree)){
+       tip_names<-subtree[[1]]$tip.label
+       if (mean(table2[tip_names]$Trait) > 0.9 ) {#change this value if you want a new threshold
+        match_test<-match(tip_names,positives)
+        if (all(is.na(match_test))) {
+            positives<-c(positives,tip_names)
+            cluster_dist<-distRoot(subtree[[i]],tip_names, method=c("p"))
+            cluster_size<-c(cluster_size,mean(cluster_dist))
+
+            # printing to files###
+            cat(c(j,m,mean(cluster_dist),length(cluster_dist)), file = cluster_size_file, sep = "\t", fill = FALSE, labels = NULL,append = TRUE)
+            cat("\n", file = cluster_size_file, fill = FALSE, labels = NULL,append = TRUE)
+
+            cat(j,m,cluster_dist, file = cluster_dist_file, sep = "\t", fill = FALSE, labels = NULL,append = TRUE)
+            cat("\n", file = cluster_dist_file, fill = FALSE, labels = NULL,append = TRUE)
+
+
+            #print(cluster_dist)
+        }
+        else if (any(is.na(match_test))) {
+            print("some NAs - something is weird")
+        }
+        else {
+            #print(tip_names)
+            #print("found cluster before")
+        }
+      }
+    }
+
+
+    ##### find singletons ######
+    a<-table2[table2$Trait == 1,][,ID]
+    g<-as.character(a)
+
+    singletons_names = setdiff(g,positives)
+    if (length(singletons_names) > 0) {
+       for (h in 1:length(singletons_names)){
+           # weigh singletons with half
+           singleton_edges = 0.5*root_tree$edge.length[which.edge(root_tree,singletons_names[h])] #here we use half the distance for singletons
+           cluster_size<-c(cluster_size,singleton_edges)
+
+           cat(c(j,m,singleton_edges,1), file = cluster_size_file, sep = "\t", fill = FALSE, labels = NULL,append = TRUE)
+           cat("\n", file = cluster_size_file, sep = "\t", fill = FALSE, labels = NULL,append = TRUE)
+       }
+    
+    }
+  Mean_all[j-1,m] = mean(cluster_size)
+  }
+  
+
+}
+#output file
+write.table(Mean_all,"Mean_all_bootstrap2.txt", sep = "\t")
+
+
+
+```
+
 
 
 
