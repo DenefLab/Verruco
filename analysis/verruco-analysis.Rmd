@@ -353,9 +353,6 @@ ggplot(sums_Ver, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs))
   ggtitle("Total Number of Sequences per Sample") + 
   theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
 
-# For additional analysis -> Removing Sediment samples
-phy.Ver.water <- subset_samples(phy.Ver, Fraction != "Sediment")
-
 ```
 
 ### Making phy.Ver normal
@@ -2099,25 +2096,52 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 
 
 ### DESeq2 ###
-# Editing phyloseq object because there can be no 0's
-Ver1 <- otu_table(Ver) + 1
-Ver.samp <- sample_data(Ver)
-Ver.tax <- tax_table(Ver)
+# Prepare phyloseq object
+Vdeseq <- subset_taxa(verr.dupmerge, Phylum == "Verrucomicrobia")
+  # We want to use the RAW COUNTS
+pick.Ver<- colnames(otu_table(Ver))
+Vdeseq.pick <- prune_taxa(names(taxa_sums(Vdeseq)) %in% pick.Ver, x=Vdeseq)
+  # Subset out the verruco taxa that we've been using so far
+  # When we calculate Verruco relative abundance, we remove a few hundred super low abundance OTUs
+Ver1 <- otu_table(Vdeseq.pick) + 1
+Ver.samp <- sample_data(Vdeseq.pick)
+Ver.tax <- tax_table(Vdeseq.pick)
 Ver1 <- merge_phyloseq(Ver1, Ver.samp, Ver.tax)
 
 
+
+
+# Editing phyloseq object because there can be no 0's
+#Ver1 <- otu_table(Ver) + 1
+#Ver.samp <- sample_data(Ver)
+#Ver.tax <- tax_table(Ver)
+#Ver1 <- merge_phyloseq(Ver1, Ver.samp, Ver.tax)
+
+
+
+#test <- phyloseq_to_deseq2(Ver1, design= ~Group+Season+Source)
+#test.deseq <- DESeq(test, test="Wald", fitType="local")
+#test.res <- results(test.deseq, cooksCutoff = FALSE)
+#test.res.alpha <- results(test.deseq, cooksCutoff=F, alpha=0.05)
+
+#test.deseq.out <- DESeq(test, test="Wald", fitType="local", minReplicatesForReplace=Inf)
+#test.res.out <- results(test.deseq.out, cooksCutoff = FALSE)
+#test.res.out.alpha <- results(test.deseq.out, cooksCutoff=F, alpha=0.05)
+
+
 # Let's look at Source (water vs. sed)
-source <- deSEQ(data=Ver1, valuetest= ~Group+Season+Source, alpha=0.05)
+source <- deSEQ(data=Ver1, valuetest= ~Group+Season+Source)
   # I left out Depth & Fraction because those all take into account water vs. sediment
 
 ### Separate sediment & water samples
 sed <- which(source$log2FoldChange < 0)
 sed.otus <- rownames(source[sed,])
-water <- which(test$log2FoldChange > 0)
+water <- which(source$log2FoldChange > 0)
 water.otus <- rownames(source[water,])
 
 ggplot(source, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Sediment (Top) vs. Water (Bottom)")
 
 
 
@@ -2134,7 +2158,8 @@ water.top <- which(watercol$log2FoldChange > 0)
 water.top.otus <- rownames(watercol[water.top,])
 
 ggplot(watercol, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer (palette="Set1")
+  scale_color_brewer (palette="Set1") +
+  ggtitle("Depth: Top (Top) vs. Bottom (Bottom)")
 
 
 # Verrucos in Bottom vs. Sediment
@@ -2149,7 +2174,8 @@ bs.sed <- which(Vbs$log2FoldChange > 0)
 bs.sed.otus <- rownames(Vbs[bs.sed,])
 
 ggplot(Vbs, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Depth: Sediment (Top) vs. Bottom (Bottom)")
 
 
 
@@ -2165,7 +2191,8 @@ st.top <- which(Vst$log2FoldChange > 0)
 st.top.otus <- rownames(Vst[st.top,])
 
 ggplot(Vst, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Depth: Top (Top) vs. Sediment (Bottom)")
 
 
 sed.otus1 <- intersect(water.bot.otus, bs.sed.otus)
@@ -2193,7 +2220,8 @@ Vel.lau <- which(Vel$log2FoldChange > 0)
 Vel.lau.otus <- rownames(Vel[Vel.lau,])
 
 ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Lake: Laurentian (Top) vs. Estuary (Bottom)")
 
 
 
@@ -2208,7 +2236,8 @@ Vei.inl <- which(Vei$log2FoldChange > 0)
 Vei.inl.otus <- rownames(Vei[Vei.inl,])
 
 ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Lake: Inland (Top) vs. Estuary (Bottom)")
 
 
 
@@ -2224,7 +2253,8 @@ Vli.lau <- which(Vel$log2FoldChange > 0)
 Vli.lau.otus <- rownames(Vli[Vli.lau,])
 
 ggplot(Vli, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Lake: Laurentian (Top) vs. Inland (Bottom)")
 
 
 ### Group Otus ###
@@ -2247,7 +2277,8 @@ Vfrac.part <- which(Vfrac$log2FoldChange > 0)
 part.otus <- rownames(Vfrac[Vfrac.part,])
 
 ggplot(Vfrac, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Fraction: Particle (Top) vs. Free (Bottom)")
 
 
 
@@ -2268,7 +2299,8 @@ Vss.su <- which(Vss$log2FoldChange > 0)
 Vss.su.otus <- rownames(Vss[Vss.su,])
 
 ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Season: Summer (Top) vs. Spring (Bottom)")
 
 
 
@@ -2286,7 +2318,8 @@ Vspf.sp <- which(Vspf$log2FoldChange > 0)
 Vspf.sp.otus <- rownames(Vspf[Vspf.sp,])
 
 ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Season: Spring (Top) vs. Fall (Bottom)")
 
 
 
@@ -2306,7 +2339,8 @@ Vsuf.su <- which(Vsuf$log2FoldChange > 0)
 Vsuf.su.otus <- rownames(Vsuf[Vsuf.su,])
 
 ggplot(Vsuf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1")
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Season: Summer (Top) vs. Fall (Bottom)")
 
 
 
@@ -2370,13 +2404,13 @@ nopref <- which(substr(group.split[4,],1,1) == "O")
 group.split[4,nopref] <- "0_"
 group.split[5,] <- paste(group.split[2,], group.split[1,], group.split[3,], group.split[4,],
                          colnames(group.split))
-write.csv(group.split[5,], file="Ecology_Otu", row.names=FALSE, quote=FALSE)
+write.csv(group.split[5,], file="Ecology_Otu4", row.names=FALSE, quote=FALSE)
 ```
 
 ### Create updated phyloseq object with EcoID
 ```{r ecoid.phyloseq}
 ##### Create new phyloseq object with EcoIDs
-eco.label<- read.csv("Ecology_Otu", header=F)
+eco.label<- read.csv("Ecology_Otu4", header=F)
 eco.label <- t(eco.label)
 otu <- otu_table(Ver1)
 samp <- sample_data(Ver1)
@@ -2453,7 +2487,7 @@ color.all <- data.frame(all$Species)
 color.all$Class <- all$Class
 color.all$color <- color.id(color.all$Class)
 color.all$label <- paste(color.all$all.Species,"range",color.all$color,color.all$Class)
-write.csv(color.all$label,file="all.ver.color",row.names=FALSE,quote=FALSE)
+write.csv(color.all$label,file="all.ver.color4",row.names=FALSE,quote=FALSE)
 
 ### Create IToL ECOID Labels
 ecoid.all <- data.frame(all$Species)
@@ -2468,7 +2502,7 @@ season.itol <- season.id(ecoid.all)
 ecoid.all$season.label <- season.itol
 ecoid.all$itol.label <- paste(ecoid.all$all.Species, ecoid.all$depth.label, ecoid.all$group.label,
                               ecoid.all$fraction.label, ecoid.all$season.label)
-write.csv(ecoid.all$itol.label,"EcoID.IToL.label", row.names=FALSE, quote=FALSE)
+write.csv(ecoid.all$itol.label,"EcoID.IToL.label4", row.names=FALSE, quote=FALSE)
 ```
 
 
@@ -2478,7 +2512,7 @@ nosig <- which(substr(ecoid.all$EcoID,1,4)=="0000")
 nosig.otus <- as.character(ecoid.all$all.Species[nosig])
 sig.otus <- Ver.otus[!Ver.otus %in% nosig.otus]
 only.sig <- prune_taxa(sig.otus, Ver.tree)
-write.tree(phy_tree(only.sig), file="ver.sig.tre")
+write.tree(phy_tree(only.sig), file="ver.sig.tre4")
 
 ```
 
@@ -2504,6 +2538,27 @@ top100ver.names<-names(top100ver)
 
 Ver.100 <- prune_taxa(mostabund.names, Ver)
 #write.tree(phy_tree(Ver.100), file="ver.100.tre")
+```
+
+
+### Check Sig Verruco Abundance
+```{r sig.itol.abund}
+refit.tree <- read.newick(file="ver.sig.tre3")
+refit.otus <- refit.tree$tip.label
+
+remove.tree <- read.newick(file="ver.sig.tre4")
+remove.otus <- remove.tree$tip.label
+
+refit.unique <- setdiff(refit.otus, remove.otus)
+  # refit.otus that are not in remove.otus
+remove.unique <- setdiff(remove.otus, refit.otus)
+  # remove.otus that are not in refit.otus
+
+refit.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% refit.otus, x=Vdeseq.pick)
+refit.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% refit.unique, x=Vdeseq.pick)
+
+remove.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.otus, x=Vdeseq.pick)
+remove.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.unique, x=Vdeseq.pick)
 ```
 
 
@@ -2667,6 +2722,8 @@ write.table(Mean_all,"Mean_all_bootstrap2.txt", sep = "\t")
 
 
 
+
+
 ### Extra Functions
 ```{r}
 ################# FUNCTION TO FIND NAS IN A DATAFRAME #################
@@ -2674,10 +2731,10 @@ nacols <- function(df) {
   colnames(df)[unlist(lapply(df, function(x) any(is.na(x))))]
 }
 
-deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.01){
+deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.05){
   data_pruned <- prune_taxa(taxa_sums(data) > cutoff, data)
   de_data <- phyloseq_to_deseq2(data_pruned, valuetest)
-  de_data2 <- DESeq(de_data, test="Wald", fitType="local")
+  de_data2 <- DESeq(de_data, test="Wald", fitType="local", minReplicatesForReplace = Inf)
   res_data <- results(de_data2, cooksCutoff = FALSE)
   sig_data <- res_data[which(res_data$padj < alpha), ]
   sigtab_sherm <- cbind(as(sig_data, "data.frame"), as(tax_table(data_pruned)[rownames(sig_data), ], "matrix"))
