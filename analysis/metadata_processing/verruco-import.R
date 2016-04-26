@@ -11,7 +11,7 @@ mapfile = "verruco_metadata_duplicates.csv"
 # Import mothur data
 mothurdata = import_mothur(
   mothur_shared_file = sharedfile, 
-  mothur_constaxonomy_file = taxfile,
+  mothur_constaxonomy_file = taxfile
 )
 
 # Add the OTU number as a column in the taxonomy file
@@ -54,7 +54,8 @@ verruco <-
   subset_samples(
       Blank == "no" &
       !Fraction %in% c("cFree", "cParticle") & 
-      Lake != "Huron" 
+      Lake != "Huron" &
+        Depth != "DCM"
   ) 
 
 # Also prune out taxa which were only present in removed samples

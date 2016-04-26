@@ -1122,7 +1122,7 @@ soren.pcoa.facet <- plot_ordination(
 
 ### Create PCoA comparison plots
 ```{r compare.pcoa}
-tiff("pcoa.compare.tiff", width = 14, height = 10, units = "in", res = 500)
+tiff("pcoa.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
 print(bray.pcoa.group.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -1444,7 +1444,7 @@ bcc.pcoa.facet <- plot_ordination(
 
 ### Compare Whole Bacterial Community with Verruco Community
 ```{r bcc.ver.pcoa}
-tiff("bcc.ver.compare.tiff", width = 14, height = 10, units = "in", res = 500)
+tiff("bcc.ver.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
 print(bray.pcoa.group.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -1704,7 +1704,7 @@ plot(pro2)
 
 procrust3 <- procrustes(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3], scale=FALSE,
                        symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Calculates procrustes based upon coordinates on axes 2 & 3 of the Bray-Curtis PCoA
   # Sum of squares = 7.538
 plot(procrust3)
 plot(procrust3,kind=2)
@@ -1728,13 +1728,16 @@ pro.df$Season <- sample_data(Ver)$Season
 
 ### Make a prettier Procrustes plot
 # Basic
+#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) +
   geom_point(aes(x=Dimension1, y=Dimension2)) +
   geom_point(aes(x=xDimension1, y=xDimension2)) +
   geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
                arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5)
+#dev.off()
 
-### Facet = Group, Color = Depth
+### Facet = Group, Color = Depth, Shape = Fraction
+#tiff("procrustes.facet1.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) +
   geom_point(aes(x=Dimension1, y=Dimension2, color=Depth, shape=Fraction)) +
   geom_point(aes(x=xDimension1, y=xDimension2, color=Depth, shape=Fraction)) +
@@ -1753,8 +1756,10 @@ ggplot(pro.df) +
         plot.title = element_text(size = 16, face="bold")) +
   guides(color = guide_legend(order=1, override.aes=list(size=3)),
          shape = guide_legend(order=2, override.aes=list(size=3)))
+#dev.off()
 
 ### Facet = Group, Color = Fraction, Shape = Season
+#tiff("procrustes.facet2.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) +
   geom_point(aes(x=Dimension1, y=Dimension2, color=Fraction, shape=Season)) +
   geom_point(aes(x=xDimension1, y=xDimension2, color=Fraction, shape=Season)) +
@@ -1773,6 +1778,9 @@ ggplot(pro.df) +
         plot.title = element_text(size = 16, face="bold")) +
   guides(color = guide_legend(order=1, override.aes=list(size=3)),
          shape = guide_legend(order=2, override.aes=list(size=3)))
+#dev.off()
+
+
 
 
 ```
@@ -2534,7 +2542,7 @@ Ver.100 <- prune_taxa(mostabund.names, Ver)
 
 ### Check Sig Verruco Abundance
 ```{r sig.itol.abund}
-refit.tree <- read.newick(file="ver.sig.tre3")
+refit.tree <- read.newick(file="ver.sig.tre.refit")
 refit.otus <- refit.tree$tip.label
 
 remove.tree <- read.newick(file="ver.sig.tre4")
@@ -2546,6 +2554,20 @@ remove.unique <- setdiff(remove.otus, refit.otus)
   # remove.otus that are not in refit.otus
 
 refit.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% refit.otus, x=Vdeseq.pick)
+refit.phy <- merge_phyloseq(refit.phy, refit.tree)
+#write.tree(phy_tree(refit.phy), file="refit.tre")
+refit.rel <- transform_sample_counts(refit.phy, function(x){x/sum(x)})
+summary(taxa_sums(refit.rel))
+# Create rank abundance of OTUs
+barplot(sort(taxa_sums(refit.rel),TRUE)/nsamples(refit.rel),las=2,cex.axis=.7)
+# Create rank abundance of OTUs
+barplot(sort(taxa_sums(refit.rel),TRUE)[1:60]/nsamples(refit.rel),las=2,cex.axis=.7)
+
+
+
+refit.relabund <- prune_taxa(names(taxa_sums(Ver.rel)) %in% refit.otus, x=Ver.rel)
+
+
 refit.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% refit.unique, x=Vdeseq.pick)
 
 remove.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.otus, x=Vdeseq.pick)
@@ -2557,7 +2579,7 @@ remove.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.unique
 ### ConsenTRAIT
 ```{r consenTRAIT}
 ### Prep labels
-labels<- read.csv("EcoID.IToL.label", header=F)
+labels<- read.csv("EcoID.IToL.label.refit", header=F)
 for(i in 2:12) {
   labels[,i] <- ifelse(grepl("-1",labels[,i]), "0", "1")
   print(labels)
@@ -2584,7 +2606,7 @@ library("ape")
 args <- commandArgs(TRUE)
 
 
-tree_all <- read.newick(file="ver.tre")
+tree_all <- read.newick(file="refit.tre")
 table <- labels
 
 #loading Newick tree (multitree) - replace to read.nexus if using nexus tress
@@ -2704,7 +2726,7 @@ for (m in 1:length(tree_all)) {#loop through all trees
 
 }
 #output file
-write.table(Mean_all,"Mean_all_bootstrap2.txt", sep = "\t")
+write.table(Mean_all,"Mean_all_bootstrap.txt", sep = "\t")
 
 
 
