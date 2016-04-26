@@ -1778,48 +1778,6 @@ ggplot(pro.df) +
 ```
 
 
-### Co-interia Analysis
-```{r cia}
-# https://pbil.univ-lyon1.fr/R/pdf/course6.pdf
-# http://pbil.univ-lyon1.fr/ade4/ade4-html/coinertia.html
-# https://www.bioconductor.org/help/course-materials/2014/BioC2014/IntAnalysis.html
-Ver.dudi <- dudi.pco(Ver.bray)
-3
-  # 3 axes since my Bray PCoA uses 3 axes
-scaled.dudi <- dudi.pco(scaled.bray)
-3
-  # 3 axes since my Bray PCoA uses 3 axes
-cia <- coinertia(scaled.dudi, Ver.dudi)
-3
-  # 3 axes since my Bray PCoA uses 3 axes
-  # RV = 0.7467593
-      # Closer to 1 means that the datasets are more similar
-summary(cia)
-plot(cia)
-rv.comp <- RV.rtest(scaled.dudi$tab, Ver.dudi$tab, 999)
-   # Observation = 0.7467594
-  # p-value = 0.001 
-hist(rv.comp$sim)
-
-
-tiff("coinertia.tiff", width=25, height=20, units="in", res=500)
-plot(cia)
-dev.off()
-
-
-
-lX = AxcX   Row scores (rows of scaled.dudi cols) 
-mX = NorS   Normed row scores (rows of scaled.dudi) 
-lY = AxcY   Row scores (rows of Ver.dudi) 
-mY = NorS   Normed row scores (rows of Ver.dudi)  
-
-
-s.label()
-
-
-s.label(res.pca$li, xax = 1, yax = 2)
-
-```
 
 
 ### RELATIVE ABUNDANCE UNSTACKED BAR PLOT
