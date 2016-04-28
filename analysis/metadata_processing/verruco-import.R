@@ -61,5 +61,5 @@ verruco <-
 # Also prune out taxa which were only present in removed samples
 verruco <- prune_taxa(taxa_sums(verruco) > 0, verruco)
 
-#save(verruco, file = "VerrucoData.RData")
+save(verruco, file = "VerrucoData.RData")
 
