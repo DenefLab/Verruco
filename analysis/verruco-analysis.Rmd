@@ -123,8 +123,21 @@ scale_reads <- function(physeq,n){
   return(physeq.scale)
 }
 
+# Remove North Hypo samples because their reads are seriously too low (8 & 18)
+dupmerge.subset <- subset_samples(physeq = verr.dupmerge, SampleID != "Z14.051.P")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.051.F")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.016.P")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "MINE.P.514")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.047.P")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.DD")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.048.P")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SN")
+dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SD")
+
+### Removing or leaving in that last 10k sample doesn't make a difference in PERMANOVA/betadisper
+
 # Normalize our dataset!
-scaled <- scale_reads(verr.dupmerge,10468)   ### Scaled to 10,468 (minumum sample)
+scaled <- scale_reads(dupmerge.subset,min(sample_sums(dupmerge.subset)))   ### Scaled to 10,808 (minumum sample)
 sample_data(scaled)$Lake_Type <- ordered(sample_data(scaled)$Lake_Type,
                                      levels=c("Laurentian","Estuary","Inland"))
 sample_data(scaled)$Fraction <- ordered(sample_data(scaled)$Fraction,
@@ -1129,6 +1142,8 @@ dev.off()
 
 ```
 
+
+
 ### Ver Lake Type PCoA
 ```{r ver.type.pcoa}
 ### Laurentian
@@ -1137,7 +1152,7 @@ Ver.lau.bray <- phyloseq::distance(physeq = Ver.lau, method = "bray")
 Ver.lau.pcoa <- ordinate(physeq = Ver.lau, method = "PCoA", distance = "bray")
 
 
-plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes = c(1, 3),
+Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes = c(1, 3),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
@@ -1167,7 +1182,7 @@ Ver.est <- subset_samples(Ver.rel, Lake_Type == "Estuary")
 Ver.est.bray <- phyloseq::distance(physeq = Ver.est, method = "bray")
 Ver.est.pcoa <- ordinate(physeq = Ver.est, method = "PCoA", distance = "bray")
   
-plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes = c(1, 3),
+Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes = c(1, 3),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
@@ -1187,12 +1202,6 @@ plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes = c(1, 3),
   guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
          shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
          alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-# MBR2.S.714 is outlier, MIN2.S.514 & MIN1.S.514 are together away from the group
-
-  
-
-  
-
 
 
 
@@ -1201,6 +1210,41 @@ plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes = c(1, 3),
 Ver.inl <- subset_samples(Ver.rel, Lake_Type == "Inland")
 Ver.inl.bray <- phyloseq::distance(physeq = Ver.inl, method = "bray")
 Ver.inl.pcoa <- ordinate(physeq = Ver.inl, method = "PCoA", distance = "bray")
+
+Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes = c(1, 3),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+         shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+         alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+
+
+
+
+tiff("remain.pcoa.tiff", width = 14, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
+print(Ver.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(Ver.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(Ver.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+dev.off()
+
+
+
 ```
 
 ### PERMANOVA/Adonis
@@ -1258,9 +1302,6 @@ p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
   # F = 46.04348 
-
-print("Depth accounts for 12.76% of the data variation. The variance between water column samples and sediment samples is significantly different. However, the variance within water column samples is not significantly different. As visualized on the PCoA, sediment samples are tightly clustered together compared to the less tightly clustered water samples. As a result, despite a significant variance difference in Depth samples, because sediment samples are clearly distinct from water samples, I believe that the PERMANOVA results are not skewed by sample variance difference.")
-print("Top and Bottom is significantly different, but R2 is so small (0.012) that this explains very little of the sample variation.")
 
 
 ##### Lake_Type #####
@@ -1365,7 +1406,6 @@ p$tab
   # p-value = 0.001
   # F = 15.73037
 
-print("Fraction is only significant between Particle/Free vs. Sediment (so water vs. Sediment). Between Particle & Free, R2 = 0.98; however, fraction variance is significantly different")
 
 
 ##### Season #####
@@ -1428,6 +1468,450 @@ adonis(Ver.bray ~ Depth + Lake_Type + Fraction + Season, data = sampledf)
 ## Raw data explains 0.361 (R2)
   # Lake_Type, Depth, Fraction, Season (in order of R2)
 ## Relative abundance explains 0.409 (R2)
+
+```
+
+
+
+
+### Ver Lake PERMANOVA
+```{r v.lake.adonis}
+
+########## LAURENTIAN ##########
+sampledf <- data.frame(sample_data(Ver.lau))
+
+### Depth
+adonis(Ver.lau.bray ~ Depth, data=sampledf)
+  ## R2 = 0.05604
+    # R2 = 0.04999
+  ## p-value = 0.119
+    # p-value = 0.126
+beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.129
+    # p-value = 0.035
+  # F = 2.348
+    # F = 4.689563
+
+### Season
+adonis(Ver.lau.bray ~ Season, data=sampledf)
+  ## R2 = 0.43192
+    ## R2 = 0.43082
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.002
+  # F = 16.6
+    # F = 11.22
+
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = Ver.lau, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # R2 = 0.50861
+    # R2 = 0.47247
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 24.519
+    # F = 15
+
+# Spring vs. Fall
+adonis.spf <- subset_samples(physeq = Ver.lau, Season != "Summer")
+adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
+adonis.spf <- data.frame(sample_data(adonis.spf))
+adonis(adonis.spf.bray ~ Season, data=adonis.spf)
+  # R2 = 0.42078 
+    # R2 = 0.41549
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 22.979
+    # F = 15.219
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = Ver.lau, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # R2 = 0.18708
+    # R2 = 0.18953
+  # p-value = 0.002
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.742
+    # p-value = 0.838
+  # F = 0.1338
+    # F = 0.0469
+
+### Fraction
+adonis(Ver.lau.bray ~ Fraction, data=sampledf)
+  ## R2 = 0.18629
+    ## R2 = 0.17341
+  ## p-value = 0.001
+    ## p-value = 0.002
+beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.948
+    # p-value = 0.712
+  # F = 0.0044
+    # F = 0.13
+
+##### Nested adonis #####
+adonis(Ver.lau.bray ~ Season + Fraction + Depth, data = sampledf)
+  ## Season = 0.43192
+  ## Fraction = 0.17388
+  ## Depth = 0.05246
+      ## Season = 0.43082
+      ## Fraction = 0.17534
+      ## Depth = 0.04616
+
+
+########## ESTUARY ##########
+sampledf <- data.frame(sample_data(Ver.est))
+
+### Depth
+adonis(Ver.est.bray ~ Depth, data=sampledf)
+  ## R2 = 0.3203
+    ## R2 = 0.30094
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.013
+    # p-value = 0.02
+  # F = 4.667
+    # F = 4.0681
+
+# Water vs. Sediment
+adonis(Ver.est.bray ~ Source, data=sampledf)
+  ## R2 = 0.30445
+    ## R2 = 0.28633
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Source)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.004
+    # p-value = 0.005
+  # F = 10.466
+    # F = 9.392686
+
+# Top vs. Bottom
+adonis.tb <- subset_samples(physeq = Ver.est, Depth != "Sediment")
+adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
+adonis.tb <- data.frame(sample_data(adonis.tb))
+adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
+  # R2 = 0.02517
+    # R2 = 0.0224
+  # p-value = 0.219
+    # p-value = 0.301
+beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.651
+    # p-value = 0.826
+  # F = 0.2417
+    # F = 0.05
+
+# Top vs. Sediment
+adonis.ts <- subset_samples(physeq = Ver.est, Depth != "Bottom")
+adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
+adonis.ts <- data.frame(sample_data(adonis.ts))
+adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
+  # R2 = 0.42695
+    # R2 = 0.39375
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.009
+    # p-value = 0.008
+  # F = 6.981
+    # F = 6.54
+
+# Bottom vs. Sediment
+adonis.bs <- subset_samples(physeq = Ver.est, Depth != "Top")
+adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
+adonis.bs <- data.frame(sample_data(adonis.bs))
+adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
+  # R2 = 0.4041
+    # R2 = 0.39372
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.002
+    # p-value = 0.005
+  # F = 10.169
+    # F = 8.67
+
+### Season
+adonis(Ver.est.bray ~ Season, data=sampledf)
+  ## R2 = 0.2126
+    ## R2 = 0.21914
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.782
+    # p-value = 0.75
+  # F = 0.241
+    # F = 0.2979
+
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = Ver.est, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # R2 = 0.20564
+    # R2 = 0.21356
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.928
+    # p-value = 0.782
+  # F = 0.006
+    # F = 0.0557
+
+# Spring vs. Fall
+adonis.spf <- subset_samples(physeq = Ver.est, Season != "Summer")
+adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
+adonis.spf <- data.frame(sample_data(adonis.spf))
+adonis(adonis.spf.bray ~ Season, data=adonis.spf)
+  # R2 = 0.25604
+    # R2 = 0.25881
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.587
+    # p-value = 0.471
+  # F = 0.323
+    # F = 0.506
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = Ver.est, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # R2 = 0.05576
+    # R2 = 0.05553
+  # p-value = 0.038
+    # p-value = 0.053
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.554
+    # p-value = 0.585
+  # F = 0.354
+    # F = 0.292
+
+### Fraction
+adonis(Ver.est.bray ~ Fraction, data=sampledf)
+  ## R2 = 0.42833
+    ## R2 = 0.4132
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.103
+    # p-value = 0.076
+  # F = 2.358
+    # F = 2.717
+
+# Particle vs. Free
+adonis.frac <- subset_samples(physeq = Ver.est, Fraction != "Sediment")
+adonis.frac.bray <- phyloseq::distance(physeq = adonis.frac, method = "bray")
+adonis.frac <- data.frame(sample_data(adonis.frac))
+adonis(adonis.frac.bray ~ Fraction, data=adonis.frac)
+  # R2 = 0.19418
+    # R2 = 0.19446
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.frac.bray, group=adonis.frac$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.209
+    # p-value = 0.123
+  # F = 1.585
+    # F = 2.43
+
+# Particle vs. Sediment
+adonis.ps <- subset_samples(physeq = Ver.est, Fraction != "Free")
+adonis.ps.bray <- phyloseq::distance(physeq = adonis.ps, method = "bray")
+adonis.ps <- data.frame(sample_data(adonis.ps))
+adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
+  # R2 = 0.41931
+    # R2 = 0.39181
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.082
+    # p-value = 0.073
+  # F = 3.263
+    # F = 3.423
+
+# Free vs. Sediment
+adonis.fs <- subset_samples(physeq = Ver.est, Fraction != "Particle")
+adonis.fs.bray <- phyloseq::distance(physeq = adonis.fs, method = "bray")
+adonis.fs <- data.frame(sample_data(adonis.fs))
+adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
+  # R2 = 0.5221
+    # R2 = 0.51146
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.142
+    # p-value = 0.242
+  # F = 2.185
+    # F = 1.43
+
+
+##### Nested adonis #####
+adonis(Ver.est.bray ~ Depth + Season + Fraction, data = sampledf)
+  ## Depth = 0.32051
+  ## Season = 0.20928
+  ## Fraction = 0.12244
+    ## Depth = 0.30094
+    ## Season = 0.21645
+    ## Fraction = 0.12687
+
+
+
+
+########## INLAND ##########
+sampledf <- data.frame(sample_data(Ver.inl))
+
+### Depth
+adonis(Ver.inl.bray ~ Depth, data=sampledf)
+  ## R2 = 0.03718
+    ## R2 = 0.03548
+  ## p-value = 0.001
+    ## p-value = 0.002
+beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.008
+    # p-value = 0.001
+  # F = 8.189
+    # F = 9.534813
+
+### Season
+adonis(Ver.inl.bray ~ Season, data=sampledf)
+  ## R2 = 0.07868
+    ## R2 = 0.7723
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.002
+    # p-value = 0.001
+  # F = 6.98
+    # F = 8.04
+
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = Ver.inl, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # R2 = 0.06833
+    # R2 = 0.06701
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.002
+    # p-value = 0.001
+  # F = 14.315
+    # F = 16.5
+
+# Spring vs. Fall
+adonis.spf <- subset_samples(physeq = Ver.inl, Season != "Summer")
+adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
+adonis.spf <- data.frame(sample_data(adonis.spf))
+adonis(adonis.spf.bray ~ Season, data=adonis.spf)
+  # R2 = 0.17208
+    # R2 = 0.17293
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.426
+    # p-value = 0.411
+  # F = 0.6775762
+    # F = 0.724
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = Ver.inl, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # R2 = 0.02151  
+    # R2 = 0.02092
+  # p-value = 0.013
+    # p-value = 0.013
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.075
+    # p-value = 0.04
+  # F = 3.559
+    # F = 4.18
+
+### Fraction
+adonis(Ver.inl.bray ~ Fraction, data=sampledf)
+  ## R2 = 0.11397
+    ## R2 = 0.11226
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.005
+    # p-value = 0.009
+  # F = 7.79
+    # F = 8.08
+
+##### Nested adonis #####
+adonis(Ver.inl.bray ~ Fraction + Season + Depth, data = sampledf)
+  ## Fraction == 0.11397
+  ## Season = 0.07932
+  ## Depth = 0.03592
+    ## Fraction = 0.11226
+    ## Season = 0.07723
+    ## Depth = 0.03532
 ```
 
 
@@ -1507,6 +1991,113 @@ bcc.pcoa.facet <- plot_ordination(
 
 ```
 
+
+
+
+### BCC Lake PCoA
+```{r bcc.lake.pcoa}
+### Laurentian
+scaled.lau <- subset_samples(scaled, Lake_Type == "Laurentian")
+scaled.lau.bray <- phyloseq::distance(physeq = scaled.lau, method = "bray")
+scaled.lau.pcoa <- ordinate(physeq = scaled.lau, method = "PCoA", distance = "bray")
+
+
+scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.pcoa, axes = c(1, 3),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  scale_y_reverse() + 
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+         shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+         alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+# Particle = fill, Free = empty
+# Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25
+#        You also can't set colors manually
+
+
+
+scaled.est <- subset_samples(scaled, Lake_Type == "Estuary")
+scaled.est.bray <- phyloseq::distance(physeq = scaled.est, method = "bray")
+scaled.est.pcoa <- ordinate(physeq = scaled.est, method = "PCoA", distance = "bray")
+  
+scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.pcoa, axes = c(1, 2),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+         shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+         alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+
+
+
+  
+  
+scaled.inl <- subset_samples(scaled, Lake_Type == "Inland")
+scaled.inl.bray <- phyloseq::distance(physeq = scaled.inl, method = "bray")
+scaled.inl.pcoa <- ordinate(physeq = scaled.inl, method = "PCoA", distance = "bray")
+
+scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.pcoa, axes = c(1, 3),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=14),
+        axis.title.y = element_text(face="bold", size=14),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size=12),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 16, face="bold")) +
+  guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+         shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+         alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+
+
+
+
+tiff("remain.bcc.pcoa.tiff", width = 14, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
+print(scaled.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(scaled.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(scaled.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+dev.off()
+
+
+
+
+```
 
 ### Compare Whole Bacterial Community with Verruco Community
 ```{r bcc.ver.pcoa}
@@ -1740,6 +2331,450 @@ adonis(scaled.bray ~ Depth + Fraction + Lake_Type + Season, data = bcc.sampledf)
 ```
 
 
+
+
+### BCC Lake PERMANOVA
+```{r bcc.lake.permanova}
+########## LAURENTIAN ##########
+sampledf <- data.frame(sample_data(scaled.lau))
+
+### Depth
+adonis(scaled.lau.bray ~ Depth, data=sampledf)
+  ## R2 = 0.04762
+    # R2 = 0.03723
+  ## p-value = 0.176
+    # p-value = 0.22
+beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.876
+    # p-value = 0.855
+  # F = 0.02
+    # F = 0.037
+
+### Season
+adonis(scaled.lau.bray ~ Season, data=sampledf)
+  ## R2 = 0.25567
+    ## R2 = 0.23951
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.008
+    # p-value = 0.147
+  # F = 6.647
+    # F = 2.14
+
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = scaled.lau, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # R2 = 0.25952
+    # R2 = 0.225
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.013
+    # p-value = 127
+  # F = 8.962
+    # F = 2.479
+
+# Spring vs. Fall
+adonis.spf <- subset_samples(physeq = scaled.lau, Season != "Summer")
+adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
+adonis.spf <- data.frame(sample_data(adonis.spf))
+adonis(adonis.spf.bray ~ Season, data=adonis.spf)
+  # R2 = 0.27294
+    # R2 = 0.23554
+  # p-value = 0.002
+    # p-value = 0.002
+beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.002
+    # p-value = 0.073
+  # F = 13.01
+    # F = 3.621
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = scaled.lau, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # R2 = 0.11311
+    # R2 = 0.11285
+  # p-value = 0.043
+    # p-value = 0.055
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.913
+    # p-value = 0.912
+  # F = 0.014
+    # F = 0.0139
+
+### Fraction
+adonis(scaled.lau.bray ~ Fraction, data=sampledf)
+  ## R2 = 0.37659
+    ## R2 = 0.34359
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 24.11
+    # F = 52.05
+
+##### Nested adonis #####
+adonis(scaled.lau.bray ~ Fraction + Season + Depth, data = sampledf)
+  ## Fraction = 0.37659
+  ## Season = 0.22677
+  ## Depth = 0.04356
+      ## Fraction = 0.34359
+      ## Season = 0.24164
+      ## Depth = 0.03411
+
+
+########## ESTUARY ##########
+sampledf <- data.frame(sample_data(scaled.est))
+
+### Depth
+adonis(scaled.est.bray ~ Depth, data=sampledf)
+  ## R2 = 0.3208
+    ## R2 = 0.30522
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.262
+    # p-value = 0.199
+  # F = 1.39
+    # F = 1.54
+
+# Water vs. Sediment
+adonis(scaled.est.bray ~ Source, data=sampledf)
+  ## R2 = 0.285
+    ## R2 = 0.28846
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Source)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.122
+    # p-value = 0.069
+  # F = 2.335
+    # F = 3.27
+
+# Top vs. Bottom
+adonis.tb <- subset_samples(physeq = scaled.est, Depth != "Sediment")
+adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
+adonis.tb <- data.frame(sample_data(adonis.tb))
+adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
+  # R2 = 0.02922
+    # R2 = 0.02693
+  # p-value = 0.136
+    # p-value = 0.185
+beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.311
+    # p-value = 0.503
+  # F = 0.986
+    # F = 0.496
+
+# Top vs. Sediment
+adonis.ts <- subset_samples(physeq = scaled.est, Depth != "Bottom")
+adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
+adonis.ts <- data.frame(sample_data(adonis.ts))
+adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
+  # R2 = 0.40321
+    # R2 = 0.40019
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.434
+    # p-value = 0.243
+  # F = 0.643
+    # F = 1.41
+
+# Bottom vs. Sediment
+adonis.bs <- subset_samples(physeq = scaled.est, Depth != "Top")
+adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
+adonis.bs <- data.frame(sample_data(adonis.bs))
+adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
+  # R2 = 0.36191
+    # R2 = 0.37597
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.075
+    # p-value = 0.056
+  # F = 3.103
+    # F = 3.567448
+
+### Season
+adonis(scaled.est.bray ~ Season, data=sampledf)
+  ## R2 = 0.16651
+    ## R2 = 0.17415
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.795
+    # p-value = 0.765
+  # F = 0.25
+    # F = 0.265
+
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = scaled.est, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # R2 = 0.17354
+    # R2 = 0.18032
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.846
+    # p-value = 0.883
+  # F = 0.0367
+    # F = 0.029
+
+# Spring vs. Fall
+adonis.spf <- subset_samples(physeq = scaled.est, Season != "Summer")
+adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
+adonis.spf <- data.frame(sample_data(adonis.spf))
+adonis(adonis.spf.bray ~ Season, data=adonis.spf)
+  # R2 = 0.18001
+    # R2 =0.18804
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.537
+    # p-value = 0.527
+  # F = 0.4
+    # F = 0.437
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = scaled.est, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # R2 = 0.05178
+    # R2 = 0.05209
+  # p-value = 0.03
+    # p-value = 0.032
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.616
+    # p-value = 0.594
+  # F = 0.26
+    # F = 0.296
+
+### Fraction
+adonis(scaled.est.bray ~ Fraction, data=sampledf)
+  ## R2 = 0.40952
+    ## R2 = 0.41303
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.067
+    # p-value =0.039
+  # F = 2.5667
+    # F = 3.459
+
+# Particle vs. Free
+adonis.frac <- subset_samples(physeq = scaled.est, Fraction != "Sediment")
+adonis.frac.bray <- phyloseq::distance(physeq = adonis.frac, method = "bray")
+adonis.frac <- data.frame(sample_data(adonis.frac))
+adonis(adonis.frac.bray ~ Fraction, data=adonis.frac)
+  # R2 = 0.2012
+    # R2 = 0.20022
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.frac.bray, group=adonis.frac$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.033
+    # p-value = 0.015
+  # F = 4.63
+    # F = 6.3
+
+# Particle vs. Sediment
+adonis.ps <- subset_samples(physeq = scaled.est, Fraction != "Free")
+adonis.ps.bray <- phyloseq::distance(physeq = adonis.ps, method = "bray")
+adonis.ps <- data.frame(sample_data(adonis.ps))
+adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
+  # R2 = 0.3719
+    # R2 = 0.37385
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.393
+    # p-value = 0.238
+  # F = 0.7389
+    # F = 1.47
+
+# Free vs. Sediment
+adonis.fs <- subset_samples(physeq = scaled.est, Fraction != "Particle")
+adonis.fs.bray <- phyloseq::distance(physeq = adonis.fs, method = "bray")
+adonis.fs <- data.frame(sample_data(adonis.fs))
+adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
+  # R2 = 0.49471
+    # R2 = 0.51092
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.311
+    # p-value = 0.428
+  # F = 0.92
+    # F = 0.596
+
+
+##### Nested adonis #####
+adonis(scaled.est.bray ~ Depth + Season + Fraction, data = sampledf)
+  ## Depth = 0.30308
+  ## Season = 0.16473
+  ## Fraction = 0.12424
+    ## Depth = 0.30522
+    ## Season = 0.17341
+    ## Fraction = 0.12457
+
+
+
+
+########## INLAND ##########
+sampledf <- data.frame(sample_data(scaled.inl))
+
+### Depth
+adonis(scaled.inl.bray ~ Depth, data=sampledf)
+  ## R2 = 0.0413
+    ## R2 = 0.03975
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 21.78
+    # F = 25.05928
+
+### Season
+adonis(scaled.inl.bray ~ Season, data=sampledf)
+  ## R2 = 0.09841
+    ## R2 = 0.09735
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 13.76
+    # F = 15.05
+
+# Spring vs. Summer
+adonis.ss <- subset_samples(physeq = scaled.inl, Season != "Fall")
+adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
+adonis.ss <- data.frame(sample_data(adonis.ss))
+adonis(adonis.ss.bray ~ Season, data=adonis.ss)
+  # R2 = 0.0862
+    # R2 = 0.08529
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 27.53
+    # F = 30.3471
+
+# Spring vs. Fall
+adonis.spf <- subset_samples(physeq = scaled.inl, Season != "Summer")
+adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
+adonis.spf <- data.frame(sample_data(adonis.spf))
+adonis(adonis.spf.bray ~ Season, data=adonis.spf)
+  # R2 = 0.20682
+    # R2 = 0.20982
+  # p-value = 0.001
+    # p-value = 0.001
+beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.03
+    # p-value = 0.041
+  # F = 4.77
+    # F = 5.219
+
+# Summer vs. Fall
+adonis.suf <- subset_samples(physeq = scaled.inl, Season != "Spring")
+adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
+adonis.suf <- data.frame(sample_data(adonis.suf))
+adonis(adonis.suf.bray ~ Season, data=adonis.suf)
+  # R2 = 0.02754
+    # R2 = 0.02688
+  # p-value = 0.004
+    # p-value = 0.005
+beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.051
+    # p-value = 0.058
+  # F = 3.864
+    # F = 4.04
+
+### Fraction
+adonis(scaled.inl.bray ~ Fraction, data=sampledf)
+  ## R2 = 0.17133
+    ## R2 = 0.17221
+  ## p-value = 0.001
+    ## p-value = 0.001
+beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+    # p-value = 0.001
+  # F = 24.138
+    # F = 26.49
+
+##### Nested adonis #####
+adonis(scaled.inl.bray ~ Fraction + Season + Depth, data = sampledf)
+  ## Fraction = 0.17133
+  ## Season = 0.09922
+  ## Depth = 0.04113
+    ## Fraction = 0.17221
+    ## Season = 0.09735
+    ## Depth = 0.04004
+```
+
+
+
+
 ### Procrustes Analyses (Verruco vs. Whole Bacterial community)
 ```{r procrustes}
 procrust <- procrustes(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2], scale=FALSE,
@@ -1845,6 +2880,133 @@ ggplot(pro.df) +
   guides(color = guide_legend(order=1, override.aes=list(size=3)),
          shape = guide_legend(order=2, override.aes=list(size=3)))
 #dev.off()
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Lake Procrustes Analyses (Verruco vs. Whole Bacterial community)
+```{r lake.procrustes}
+
+########## LAURENTIAN ##########
+procrust <- procrustes(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 2.446
+    # Sum of squares = 1.901
+plot(procrust)
+plot(procrust,kind=2)
+pro <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.4662
+    # m12^2 (sum of squares) = 0.3399
+  # correlation = 0.7306
+    # correlation = 0.8125
+plot(pro)
+
+
+procrust2 <- procrustes(scaled.lau.pcoa$vectors[,1:3], Ver.lau.pcoa$vectors[,1:3], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 2.08
+    # sum of squares = 2.34
+plot(procrust2)
+plot(procrust2,kind=2)
+pro2 <- protest(scaled.lau.pcoa$vectors[,1:3], Ver.lau.pcoa$vectors[,1:3])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.33
+    # m12^2 (sum of squares) = 0.3417
+  # correlation = 0.8185
+    # correlation = 0.8114
+plot(pro2)
+
+
+
+
+
+
+
+########## ESTUARY ##########
+procrust <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 0.9803
+    # sum of squares = 1.05
+plot(procrust)
+plot(procrust,kind=2)
+pro <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.08122
+    # m12^2 (sum of squares) = 0.09223
+  # correlation = 0.9585
+    # correlation = 0.9528
+plot(pro)
+
+
+procrust2 <- procrustes(scaled.est.pcoa$vectors[,1:3], Ver.est.pcoa$vectors[,1:3], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 1.315
+    # sum of squares = 1.257
+plot(procrust2)
+plot(procrust2,kind=2)
+pro2 <- protest(scaled.est.pcoa$vectors[,1:3], Ver.est.pcoa$vectors[,1:3])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.09107
+    # m12^2 (sum of squares) = 0.08774
+  # correlation = 0.9534
+    # correlation = 0.9551
+plot(pro2)
+
+
+
+
+
+
+########## INLAND ##########
+procrust <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 5.582
+    # sum of squares = 5.454
+plot(procrust)
+plot(procrust,kind=2)
+pro <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3757
+    # m12^2 (sum of squares) = 0.3649
+  # correlation = 0.7901
+    # correlation = 0.7969
+plot(pro)
+
+
+procrust2 <- procrustes(scaled.inl.pcoa$vectors[,1:3], Ver.inl.pcoa$vectors[,1:3], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 7.864
+    # sum of squares = 8.086
+plot(procrust2)
+plot(procrust2,kind=2)
+pro2 <- protest(scaled.inl.pcoa$vectors[,1:3], Ver.inl.pcoa$vectors[,1:3])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.4154
+    # m12^2 (sum of squares) = 0.4168
+  # correlation = 0.7646
+    # correlation = 0.7637
+plot(pro2)
 
 
 
