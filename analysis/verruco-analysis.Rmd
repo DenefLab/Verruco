@@ -126,18 +126,24 @@ scale_reads <- function(physeq,n){
 # Remove North Hypo samples because their reads are seriously too low (8 & 18)
 dupmerge.subset <- subset_samples(physeq = verr.dupmerge, SampleID != "Z14.051.P")
 dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.051.F")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.016.P")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "MINE.P.514")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.047.P")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.DD")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.048.P")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SN")
-dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SD")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.016.P")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "MINE.P.514")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.047.P")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.DD")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.048.P")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SN")
+#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SD")
 
 ### Removing or leaving in that last 10k sample doesn't make a difference in PERMANOVA/betadisper
 
 # Normalize our dataset!
-scaled <- scale_reads(dupmerge.subset,min(sample_sums(dupmerge.subset)))   ### Scaled to 10,808 (minumum sample)
+scaled <- scale_reads(dupmerge.subset,min(sample_sums(dupmerge.subset)))
+  ### Scaled to 13,012 (minumum sample)
+    # 28,759 taxa
+    # 219 samples
+  ### Scaled to 2,072 (min sample)
+    # 5593 taxa
+    # 226 samples
 sample_data(scaled)$Lake_Type <- ordered(sample_data(scaled)$Lake_Type,
                                      levels=c("Laurentian","Estuary","Inland"))
 sample_data(scaled)$Fraction <- ordered(sample_data(scaled)$Fraction,
@@ -219,7 +225,7 @@ top5phyla.barplot <- barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylu
 
 ### STACKED BAR PLOT OF Lake_Type
 ```{r, fig.width = 7, fig.height = 8}
-################# TIME TO CREATE STACKED BAR PLOT OF Lake_TypeS #################
+################# TIME TO CREATE STACKED BAR PLOT OF Lake_Type #################
 
 # Merge samples by Lake_Type
 phy.Lake_Type <- merge_samples(phylum.99, "Lake_Type")
@@ -233,9 +239,9 @@ phy.otu <- data.frame(otu_table(phy.Lake_Type))
 phy <- data.frame(tax_table(phy.Lake_Type))
 phy.otu[1,] <- (phy.otu[1,]/64)
     ## Averaging Estuary
-phy.otu[2,] <- (phy.otu[2,]/117)
+phy.otu[2,] <- (phy.otu[2,]/123)
     ## Averaging Inland
-phy.otu[3,] <- (phy.otu[3,]/34)
+phy.otu[3,] <- (phy.otu[3,]/32)
     ## Averaging Laurentian
 #colnames(phy.otu) <- c("Proteobacteria","Actinobacteria","Cyanobacteria","Bacteroidetes","Planctomycetes","Chloroflexi","Verrucomicrobia","Armatimonadetes","NPL-UPA2","Chlorobi","Gemmatimonadetes","Acidobacteria","Candidate_division_OP3","Nitrospirae","Candidate_division_OD1","Spirochaetae","Candidate_division_OP8","Chlamydiae","Lentisphaerae","BD1-5","TM6","unclassified","Firmicutes", "Candidate_division_WS3","Fibrobacteres","Candidate_division_SR1")
 tphy.otu <- t(phy.otu)
@@ -264,7 +270,9 @@ phylum.colors <- c(Acidobacteria="lightblue1",
                    Chlorobi="gold",
                    Chloroflexi="#ff7f00",
                    Cyanobacteria="#33a02c",
+                   Firmicutes="red",
                    Nitrospirae="midnightblue",
+                   Lentispherae="white",
                    Planctomycetes="deepskyblue",
                    Proteobacteria="khaki1",
                    Verrucomicrobia="lightslateblue",
@@ -317,11 +325,11 @@ phy.Lake_Type.Ver <- merge_samples(phy.Ver, "Lake_Type")
 
 # Average Lake_Types
 Lake_Type.Ver <- data.frame(otu_table(phy.Lake_Type.Ver))
-Lake_Type.Ver[1,] <- (Lake_Type.Ver[1,]/54)
+Lake_Type.Ver[1,] <- (Lake_Type.Ver[1,]/64)
     ## Averaging Estuary
-Lake_Type.Ver[2,] <- (Lake_Type.Ver[2,]/117)
+Lake_Type.Ver[2,] <- (Lake_Type.Ver[2,]/123)
     ## Averaging Inland
-Lake_Type.Ver[3,] <- (Lake_Type.Ver[3,]/45)
+Lake_Type.Ver[3,] <- (Lake_Type.Ver[3,]/32)
     ## Averaging Laurentian
 #tLake_Type.Ver <- t(Lake_Type.Ver)
 #tLake_Type.Ver <- data.frame(tLake_Type.Ver)
@@ -329,7 +337,7 @@ Lake_Type.Ver$Lake_Type <- rownames(Lake_Type.Ver)
 
 # Really crappy bar plot
 # Averaged relative abundance of Verrucos in each Lake_Type of lake
-ggplot(data = Lake_Type.Ver, aes(x = Lake_Type, y = Otu000064)) +
+ggplot(data = Lake_Type.Ver, aes(x = Lake_Type, y = Otu000049)) +
   geom_bar(stat = "identity", fill = "dark grey", colour = "black") 
 
 # Unclassifed phylum
@@ -351,6 +359,8 @@ paste(c("The max sample read count is",maxs))
 ```{r}
 # Phyloseq object of ALL Verruco OTUs
 Ver <- subset_taxa(scaled, Phylum == "Verrucomicrobia")
+  # Remove taxa = 1216
+  # Remain taxa = 329
 
 # Check the sequencing depth of Verrucos each sample 
 sums_Ver <- data.frame(rowSums(otu_table(Ver)))
@@ -367,6 +377,209 @@ ggplot(sums_Ver, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs))
   theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
 
 ```
+
+### Intra-Verruco Rel Abund
+```{r Intra.Ver}
+classVer <- tax_glom(Ver, taxrank = "Class")
+
+# Calculate relative abundance
+classVer.rel = transform_sample_counts(classVer, function(x){x/sum(x)})
+
+# If a phylum has <1% rel abun, change that to 0%
+otu_table(classVer.rel)[otu_table(classVer.rel)<.01] <- 0
+
+# Remove anything with 0% rel abun
+classVer.rel = prune_taxa(taxa_sums(classVer.rel)>0,classVer.rel)
+
+# Create rank abundance of OTUs
+barplot(sort(taxa_sums(classVer.rel),TRUE)[1:20]/nsamples(classVer.rel),las=2,cex.axis=.7)
+
+
+
+# Create dataframe to use in ggplot
+classVer.df <- psmelt(classVer.rel)
+classVer.df$Abundance <- classVer.df$Abundance * 100
+classVer.df$Class <- ordered(classVer.df$Class, levels=c("unclassified","Verrucomicrobiae","Verrucomicrobia_Incertae_Sedis","Spartobacteria","S-BQ2-57_soil_group","Opitutae","OPB35_soil_group"))
+classVer.df$Group <- ordered(classVer.df$Lake_Type, levels = c("Laurentian","Estuary","Inland"))
+classVer.df$Fraction <- ordered(classVer.df$Fraction, levels = c("Particle","Free","Sediment"))
+classVer.df$Depth <- ordered(classVer.df$Depth, levels = c("Top", "Bottom","Sediment"))
+classVer.df$Season <- ordered(classVer.df$Season, levels = c("Spring","Summer","Fall"))
+
+
+#Ver.colors <- c("OPB35_soil_group" = "gold", Opitutae = "red2", "S-BQ2-57_soil_group" = "mediumorchid3", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "darkorange", Verrucomicrobiae = "deepskyblue", unclassified="purple4")
+
+Ver.colors <- c("OPB35_soil_group" = "#e41a1c", Opitutae = "#377eb8", "S-BQ2-57_soil_group" = "#984ea3", Spartobacteria = "#4daf4a", "Verrucomicrobia_Incertae_Sedis" = "#ff7f00", Verrucomicrobiae = "#ffd92f", unclassified="#f1a3a9")
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Group & Fraction) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Lake_Type","Fraction"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Lake_Type","Fraction", "Class"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+###### GGPLOT IT! ######
+#tiff("intra.remain.lakefrac.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Lake_Type) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+#dev.off()
+
+
+
+
+
+
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Season & Fraction) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Fraction"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Season", "Class", "Fraction"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+
+###### GGPLOT IT! ######
+#tiff("intra.remain.seasonfrac.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Season) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+#dev.off()
+
+
+
+
+
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Lake_Type & Season) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Lake_Type"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Season", "Class", "Lake_Type"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+
+
+###### GGPLOT IT! ######
+#tiff("intra.remain.groupseason.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Season ~ Lake_Type) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+#dev.off()
+
+
+
+
+
+########### Create dataframe for unstacked bar plots (facet by Fraction ~ Depth) ###########
+classVer.rel.df <- psmelt(classVer.rel)
+    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
+    ## These are the factors that you'll be using to make your graph
+groupfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
+                   n =  length(Abundance),
+                   relabun = mean(Abundance),
+                   sd = sd(Abundance),
+                   se = sd/sqrt(n) )
+    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
+    ## into a new dataframe
+    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
+    ##         summarise (no clue what this adds to the output),
+    ##         now all the functions/commands you want to apply
+
+
+###### GGPLOT IT! ######
+#tiff("intra.remain.depthfrac.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(groupfrac, aes(y=relabun, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Depth) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
+#dev.off()
+
+```
+
+
 
 ### Making phy.Ver normal
 ```{r}
@@ -568,11 +781,13 @@ otu_table(Ver.rel)[otu_table(Ver.rel)<.01] <- 0
 
 # Remove anything with 0% rel abun
 Ver.rel = prune_taxa(taxa_sums(Ver.rel)>0,Ver.rel)
+  # Remove taxa = 135
+  # Remain taxa = 208
 
 # Create rank abundance of OTUs
 barplot(sort(taxa_sums(Ver.rel),TRUE)[1:20]/nsamples(Ver.rel),las=2,cex.axis=.7)
-    ## 1 = OPB35_soil_Lake_Type
-    ## 2 = OPB35_soil_Lake_Type
+    ## 1 = OPB35_soil_group
+    ## 2 = OPB35_soil_group
     ## 3 = Opitutae - vadinHA64
     ## 4 = Spartobacteria - Chthoniobacterales - FukuN18_freshwater_Lake_Type
     ## 5 = Verrucomicrobiae - Verrucomicrobiales - Verrucomicrobiaceae
@@ -1484,12 +1699,12 @@ sampledf <- data.frame(sample_data(Ver.lau))
 adonis(Ver.lau.bray ~ Depth, data=sampledf)
   ## R2 = 0.05604
     # R2 = 0.04999
-  ## p-value = 0.119
-    # p-value = 0.126
+  ## p-value = 0.092
+    # p-value = 0.127
 beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.129
+  # p-value = 0.159
     # p-value = 0.035
   # F = 2.348
     # F = 4.689563
@@ -1554,7 +1769,7 @@ adonis(adonis.suf.bray ~ Season, data=adonis.suf)
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.742
+  # p-value = 0.722
     # p-value = 0.838
   # F = 0.1338
     # F = 0.0469
@@ -1588,14 +1803,14 @@ sampledf <- data.frame(sample_data(Ver.est))
 
 ### Depth
 adonis(Ver.est.bray ~ Depth, data=sampledf)
-  ## R2 = 0.3203
+  ## R2 = 0.32051
     ## R2 = 0.30094
   ## p-value = 0.001
     ## p-value = 0.001
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.013
+  # p-value = 0.009
     # p-value = 0.02
   # F = 4.667
     # F = 4.0681
@@ -1621,12 +1836,12 @@ adonis.tb <- data.frame(sample_data(adonis.tb))
 adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
   # R2 = 0.02517
     # R2 = 0.0224
-  # p-value = 0.219
-    # p-value = 0.301
+  # p-value = 0.251
+    # p-value = 0.279
 beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.651
+  # p-value = 0.678
     # p-value = 0.826
   # F = 0.2417
     # F = 0.05
@@ -1643,7 +1858,7 @@ adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
 beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.009
+  # p-value = 0.011
     # p-value = 0.008
   # F = 6.981
     # F = 6.54
@@ -1660,7 +1875,7 @@ adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
 beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.002
+  # p-value = 0.004
     # p-value = 0.005
   # F = 10.169
     # F = 8.67
@@ -1674,7 +1889,7 @@ adonis(Ver.est.bray ~ Season, data=sampledf)
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.782
+  # p-value = 0.801
     # p-value = 0.75
   # F = 0.241
     # F = 0.2979
@@ -1691,8 +1906,8 @@ adonis(adonis.ss.bray ~ Season, data=adonis.ss)
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.928
-    # p-value = 0.782
+  # p-value = 0.957
+    # p-value = 0.816
   # F = 0.006
     # F = 0.0557
 
@@ -1708,7 +1923,7 @@ adonis(adonis.spf.bray ~ Season, data=adonis.spf)
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.587
+  # p-value = 0.585
     # p-value = 0.471
   # F = 0.323
     # F = 0.506
@@ -1720,12 +1935,12 @@ adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
   # R2 = 0.05576
     # R2 = 0.05553
-  # p-value = 0.038
-    # p-value = 0.053
+  # p-value = 0.045
+    # p-value = 0.03
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.554
+  # p-value = 0.523
     # p-value = 0.585
   # F = 0.354
     # F = 0.292
@@ -1739,7 +1954,7 @@ adonis(Ver.est.bray ~ Fraction, data=sampledf)
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.103
+  # p-value = 0.098
     # p-value = 0.076
   # F = 2.358
     # F = 2.717
@@ -1756,7 +1971,7 @@ adonis(adonis.frac.bray ~ Fraction, data=adonis.frac)
 beta.tax = betadisper(d=adonis.frac.bray, group=adonis.frac$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.209
+  # p-value = 0.234
     # p-value = 0.123
   # F = 1.585
     # F = 2.43
@@ -1773,7 +1988,7 @@ adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
 beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.082
+  # p-value = 0.08
     # p-value = 0.073
   # F = 3.263
     # F = 3.423
@@ -1790,7 +2005,7 @@ adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
 beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.142
+  # p-value = 0.16
     # p-value = 0.242
   # F = 2.185
     # F = 1.43
@@ -1820,7 +2035,7 @@ adonis(Ver.inl.bray ~ Depth, data=sampledf)
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.008
+  # p-value = 0.006
     # p-value = 0.001
   # F = 8.189
     # F = 9.534813
@@ -1834,7 +2049,7 @@ adonis(Ver.inl.bray ~ Season, data=sampledf)
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.002
+  # p-value = 0.001
     # p-value = 0.001
   # F = 6.98
     # F = 8.04
@@ -1851,7 +2066,7 @@ adonis(adonis.ss.bray ~ Season, data=adonis.ss)
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.002
+  # p-value = 0.001
     # p-value = 0.001
   # F = 14.315
     # F = 16.5
@@ -1868,7 +2083,7 @@ adonis(adonis.spf.bray ~ Season, data=adonis.spf)
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.426
+  # p-value = 0.428
     # p-value = 0.411
   # F = 0.6775762
     # F = 0.724
@@ -1880,12 +2095,12 @@ adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
   # R2 = 0.02151  
     # R2 = 0.02092
-  # p-value = 0.013
+  # p-value = 0.017
     # p-value = 0.013
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.075
+  # p-value = 0.069
     # p-value = 0.04
   # F = 3.559
     # F = 4.18
@@ -1899,7 +2114,7 @@ adonis(Ver.inl.bray ~ Fraction, data=sampledf)
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.005
+  # p-value = 0.006
     # p-value = 0.009
   # F = 7.79
     # F = 8.08
@@ -2342,8 +2557,8 @@ sampledf <- data.frame(sample_data(scaled.lau))
 adonis(scaled.lau.bray ~ Depth, data=sampledf)
   ## R2 = 0.04762
     # R2 = 0.03723
-  ## p-value = 0.176
-    # p-value = 0.22
+  ## p-value = 0.171
+    # p-value = 0.243
 beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
@@ -2372,14 +2587,14 @@ adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
   # R2 = 0.25952
-    # R2 = 0.225
-  # p-value = 0.001
+    # R2 = 0.2255
+  # p-value = 0.003
     # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.013
-    # p-value = 127
+    # p-value = 0.113
   # F = 8.962
     # F = 2.479
 
@@ -2446,14 +2661,14 @@ sampledf <- data.frame(sample_data(scaled.est))
 
 ### Depth
 adonis(scaled.est.bray ~ Depth, data=sampledf)
-  ## R2 = 0.3208
+  ## R2 = 0.30308
     ## R2 = 0.30522
   ## p-value = 0.001
     ## p-value = 0.001
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.262
+  # p-value = 0.27
     # p-value = 0.199
   # F = 1.39
     # F = 1.54
@@ -2467,7 +2682,7 @@ adonis(scaled.est.bray ~ Source, data=sampledf)
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Source)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.122
+  # p-value = 0.141
     # p-value = 0.069
   # F = 2.335
     # F = 3.27
@@ -2479,12 +2694,12 @@ adonis.tb <- data.frame(sample_data(adonis.tb))
 adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
   # R2 = 0.02922
     # R2 = 0.02693
-  # p-value = 0.136
+  # p-value = 0.129
     # p-value = 0.185
 beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.311
+  # p-value = 0.345
     # p-value = 0.503
   # F = 0.986
     # F = 0.496
@@ -2501,7 +2716,7 @@ adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
 beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.434
+  # p-value = 0.422
     # p-value = 0.243
   # F = 0.643
     # F = 1.41
@@ -2518,7 +2733,7 @@ adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
 beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.075
+  # p-value = 0.084
     # p-value = 0.056
   # F = 3.103
     # F = 3.567448
@@ -2532,9 +2747,9 @@ adonis(scaled.est.bray ~ Season, data=sampledf)
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.795
+  # p-value = 0.815
     # p-value = 0.765
-  # F = 0.25
+  # F = 0.24
     # F = 0.265
 
 # Spring vs. Summer
@@ -2578,7 +2793,7 @@ adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
   # R2 = 0.05178
     # R2 = 0.05209
-  # p-value = 0.03
+  # p-value = 0.029
     # p-value = 0.032
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
@@ -2738,7 +2953,7 @@ adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
   # R2 = 0.02754
     # R2 = 0.02688
-  # p-value = 0.004
+  # p-value = 0.005
     # p-value = 0.005
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
@@ -3291,11 +3506,11 @@ abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
 
 ### DESeq2 ###
 # Prepare phyloseq object
-Vdeseq <- subset_taxa(verr.dupmerge, Phylum == "Verrucomicrobia")
+Vdeseq <- subset_taxa(dupmerge.subset, Phylum == "Verrucomicrobia")
   # We want to use the RAW COUNTS
-pick.Ver<- colnames(otu_table(Ver))
+pick.Ver<- colnames(otu_table(Ver.rel))
 Vdeseq.pick <- prune_taxa(names(taxa_sums(Vdeseq)) %in% pick.Ver, x=Vdeseq)
-  # 1319 OTUs
+  # 208 OTUs
   # Subset out the verruco taxa that we've been using so far
   # When we calculate Verruco relative abundance, we remove a few hundred super low abundance OTUs
 Ver1 <- otu_table(Vdeseq.pick) + 1
@@ -3334,7 +3549,7 @@ sed.otus <- rownames(source[sed,])
 water <- which(source$log2FoldChange > 0)
 water.otus <- rownames(source[water,])
 
-ggplot(source, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.source <- ggplot(source, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Sediment (Top) vs. Water (Bottom)")
 
@@ -3352,7 +3567,7 @@ water.bot.otus <- rownames(watercol[water.bot,])
 water.top <- which(watercol$log2FoldChange > 0)
 water.top.otus <- rownames(watercol[water.top,])
 
-ggplot(watercol, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.watercol<- ggplot(watercol, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer (palette="Set1") +
   ggtitle("Top (Top) vs. Bottom (Bottom)")
 
@@ -3368,7 +3583,7 @@ bs.bot.otus <- rownames(Vbs[bs.bot,])
 bs.sed <- which(Vbs$log2FoldChange > 0)
 bs.sed.otus <- rownames(Vbs[bs.sed,])
 
-ggplot(Vbs, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vbs <- ggplot(Vbs, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Sediment (Top) vs. Bottom (Bottom)")
 
@@ -3385,7 +3600,7 @@ st.sed.otus <- rownames(Vst[st.sed,])
 st.top <- which(Vst$log2FoldChange > 0)
 st.top.otus <- rownames(Vst[st.top,])
 
-ggplot(Vst, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vst <- ggplot(Vst, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Top (Top) vs. Sediment (Bottom)")
 
@@ -3403,14 +3618,14 @@ top.otus <- intersect(water.top.otus, st.top.otus)
 
 
 
-#tiff("deseq.depth.tiff", width = 14, height = 10, units = "in", res = 500)
-#grid.newpage()
-#pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-#print(deseq.source, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-#print(deseq.watercol, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-#print(deseq.Vst, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-#print(deseq.Vbs, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-#dev.off()
+tiff("deseq.depth.tiff", width = 14, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+print(deseq.source, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(deseq.watercol, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(deseq.Vst, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+print(deseq.Vbs, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+dev.off()
 
 
 
@@ -3426,7 +3641,7 @@ Vel.est.otus <- rownames(Vel[Vel.est,])
 Vel.lau <- which(Vel$log2FoldChange > 0)
 Vel.lau.otus <- rownames(Vel[Vel.lau,])
 
-ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vel<- ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Laurentian (Top) vs. Estuary (Bottom)")
 
@@ -3442,7 +3657,7 @@ Vei.est.otus <- rownames(Vei[Vel.est,])
 Vei.inl <- which(Vei$log2FoldChange > 0)
 Vei.inl.otus <- rownames(Vei[Vei.inl,])
 
-ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vei<- ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Inland (Top) vs. Estuary (Bottom)")
 
@@ -3459,7 +3674,7 @@ Vli.inl.otus <- rownames(Vli[Vli.inl,])
 Vli.lau <- which(Vel$log2FoldChange > 0)
 Vli.lau.otus <- rownames(Vli[Vli.lau,])
 
-ggplot(Vli, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vli<- ggplot(Vli, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Laurentian (Top) vs. Inland (Bottom)")
 
@@ -3469,13 +3684,13 @@ est.otus <- intersect(Vel.est.otus, Vei.est.otus)
 inl.otus <- intersect(Vei.inl.otus, Vli.inl.otus)
 lau.otus <- intersect(Vel.lau.otus, Vli.lau.otus)
 
-#tiff("deseq.Lake_Type.tiff", width = 20, height = 10, units = "in", res = 500)
-#grid.newpage()
-#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1.25,1.25,1.25), heights=c(1.5,1.5)))))
-#print(deseq.Vel, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-#print(deseq.Vei, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-#print(deseq.Vli, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-#dev.off()
+tiff("deseq.Lake_Type.tiff", width = 20, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1.25,1.25,1.25), heights=c(1.5,1.5)))))
+print(deseq.Vel, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(deseq.Vei, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(deseq.Vli, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+dev.off()
 
 
 
@@ -3492,11 +3707,11 @@ free.otus <- rownames(Vfrac[Vfrac.free,])
 Vfrac.part <- which(Vfrac$log2FoldChange > 0)
 part.otus <- rownames(Vfrac[Vfrac.part,])
 
-#tiff("deseq.fraction.tiff", width = 7, height = 10, units = "in", res = 500)
-#ggplot(Vfrac, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-#  scale_color_brewer(palette="Set1") +
-#  ggtitle("Particle (Top) vs. Free (Bottom)")
-#dev.off()
+tiff("deseq.fraction.tiff", width = 7, height = 10, units = "in", res = 500)
+ggplot(Vfrac, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+  scale_color_brewer(palette="Set1") +
+  ggtitle("Particle (Top) vs. Free (Bottom)")
+dev.off()
 
 
 
@@ -3516,7 +3731,7 @@ Vss.sp.otus <- rownames(Vss[Vss.sp,])
 Vss.su <- which(Vss$log2FoldChange > 0)
 Vss.su.otus <- rownames(Vss[Vss.su,])
 
-ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vss <- ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Season: Summer (Top) vs. Spring (Bottom)")
 
@@ -3535,7 +3750,7 @@ Vspf.fa.otus <- rownames(Vspf[Vspf.fa,])
 Vspf.sp <- which(Vspf$log2FoldChange > 0)
 Vspf.sp.otus <- rownames(Vspf[Vspf.sp,])
 
-ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vspf <- ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Season: Spring (Top) vs. Fall (Bottom)")
 
@@ -3556,7 +3771,7 @@ Vsuf.fa.otus <- rownames(Vsuf[Vsuf.fa,])
 Vsuf.su <- which(Vsuf$log2FoldChange > 0)
 Vsuf.su.otus <- rownames(Vsuf[Vsuf.su,])
 
-ggplot(Vsuf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
+deseq.Vsuf <- ggplot(Vsuf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Season: Summer (Top) vs. Fall (Bottom)")
 
@@ -3568,13 +3783,13 @@ fa.otus <- intersect(Vspf.fa.otus,Vsuf.fa.otus)
 
 
 
-#tiff("deseq.season.tiff", width = 20, height = 10, units = "in", res = 500)
-#grid.newpage()
-#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1.25,1.25,1.25), heights=c(1.5,1.5)))))
-#print(deseq.Vss, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-#print(deseq.Vspf, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-#print(deseq.Vsuf, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-#dev.off()
+tiff("deseq.season.tiff", width = 20, height = 10, units = "in", res = 500)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1.25,1.25,1.25), heights=c(1.5,1.5)))))
+print(deseq.Vss, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(deseq.Vspf, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(deseq.Vsuf, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+dev.off()
 ```
 
 
@@ -3632,13 +3847,13 @@ nopref <- which(substr(Lake_Type.split[4,],1,1) == "O")
 Lake_Type.split[4,nopref] <- "0_"
 Lake_Type.split[5,] <- paste(Lake_Type.split[2,], Lake_Type.split[1,], Lake_Type.split[3,], Lake_Type.split[4,],
                          colnames(Lake_Type.split))
-write.csv(Lake_Type.split[5,], file="Ecology_Otu2", row.names=FALSE, quote=FALSE)
+write.csv(Lake_Type.split[5,], file="Ecology_Otu_sig", row.names=FALSE, quote=FALSE)
 ```
 
 ### Create updated phyloseq object with EcoID
 ```{r ecoid.phyloseq}
 ##### Create new phyloseq object with EcoIDs
-eco.label<- read.csv("Ecology_Otu2", header=F)
+eco.label<- read.csv("Ecology_Otu_sig", header=F)
 eco.label <- t(eco.label)
 otu <- otu_table(Ver1)
 samp <- sample_data(Ver1)
@@ -3663,10 +3878,10 @@ Ver.tree<-merge_phyloseq(eco.ver,newick_phy)
 ```{r, itol}
 ### IToL Label Functions
 color.id <- function(x) {
-  ifelse(grepl("OPB35_soil_Lake_Type",x),"#e41a1c",
+  ifelse(grepl("OPB35_soil_group",x),"#e41a1c",
   ifelse(grepl("Opitutae",x), "#377eb8",
   ifelse(grepl("Spartobacteria",x), "#4daf4a",
-  ifelse(grepl("S-BQ2-57_soil_Lake_Type",x), "#984ea3",
+  ifelse(grepl("S-BQ2-57_soil_group",x), "#984ea3",
   ifelse(grepl("Verrucomicrobia_Incertae_Sedis",x), "#ff7f00",
   ifelse(grepl("Verrucomicrobiae",x), "#ffd92f",
   ifelse(grepl("unclassified",x), "#f1a3a9",
@@ -3715,7 +3930,7 @@ color.all <- data.frame(all$Species)
 color.all$Class <- all$Class
 color.all$color <- color.id(color.all$Class)
 color.all$label <- paste(color.all$all.Species,"range",color.all$color,color.all$Class)
-write.csv(color.all$label,file="all.ver.color1",row.names=FALSE,quote=FALSE)
+write.csv(color.all$label,file="sig.ver.color",row.names=FALSE,quote=FALSE)
 
 ### Create IToL ECOID Labels
 ecoid.all <- data.frame(all$Species)
@@ -3730,7 +3945,7 @@ season.itol <- season.id(ecoid.all)
 ecoid.all$season.label <- season.itol
 ecoid.all$itol.label <- paste(ecoid.all$all.Species, ecoid.all$depth.label, ecoid.all$Lake_Type.label,
                               ecoid.all$fraction.label, ecoid.all$season.label)
-write.csv(ecoid.all$itol.label,"EcoID.IToL.label2", row.names=FALSE, quote=FALSE)
+write.csv(ecoid.all$itol.label,"EcoID.IToL.label.sig", row.names=FALSE, quote=FALSE)
 ```
 
 
@@ -3740,7 +3955,7 @@ nosig <- which(substr(ecoid.all$EcoID,1,4)=="0000")
 nosig.otus <- as.character(ecoid.all$all.Species[nosig])
 sig.otus <- Ver.otus[!Ver.otus %in% nosig.otus]
 only.sig <- prune_taxa(sig.otus, Ver.tree)
-write.tree(phy_tree(only.sig), file="ver.sig.tre2")
+write.tree(phy_tree(only.sig), file="ver.sig.tre")
 
 ```
 
@@ -3771,33 +3986,33 @@ Ver.100 <- prune_taxa(mostabund.names, Ver)
 
 ### Check Sig Verruco Abundance
 ```{r sig.itol.abund}
-refit.tree <- read.newick(file="ver.sig.tre.refit")
-refit.otus <- refit.tree$tip.label
+remain.tree <- read.newick(file="ver.remain.sig.01.tre")
+remain.otus <- remain.tree$tip.label
 
-remove.tree <- read.newick(file="ver.sig.tre4")
+remove.tree <- read.newick(file="ver.remove.sig.01.tre")
 remove.otus <- remove.tree$tip.label
 
-refit.unique <- setdiff(refit.otus, remove.otus)
-  # refit.otus that are not in remove.otus
-remove.unique <- setdiff(remove.otus, refit.otus)
-  # remove.otus that are not in refit.otus
+remain.unique <- setdiff(remain.otus, remove.otus)
+  # remain.otus that are not in remove.otus
+remove.unique <- setdiff(remove.otus, remain.otus)
+  # remove.otus that are not in remain.otus
 
-refit.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% refit.otus, x=Vdeseq.pick)
-refit.phy <- merge_phyloseq(refit.phy, refit.tree)
+remain.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.otus, x=Vdeseq.pick)
+remain.phy <- merge_phyloseq(remain.phy, remain.tree)
 #write.tree(phy_tree(refit.phy), file="refit.tre")
-refit.rel <- transform_sample_counts(refit.phy, function(x){x/sum(x)})
-summary(taxa_sums(refit.rel))
+remain.rel <- transform_sample_counts(remain.phy, function(x){x/sum(x)})
+summary(taxa_sums(remain.rel))
 # Create rank abundance of OTUs
-barplot(sort(taxa_sums(refit.rel),TRUE)/nsamples(refit.rel),las=2,cex.axis=.7)
+barplot(sort(taxa_sums(remain.rel),TRUE)/nsamples(remain.rel),las=2,cex.axis=.7)
 # Create rank abundance of OTUs
-barplot(sort(taxa_sums(refit.rel),TRUE)[1:60]/nsamples(refit.rel),las=2,cex.axis=.7)
+barplot(sort(taxa_sums(remain.rel),TRUE)[1:60]/nsamples(remain.rel),las=2,cex.axis=.7)
 
 
 
-refit.relabund <- prune_taxa(names(taxa_sums(Ver.rel)) %in% refit.otus, x=Ver.rel)
+remain.relabund <- prune_taxa(names(taxa_sums(Ver.rel)) %in% remain.otus, x=Ver.rel)
 
 
-refit.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% refit.unique, x=Vdeseq.pick)
+remain.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.unique, x=Vdeseq.pick)
 
 remove.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.otus, x=Vdeseq.pick)
 remove.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.unique, x=Vdeseq.pick)
@@ -3973,7 +4188,7 @@ nacols <- function(df) {
   colnames(df)[unlist(lapply(df, function(x) any(is.na(x))))]
 }
 
-deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.05){
+deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.01){
   data_pruned <- prune_taxa(taxa_sums(data) > cutoff, data)
   de_data <- phyloseq_to_deseq2(data_pruned, valuetest)
   de_data2 <- DESeq(de_data, test="Wald", fitType="local")
