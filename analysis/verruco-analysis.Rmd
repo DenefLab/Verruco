@@ -3986,15 +3986,15 @@ Ver.100 <- prune_taxa(mostabund.names, Ver)
 
 ### Check Sig Verruco Abundance
 ```{r sig.itol.abund}
-remain.tree <- read.newick(file="ver.remain.sig.01.tre")
+remain.tree <- read.newick(file="ver.sig.tre")
 remain.otus <- remain.tree$tip.label
 
-remove.tree <- read.newick(file="ver.remove.sig.01.tre")
-remove.otus <- remove.tree$tip.label
+#remove.tree <- read.newick(file="ver.remove.sig.01.tre")
+#remove.otus <- remove.tree$tip.label
 
-remain.unique <- setdiff(remain.otus, remove.otus)
+#remain.unique <- setdiff(remain.otus, remove.otus)
   # remain.otus that are not in remove.otus
-remove.unique <- setdiff(remove.otus, remain.otus)
+#remove.unique <- setdiff(remove.otus, remain.otus)
   # remove.otus that are not in remain.otus
 
 remain.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.otus, x=Vdeseq.pick)
@@ -4011,12 +4011,121 @@ barplot(sort(taxa_sums(remain.rel),TRUE)[1:60]/nsamples(remain.rel),las=2,cex.ax
 
 remain.relabund <- prune_taxa(names(taxa_sums(Ver.rel)) %in% remain.otus, x=Ver.rel)
 
+#remain.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.unique, x=Vdeseq.pick)
 
-remain.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.unique, x=Vdeseq.pick)
-
-remove.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.otus, x=Vdeseq.pick)
-remove.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.unique, x=Vdeseq.pick)
+#remove.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.otus, x=Vdeseq.pick)
+#remove.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.unique, x=Vdeseq.pick)
 ```
+
+
+
+
+
+### Geiger
+```{r geiger}
+# https://github.com/mwpennell/geiger-v2
+
+ver.sig.tre <- read.newick(file="ver.sig.tre")
+
+eco.label <- read.csv("Ecology_Otu_sig", header=F)
+eco.label <- t(eco.label)
+eco.label <- data.frame(eco.label)
+eco.label$OTU <- substr(eco.label[,1],6,14)
+eco.label$Depth <- substr(eco.label[,1],1,1)
+eco.label$Lake_Type <- substr(eco.label[,1],2,2)
+eco.label$Fraction <- substr(eco.label[,1],3,3)
+eco.label$Season <- substr(eco.label[,1],4,4)
+
+# Remove non-significant Verruco OTUs
+nosig <- setdiff(eco.label$OTU, ver.sig.tre$tip.label)
+nosig.loc <- pmatch(nosig, eco.label$OTU)
+eco.label <- eco.label[-nosig.loc,]
+
+
+# Pull out only significant depth preferences
+eco.depth <- data.frame(eco.label$Depth, row.names=eco.label$OTU)
+pref <- which(eco.depth != "0")
+sig.depth <- data.frame(eco.depth[pref,1], row.names=row.names(eco.depth)[pref])
+nopref <- which(eco.depth == "0")
+nopref<- row.names(eco.depth)[nopref]
+depth.tre <- drop.tip(ver.sig.tre, nopref)
+
+# Test for phylogenetic signal in depth affinity
+optimal <- fitDiscrete(depth.tre, sig.depth, treeTransform="lambda")
+phy.Lambda0 <- rescale(depth.tre, "lambda", 0)
+zero <- fitDiscrete(phy.Lambda0, sig.depth)
+d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
+p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
+p.lambda
+  # p-value = 0.1857386
+
+
+
+# Pull out only significant lake type preferences
+eco.lake <- data.frame(eco.label$Lake_Type, row.names=eco.label$OTU)
+pref <- which(eco.lake != "0")
+sig.lake <- data.frame(eco.lake[pref,1], row.names=row.names(eco.lake)[pref])
+nopref <- which(eco.lake == "0")
+nopref<- row.names(eco.lake)[nopref]
+lake.tre <- drop.tip(ver.sig.tre, nopref)
+
+# Test for phylogenetic signal in lake affinity
+optimal <- fitDiscrete(lake.tre, sig.lake, treeTransform="lambda")
+phy.Lambda0 <- rescale(lake.tre, "lambda", 0)
+zero <- fitDiscrete(phy.Lambda0, sig.lake)
+d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
+p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
+p.lambda
+  # p-value = 0.0286439
+
+
+# Pull out only significant fraction preferences
+eco.frac <- data.frame(eco.label$Fraction, row.names=eco.label$OTU)
+pref <- which(eco.frac != "0")
+sig.frac <- data.frame(eco.frac[pref,1], row.names=row.names(eco.frac)[pref])
+nopref <- which(eco.frac == "0")
+nopref<- row.names(eco.frac)[nopref]
+frac.tre <- drop.tip(ver.sig.tre, nopref)
+
+# Test for phylogenetic signal in lake affinity
+optimal <- fitDiscrete(frac.tre, sig.frac, treeTransform="lambda")
+phy.Lambda0 <- rescale(frac.tre, "lambda", 0)
+zero <- fitDiscrete(phy.Lambda0, sig.frac)
+d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
+p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
+p.lambda
+  # p-value = 7.514368e-11
+
+
+
+# Pull out only significant season preferences
+eco.season <- data.frame(eco.label$Season, row.names=eco.label$OTU)
+pref <- which(eco.season != "0")
+sig.season <- data.frame(eco.season[pref,1], row.names=row.names(eco.season)[pref])
+nopref <- which(eco.season == "0")
+nopref<- row.names(eco.season)[nopref]
+season.tre <- drop.tip(ver.sig.tre, nopref)
+
+# Test for phylogenetic signal in season affinity
+optimal <- fitDiscrete(season.tre, sig.season, treeTransform="lambda")
+phy.Lambda0 <- rescale(season.tre, "lambda", 0)
+zero <- fitDiscrete(phy.Lambda0, sig.season)
+d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
+p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
+p.lambda
+  # p-value = 2.492829e-05
+
+##### Lake Type, Fraction, & Season have significant phylogenetic signals
+##### Depth does not have significant phylogenetic signals
+
+```
+
+
+
+
+
+
+
 
 
 
