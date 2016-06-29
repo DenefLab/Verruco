@@ -1426,6 +1426,13 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
   #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
 
 
+##### Let's steal the legend 
+g_legend <- function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+legend <- g_legend(Ver.est.ord)
 
   
   
@@ -2324,9 +2331,9 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 ### MAKE BIG PCOA FIGURE
 ```{r big.pcoa}
-tiff("pcoa.tiff", width = 15, height = 20, units = "cm", res = 500)
+tiff("pcoa.tiff", width = 17, height = 20, units = "cm", res = 500)
 grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,4, widths=c(1.6,19,19,19), heights=c(0.7,14,14)))))
+pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.6,19,19,19,8), heights=c(0.7,14,14)))))
 grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=12,fontface="bold"))
 grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=12,fontface="bold"))
 grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=12,fontface="bold"))
@@ -2338,15 +2345,9 @@ print(Ver.inl.ord, vp=viewport(layout.pos.row=2, layout.pos.col=4))
 print(scaled.lau.ord, vp=viewport(layout.pos.row=3, layout.pos.col=2))
 print(scaled.est.ord, vp=viewport(layout.pos.row=3, layout.pos.col=3))
 print(scaled.inl.ord, vp=viewport(layout.pos.row=3, layout.pos.col=4))
+legend$vp <- viewport(layout.pos.row = 1:3, layout.pos.col = 5)
+grid.draw(legend)
 dev.off()
-
-
-
-pushViewport(viewport(layout = grid.layout(3, 2, heights = unit(c(1, 4, 4), "null"))))
-grid.text("title of this panel", vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2))
-print(p1, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
-print(p2, vp = viewport(layout.pos.row = 2, layout.pos.col = 2))
-print(p3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1:2))
 ```
 
 
