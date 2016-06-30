@@ -25,6 +25,7 @@ library(DESeq2)
 library(pander)
 library(ade4)
 library(labdsv)
+library(geiger)
 #library(shiny)
 #library(shinyFiles)
 #library(samr)
@@ -138,9 +139,6 @@ dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.051
 
 # Normalize our dataset!
 scaled <- scale_reads(dupmerge.subset,min(sample_sums(dupmerge.subset)))
-  ### Scaled to 13,012 (minumum sample)
-    # 28,759 taxa
-    # 219 samples
   ### Scaled to 2,072 (min sample)
     # 5593 taxa
     # 226 samples
@@ -359,8 +357,7 @@ paste(c("The max sample read count is",maxs))
 ```{r}
 # Phyloseq object of ALL Verruco OTUs
 Ver <- subset_taxa(scaled, Phylum == "Verrucomicrobia")
-  # Remove taxa = 1216
-  # Remain taxa = 329
+  # taxa = 329
 
 # Check the sequencing depth of Verrucos each sample 
 sums_Ver <- data.frame(rowSums(otu_table(Ver)))
@@ -1715,105 +1712,78 @@ sampledf <- data.frame(sample_data(Ver.lau))
 
 ### Depth
 adonis(Ver.lau.bray ~ Depth, data=sampledf)
-  ## R2 = 0.05604
-    # R2 = 0.04999
-  ## p-value = 0.092
-    # p-value = 0.127
+  # R2 = 0.04999
+  # p-value = 0.127
 beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.159
-    # p-value = 0.035
-  # F = 2.348
-    # F = 4.689563
+  # p-value = 0.035
+  # F = 4.689563
 
 ### Season
 adonis(Ver.lau.bray ~ Season, data=sampledf)
-  ## R2 = 0.43192
-    ## R2 = 0.43082
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.43082
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.001
-    # p-value = 0.002
-  # F = 16.6
-    # F = 11.22
+  # p-value = 0.002
+  # F = 11.22
 
 # Spring vs. Summer
 adonis.ss <- subset_samples(physeq = Ver.lau, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.50861
-    # R2 = 0.47247
+  # R2 = 0.47247
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 24.519
-    # F = 15
+  # F = 15
 
 # Spring vs. Fall
 adonis.spf <- subset_samples(physeq = Ver.lau, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.42078 
-    # R2 = 0.41549
+  # R2 = 0.41549
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 22.979
-    # F = 15.219
+  # F = 15.219
 
 # Summer vs. Fall
 adonis.suf <- subset_samples(physeq = Ver.lau, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.18708
-    # R2 = 0.18953
-  # p-value = 0.002
-    # p-value = 0.001
+  # R2 = 0.18953
+  # p-value = 0.001
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.722
-    # p-value = 0.838
-  # F = 0.1338
-    # F = 0.0469
+  # p-value = 0.838
+  # F = 0.0469
 
 ### Fraction
 adonis(Ver.lau.bray ~ Fraction, data=sampledf)
-  ## R2 = 0.18629
-    ## R2 = 0.17341
-  ## p-value = 0.001
-    ## p-value = 0.002
+  # R2 = 0.17341
+  # p-value = 0.002
 beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.948
-    # p-value = 0.712
-  # F = 0.0044
-    # F = 0.13
+  # p-value = 0.712
+  # F = 0.13
 
 ##### Nested adonis #####
 adonis(Ver.lau.bray ~ Season + Fraction + Depth, data = sampledf)
-  ## Season = 0.43192
-  ## Fraction = 0.17388
-  ## Depth = 0.05246
-      ## Season = 0.43082
-      ## Fraction = 0.17534
-      ## Depth = 0.04616
+  ## Season = 0.43082
+  ## Fraction = 0.17534
+  ## Depth = 0.04616
 
 
 ########## ESTUARY ##########
@@ -1821,222 +1791,167 @@ sampledf <- data.frame(sample_data(Ver.est))
 
 ### Depth
 adonis(Ver.est.bray ~ Depth, data=sampledf)
-  ## R2 = 0.32051
-    ## R2 = 0.30094
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.30094
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.009
-    # p-value = 0.02
-  # F = 4.667
-    # F = 4.0681
+  # p-value = 0.02
+  # F = 4.0681
 
 # Water vs. Sediment
 adonis(Ver.est.bray ~ Source, data=sampledf)
-  ## R2 = 0.30445
-    ## R2 = 0.28633
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.28633
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Source)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.004
-    # p-value = 0.005
-  # F = 10.466
-    # F = 9.392686
+  # p-value = 0.005
+  # F = 9.392686
 
 # Top vs. Bottom
 adonis.tb <- subset_samples(physeq = Ver.est, Depth != "Sediment")
 adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
 adonis.tb <- data.frame(sample_data(adonis.tb))
 adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
-  # R2 = 0.02517
-    # R2 = 0.0224
-  # p-value = 0.251
-    # p-value = 0.279
+  # R2 = 0.0224
+  # p-value = 0.279
 beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.678
-    # p-value = 0.826
-  # F = 0.2417
-    # F = 0.05
+  # p-value = 0.826
+  # F = 0.05
 
 # Top vs. Sediment
 adonis.ts <- subset_samples(physeq = Ver.est, Depth != "Bottom")
 adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
 adonis.ts <- data.frame(sample_data(adonis.ts))
 adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
-  # R2 = 0.42695
-    # R2 = 0.39375
+  # R2 = 0.39375
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.011
-    # p-value = 0.008
-  # F = 6.981
-    # F = 6.54
+  # p-value = 0.008
+  # F = 6.54
 
 # Bottom vs. Sediment
 adonis.bs <- subset_samples(physeq = Ver.est, Depth != "Top")
 adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
 adonis.bs <- data.frame(sample_data(adonis.bs))
 adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
-  # R2 = 0.4041
-    # R2 = 0.39372
+  # R2 = 0.39372
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.004
-    # p-value = 0.005
-  # F = 10.169
-    # F = 8.67
+  # p-value = 0.005
+  # F = 8.67
 
 ### Season
 adonis(Ver.est.bray ~ Season, data=sampledf)
-  ## R2 = 0.2126
-    ## R2 = 0.21914
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.21914
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.801
-    # p-value = 0.75
-  # F = 0.241
-    # F = 0.2979
+  # p-value = 0.75
+  # F = 0.2979
 
 # Spring vs. Summer
 adonis.ss <- subset_samples(physeq = Ver.est, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.20564
-    # R2 = 0.21356
+  # R2 = 0.21356
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.957
-    # p-value = 0.816
-  # F = 0.006
-    # F = 0.0557
+  # p-value = 0.816
+  # F = 0.0557
 
 # Spring vs. Fall
 adonis.spf <- subset_samples(physeq = Ver.est, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.25604
-    # R2 = 0.25881
+  # R2 = 0.25881
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.585
-    # p-value = 0.471
-  # F = 0.323
-    # F = 0.506
+  # p-value = 0.471
+  # F = 0.506
 
 # Summer vs. Fall
 adonis.suf <- subset_samples(physeq = Ver.est, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.05576
-    # R2 = 0.05553
-  # p-value = 0.045
-    # p-value = 0.03
+  # R2 = 0.05553
+  # p-value = 0.03
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.523
-    # p-value = 0.585
-  # F = 0.354
-    # F = 0.292
+  # p-value = 0.585
+  # F = 0.292
 
 ### Fraction
 adonis(Ver.est.bray ~ Fraction, data=sampledf)
-  ## R2 = 0.42833
-    ## R2 = 0.4132
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.4132
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.098
-    # p-value = 0.076
-  # F = 2.358
-    # F = 2.717
+  # p-value = 0.076
+  # F = 2.717
 
 # Particle vs. Free
 adonis.frac <- subset_samples(physeq = Ver.est, Fraction != "Sediment")
 adonis.frac.bray <- phyloseq::distance(physeq = adonis.frac, method = "bray")
 adonis.frac <- data.frame(sample_data(adonis.frac))
 adonis(adonis.frac.bray ~ Fraction, data=adonis.frac)
-  # R2 = 0.19418
-    # R2 = 0.19446
+  # R2 = 0.19446
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.frac.bray, group=adonis.frac$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.234
-    # p-value = 0.123
-  # F = 1.585
-    # F = 2.43
+  # p-value = 0.123
+  # F = 2.43
 
 # Particle vs. Sediment
 adonis.ps <- subset_samples(physeq = Ver.est, Fraction != "Free")
 adonis.ps.bray <- phyloseq::distance(physeq = adonis.ps, method = "bray")
 adonis.ps <- data.frame(sample_data(adonis.ps))
 adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
-  # R2 = 0.41931
-    # R2 = 0.39181
+  # R2 = 0.39181
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.08
-    # p-value = 0.073
-  # F = 3.263
-    # F = 3.423
+  # p-value = 0.073
+  # F = 3.423
 
 # Free vs. Sediment
 adonis.fs <- subset_samples(physeq = Ver.est, Fraction != "Particle")
 adonis.fs.bray <- phyloseq::distance(physeq = adonis.fs, method = "bray")
 adonis.fs <- data.frame(sample_data(adonis.fs))
 adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
-  # R2 = 0.5221
-    # R2 = 0.51146
+  # R2 = 0.51146
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.16
-    # p-value = 0.242
-  # F = 2.185
-    # F = 1.43
+  # p-value = 0.242
+  # F = 1.43
 
 
 ##### Nested adonis #####
 adonis(Ver.est.bray ~ Depth + Season + Fraction, data = sampledf)
-  ## Depth = 0.32051
-  ## Season = 0.20928
-  ## Fraction = 0.12244
-    ## Depth = 0.30094
-    ## Season = 0.21645
-    ## Fraction = 0.12687
+  ## Depth = 0.30094
+  ## Season = 0.21645
+  ## Fraction = 0.12687
 
 
 
@@ -2046,105 +1961,78 @@ sampledf <- data.frame(sample_data(Ver.inl))
 
 ### Depth
 adonis(Ver.inl.bray ~ Depth, data=sampledf)
-  ## R2 = 0.03718
-    ## R2 = 0.03548
-  ## p-value = 0.001
-    ## p-value = 0.002
+  # R2 = 0.03548
+  # p-value = 0.002
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.006
-    # p-value = 0.001
-  # F = 8.189
-    # F = 9.534813
+  # p-value = 0.001
+  # F = 9.534813
 
 ### Season
 adonis(Ver.inl.bray ~ Season, data=sampledf)
-  ## R2 = 0.07868
-    ## R2 = 0.7723
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.7723
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 6.98
-    # F = 8.04
+  # F = 8.04
 
 # Spring vs. Summer
 adonis.ss <- subset_samples(physeq = Ver.inl, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.06833
-    # R2 = 0.06701
+  # R2 = 0.06701
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 14.315
-    # F = 16.5
+  # F = 16.5
 
 # Spring vs. Fall
 adonis.spf <- subset_samples(physeq = Ver.inl, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.17208
-    # R2 = 0.17293
+  # R2 = 0.17293
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.428
-    # p-value = 0.411
-  # F = 0.6775762
-    # F = 0.724
+  # p-value = 0.411
+  # F = 0.724
 
 # Summer vs. Fall
 adonis.suf <- subset_samples(physeq = Ver.inl, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.02151  
-    # R2 = 0.02092
-  # p-value = 0.017
-    # p-value = 0.013
+  # R2 = 0.02092
+  # p-value = 0.013
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.069
-    # p-value = 0.04
-  # F = 3.559
-    # F = 4.18
+  # p-value = 0.04
+  # F = 4.18
 
 ### Fraction
 adonis(Ver.inl.bray ~ Fraction, data=sampledf)
-  ## R2 = 0.11397
-    ## R2 = 0.11226
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.11226
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.006
-    # p-value = 0.009
-  # F = 7.79
-    # F = 8.08
+  # p-value = 0.009
+  # F = 8.08
 
 ##### Nested adonis #####
 adonis(Ver.inl.bray ~ Fraction + Season + Depth, data = sampledf)
-  ## Fraction == 0.11397
-  ## Season = 0.07932
-  ## Depth = 0.03592
-    ## Fraction = 0.11226
-    ## Season = 0.07723
-    ## Depth = 0.03532
+  ## Fraction = 0.11226
+  ## Season = 0.07723
+  ## Depth = 0.03532
 ```
 
 
@@ -2337,9 +2225,9 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 ### MAKE BIG PCOA FIGURE
 ```{r big.pcoa}
-tiff("pcoa.tiff", width = 17, height = 20, units = "cm", res = 500)
+tiff("pcoa.tiff", width = 17.8, height = 17.8, units = "cm", res = 600)
 grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.6,19,19,19,8), heights=c(0.7,14,14)))))
+pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,7.5), heights=c(0.7,14,14)))))
 grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=12,fontface="bold"))
 grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=12,fontface="bold"))
 grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=12,fontface="bold"))
@@ -2598,105 +2486,78 @@ sampledf <- data.frame(sample_data(scaled.lau))
 
 ### Depth
 adonis(scaled.lau.bray ~ Depth, data=sampledf)
-  ## R2 = 0.04762
-    # R2 = 0.03723
-  ## p-value = 0.171
-    # p-value = 0.243
+  # R2 = 0.03723
+  # p-value = 0.243
 beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.876
-    # p-value = 0.855
-  # F = 0.02
-    # F = 0.037
+  # p-value = 0.855
+  # F = 0.037
 
 ### Season
 adonis(scaled.lau.bray ~ Season, data=sampledf)
-  ## R2 = 0.25567
-    ## R2 = 0.23951
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.23951
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.008
-    # p-value = 0.147
-  # F = 6.647
-    # F = 2.14
+  # p-value = 0.147
+  # F = 2.14
 
 # Spring vs. Summer
 adonis.ss <- subset_samples(physeq = scaled.lau, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.25952
-    # R2 = 0.2255
-  # p-value = 0.003
-    # p-value = 0.001
+  # R2 = 0.2255
+  # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.013
-    # p-value = 0.113
-  # F = 8.962
-    # F = 2.479
+  # p-value = 0.113
+  # F = 2.479
 
 # Spring vs. Fall
 adonis.spf <- subset_samples(physeq = scaled.lau, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.27294
-    # R2 = 0.23554
+  # R2 = 0.23554
   # p-value = 0.002
-    # p-value = 0.002
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.002
-    # p-value = 0.073
-  # F = 13.01
-    # F = 3.621
+  # p-value = 0.073
+  # F = 3.621
 
 # Summer vs. Fall
 adonis.suf <- subset_samples(physeq = scaled.lau, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.11311
-    # R2 = 0.11285
-  # p-value = 0.043
-    # p-value = 0.055
+  # R2 = 0.11285
+  # p-value = 0.055
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.913
-    # p-value = 0.912
-  # F = 0.014
-    # F = 0.0139
+  # p-value = 0.912
+  # F = 0.0139
 
 ### Fraction
 adonis(scaled.lau.bray ~ Fraction, data=sampledf)
-  ## R2 = 0.37659
-    ## R2 = 0.34359
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.34359
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 24.11
-    # F = 52.05
+  # F = 52.05
 
 ##### Nested adonis #####
 adonis(scaled.lau.bray ~ Fraction + Season + Depth, data = sampledf)
-  ## Fraction = 0.37659
-  ## Season = 0.22677
-  ## Depth = 0.04356
-      ## Fraction = 0.34359
-      ## Season = 0.24164
-      ## Depth = 0.03411
+  ## Fraction = 0.34359
+  ## Season = 0.24164
+  ## Depth = 0.03411
 
 
 ########## ESTUARY ##########
@@ -2704,222 +2565,167 @@ sampledf <- data.frame(sample_data(scaled.est))
 
 ### Depth
 adonis(scaled.est.bray ~ Depth, data=sampledf)
-  ## R2 = 0.30308
-    ## R2 = 0.30522
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.30522
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.27
-    # p-value = 0.199
-  # F = 1.39
-    # F = 1.54
+  # p-value = 0.199
+  # F = 1.54
 
 # Water vs. Sediment
 adonis(scaled.est.bray ~ Source, data=sampledf)
-  ## R2 = 0.285
-    ## R2 = 0.28846
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.28846
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Source)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.141
-    # p-value = 0.069
-  # F = 2.335
-    # F = 3.27
+  # p-value = 0.069
+  # F = 3.27
 
 # Top vs. Bottom
 adonis.tb <- subset_samples(physeq = scaled.est, Depth != "Sediment")
 adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
 adonis.tb <- data.frame(sample_data(adonis.tb))
 adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
-  # R2 = 0.02922
-    # R2 = 0.02693
-  # p-value = 0.129
-    # p-value = 0.185
+  #R2 = 0.02693
+  # p-value = 0.185
 beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.345
-    # p-value = 0.503
-  # F = 0.986
-    # F = 0.496
+  # p-value = 0.503
+  # F = 0.496
 
 # Top vs. Sediment
 adonis.ts <- subset_samples(physeq = scaled.est, Depth != "Bottom")
 adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
 adonis.ts <- data.frame(sample_data(adonis.ts))
 adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
-  # R2 = 0.40321
-    # R2 = 0.40019
+  # R2 = 0.40019
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.422
-    # p-value = 0.243
-  # F = 0.643
-    # F = 1.41
+  # p-value = 0.243
+  # F = 1.41
 
 # Bottom vs. Sediment
 adonis.bs <- subset_samples(physeq = scaled.est, Depth != "Top")
 adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
 adonis.bs <- data.frame(sample_data(adonis.bs))
 adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
-  # R2 = 0.36191
-    # R2 = 0.37597
+  # R2 = 0.37597
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.084
-    # p-value = 0.056
-  # F = 3.103
-    # F = 3.567448
+  # p-value = 0.056
+  # F = 3.567448
 
 ### Season
 adonis(scaled.est.bray ~ Season, data=sampledf)
-  ## R2 = 0.16651
-    ## R2 = 0.17415
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.17415
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.815
-    # p-value = 0.765
-  # F = 0.24
-    # F = 0.265
+  # p-value = 0.765
+  # F = 0.265
 
 # Spring vs. Summer
 adonis.ss <- subset_samples(physeq = scaled.est, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.17354
-    # R2 = 0.18032
+  # R2 = 0.18032
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.846
-    # p-value = 0.883
-  # F = 0.0367
-    # F = 0.029
+  # p-value = 0.883
+  # F = 0.029
 
 # Spring vs. Fall
 adonis.spf <- subset_samples(physeq = scaled.est, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.18001
-    # R2 =0.18804
+  # R2 =0.18804
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.537
-    # p-value = 0.527
-  # F = 0.4
-    # F = 0.437
+  # p-value = 0.527
+  # F = 0.437
 
 # Summer vs. Fall
 adonis.suf <- subset_samples(physeq = scaled.est, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.05178
-    # R2 = 0.05209
-  # p-value = 0.029
-    # p-value = 0.032
+  # R2 = 0.05209
+  # p-value = 0.032
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.616
-    # p-value = 0.594
-  # F = 0.26
-    # F = 0.296
+  # p-value = 0.594
+  # F = 0.296
 
 ### Fraction
 adonis(scaled.est.bray ~ Fraction, data=sampledf)
-  ## R2 = 0.40952
-    ## R2 = 0.41303
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.41303
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.067
-    # p-value =0.039
-  # F = 2.5667
-    # F = 3.459
+  # p-value =0.039
+  # F = 3.459
 
 # Particle vs. Free
 adonis.frac <- subset_samples(physeq = scaled.est, Fraction != "Sediment")
 adonis.frac.bray <- phyloseq::distance(physeq = adonis.frac, method = "bray")
 adonis.frac <- data.frame(sample_data(adonis.frac))
 adonis(adonis.frac.bray ~ Fraction, data=adonis.frac)
-  # R2 = 0.2012
-    # R2 = 0.20022
+  # R2 = 0.20022
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.frac.bray, group=adonis.frac$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.033
-    # p-value = 0.015
-  # F = 4.63
-    # F = 6.3
+  # p-value = 0.015
+  # F = 6.3
 
 # Particle vs. Sediment
 adonis.ps <- subset_samples(physeq = scaled.est, Fraction != "Free")
 adonis.ps.bray <- phyloseq::distance(physeq = adonis.ps, method = "bray")
 adonis.ps <- data.frame(sample_data(adonis.ps))
 adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
-  # R2 = 0.3719
-    # R2 = 0.37385
+  # R2 = 0.37385
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.393
-    # p-value = 0.238
-  # F = 0.7389
-    # F = 1.47
+  # p-value = 0.238
+  # F = 1.47
 
 # Free vs. Sediment
 adonis.fs <- subset_samples(physeq = scaled.est, Fraction != "Particle")
 adonis.fs.bray <- phyloseq::distance(physeq = adonis.fs, method = "bray")
 adonis.fs <- data.frame(sample_data(adonis.fs))
 adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
-  # R2 = 0.49471
-    # R2 = 0.51092
+  # R2 = 0.51092
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.311
-    # p-value = 0.428
-  # F = 0.92
-    # F = 0.596
+  # p-value = 0.428
+  # F = 0.596
 
 
 ##### Nested adonis #####
 adonis(scaled.est.bray ~ Depth + Season + Fraction, data = sampledf)
-  ## Depth = 0.30308
-  ## Season = 0.16473
-  ## Fraction = 0.12424
-    ## Depth = 0.30522
-    ## Season = 0.17341
-    ## Fraction = 0.12457
+  ## Depth = 0.30522
+  ## Season = 0.17341
+  ## Fraction = 0.12457
 
 
 
@@ -2929,105 +2735,78 @@ sampledf <- data.frame(sample_data(scaled.inl))
 
 ### Depth
 adonis(scaled.inl.bray ~ Depth, data=sampledf)
-  ## R2 = 0.0413
-    ## R2 = 0.03975
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.03975
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 21.78
-    # F = 25.05928
+  # F = 25.05928
 
 ### Season
 adonis(scaled.inl.bray ~ Season, data=sampledf)
-  ## R2 = 0.09841
-    ## R2 = 0.09735
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.09735
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 13.76
-    # F = 15.05
+  # F = 15.05
 
 # Spring vs. Summer
 adonis.ss <- subset_samples(physeq = scaled.inl, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.0862
-    # R2 = 0.08529
+  # R2 = 0.08529
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 27.53
-    # F = 30.3471
+  # F = 30.3471
 
 # Spring vs. Fall
 adonis.spf <- subset_samples(physeq = scaled.inl, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.20682
-    # R2 = 0.20982
+  # R2 = 0.20982
   # p-value = 0.001
-    # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.03
-    # p-value = 0.041
-  # F = 4.77
-    # F = 5.219
+  # p-value = 0.041
+  # F = 5.219
 
 # Summer vs. Fall
 adonis.suf <- subset_samples(physeq = scaled.inl, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.02754
-    # R2 = 0.02688
+  # R2 = 0.02688
   # p-value = 0.005
-    # p-value = 0.005
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.051
-    # p-value = 0.058
-  # F = 3.864
-    # F = 4.04
+  # p-value = 0.058
+  # F = 4.04
 
 ### Fraction
 adonis(scaled.inl.bray ~ Fraction, data=sampledf)
-  ## R2 = 0.17133
-    ## R2 = 0.17221
-  ## p-value = 0.001
-    ## p-value = 0.001
+  # R2 = 0.17221
+  # p-value = 0.001
 beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-    # p-value = 0.001
-  # F = 24.138
-    # F = 26.49
+  # F = 26.49
 
 ##### Nested adonis #####
 adonis(scaled.inl.bray ~ Fraction + Season + Depth, data = sampledf)
-  ## Fraction = 0.17133
-  ## Season = 0.09922
-  ## Depth = 0.04113
-    ## Fraction = 0.17221
-    ## Season = 0.09735
-    ## Depth = 0.04004
+  ## Fraction = 0.17221
+  ## Season = 0.09735
+  ## Depth = 0.04004
 ```
 
 
