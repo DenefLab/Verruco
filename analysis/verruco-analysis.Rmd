@@ -1426,12 +1426,12 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
 
 
  ##### Let's steal the legend 
- #g_legend <- function(a.gplot){
-#   tmp <- ggplot_gtable(ggplot_build(a.gplot))
-#   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-#   legend <- tmp$grobs[[leg]]
-#   return(legend)}
- legend <- g_legend(Ver.est.ord)
+ # g_legend <- function(a.gplot){
+ #   tmp <- ggplot_gtable(ggplot_build(a.gplot))
+ #   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+ #   legend <- tmp$grobs[[leg]]
+ #   return(legend)}
+ # legend <- g_legend(Ver.est.ord)
 
   
   
@@ -2140,7 +2140,8 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.28, y=0.45, label = "D", fontface = "bold", size=6, colour="black") +
+  scale_y_reverse() + scale_x_reverse() +
+  annotate("text", x= 0.42, y=-0.45, label = "D", fontface = "bold", size=6, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -2172,7 +2173,8 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.24, y=0.45, label = "E", fontface = "bold", size=6, colour="black") +
+  scale_y_reverse() +
+  annotate("text", x= -0.24, y=-0.45, label = "E", fontface = "bold", size=6, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
