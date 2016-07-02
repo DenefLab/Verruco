@@ -2836,77 +2836,11 @@ pro <- protest(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
 plot(pro)
 
 
-procrust2 <- procrustes(scaled.pcoa$vectors[,1:3], Ver.pcoa$vectors[,1:3], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 13.07
-plot(procrust2)
-plot(procrust2,kind=2)
-pro2 <- protest(scaled.pcoa$vectors[,1:3], Ver.pcoa$vectors[,1:3])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.4068
-  # correlation = 0.7702
-plot(pro2)
-
-
-procrust3 <- procrustes(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 2 & 3 of the Bray-Curtis PCoA
-  # Sum of squares = 8.608
-plot(procrust3)
-plot(procrust3,kind=2)
-pro3 <- protest(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.467
-  # correlation = 0.73
-plot(pro2)
-
-
-### Laurentian
-procrust.lau <- procrustes(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 1.901
-plot(procrust.lau)
-plot(procrust.lau,kind=2)
-pro.lau <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3399
-  # correlation = 0.8125
-plot(pro.lau)
-
-### Estuary
-procrust.est <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 1.05
-plot(procrust.est)
-plot(procrust.est,kind=2)
-pro.est <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.09223
-  # correlation = 0.9528
-plot(pro.est)
-
-### Inland
-procrust.inl <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 5.545
-plot(procrust.inl)
-plot(procrust.inl,kind=2)
-pro.inl <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3649
-  # correlation = 0.7969
-plot(pro.inl)
-
-
 
 ### Prepare to make a prettier Procrustes plot
 # http://stackoverflow.com/questions/30325739/ggplot2-for-procrustes-rotation-in-vegan
-pro.df <- data.frame(Dimension1=procrust2$Yrot[,1], Dimension2=procrust2$Yrot[,2],
-                     xDimension1=procrust2$X[,1], xDimension2=procrust2$X[,2])
+pro.df <- data.frame(rda1=procrust$Yrot[,1], rda2=procrust$Yrot[,2],
+                         xrda1=procrust$X[,1], xrda2=procrust$X[,2])
 pro.df$Depth <- sample_data(Ver)$Depth
 pro.df$Lake_Type <- sample_data(Ver)$Lake_Type
 pro.df$Fraction <- sample_data(Ver)$Fraction
@@ -2915,19 +2849,19 @@ pro.df$Season <- sample_data(Ver)$Season
 ### Make a prettier Procrustes plot
 # Basic
 #tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(pro.df) +
-  geom_point(aes(x=Dimension1, y=Dimension2)) +
-  geom_point(aes(x=xDimension1, y=xDimension2)) +
-  geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
-               arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5)
+ggplot(pro.df) + 
+  #geom_point(aes(x=rda1,y=rda2)) + 
+  geom_point(aes(x=xrda1, y=xrda2)) +
+  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
+               color="burlywood", alpha=0.5)
 #dev.off()
 
 ### Facet = Lake_Type, Color = Depth, Shape = Fraction
 #tiff("procrustes.facet1.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) +
-  geom_point(aes(x=Dimension1, y=Dimension2, color=Depth, shape=Fraction)) +
-  geom_point(aes(x=xDimension1, y=xDimension2, color=Depth, shape=Fraction)) +
-  geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
+  #geom_point(aes(x=rda1, y=rda2, color=Depth, shape=Fraction)) +
+  geom_point(aes(x=xrda1, y=xrda2, color=Depth, shape=Fraction)) +
+  geom_segment(aes(x=rda2, y=rda2, xend=xrda1, yend=xrda2),
                arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5) +
   facet_grid(~Lake_Type) +
   scale_color_manual(values = c("indianred1","green3","mediumpurple2", "skyblue")) +
@@ -2947,9 +2881,9 @@ ggplot(pro.df) +
 ### Facet = Lake_Type, Color = Fraction, Shape = Season
 #tiff("procrustes.facet2.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) +
-  geom_point(aes(x=Dimension1, y=Dimension2, color=Fraction, shape=Season)) +
-  geom_point(aes(x=xDimension1, y=xDimension2, color=Fraction, shape=Season)) +
-  geom_segment(aes(x=Dimension2, y=Dimension2, xend=xDimension1, yend=xDimension2),
+  #geom_point(aes(x=rda1, y=rda2, color=Fraction, shape=Season)) +
+  geom_point(aes(x=xrda1, y=xrda2, color=Fraction, shape=Season)) +
+  geom_segment(aes(x=rda2, y=rda2, xend=xrda1, yend=xrda2),
                arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5) +
   facet_grid(~Lake_Type) +
   scale_color_manual(values = c("indianred1","skyblue","mediumpurple2")) +
@@ -2969,130 +2903,105 @@ ggplot(pro.df) +
 
 
 
+
 ```
-
-
-
-
-
-
-
-
-
-
 
 
 
 ### Lake Procrustes Analyses (Verruco vs. Whole Bacterial community)
 ```{r lake.procrustes}
-
-########## LAURENTIAN ##########
-procrust <- procrustes(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2], scale=FALSE,
+##### Laurentian #####
+procrust.lau <- procrustes(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2], scale=FALSE,
                        symmetric=FALSE)
   # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 2.446
-    # Sum of squares = 1.901
-plot(procrust)
-plot(procrust,kind=2)
-pro <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
+  # Sum of squares = 1.901
+plot(procrust.lau)
+plot(procrust.lau,kind=2)
+pro.lau <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.4662
-    # m12^2 (sum of squares) = 0.3399
-  # correlation = 0.7306
-    # correlation = 0.8125
-plot(pro)
+  # m12^2 (sum of squares) = 0.3399
+  # correlation = 0.8125
+plot(pro.lau)
+
+### Make a prettier Procrustes plot
+# Basic
+pro.lau.df <- data.frame(rda1=procrust.lau$Yrot[,1], rda2=procrust.lau$Yrot[,2],
+                         xrda1=procrust.lau$X[,1], xrda2=procrust.lau$X[,2])
+pro.lau.df$Depth <- sample_data(Ver.lau)$Depth
+pro.lau.df$Lake_Type <- sample_data(Ver.lau)$Lake_Type
+pro.lau.df$Fraction <- sample_data(Ver.lau)$Fraction
+pro.lau.df$Season <- sample_data(Ver.lau)$Season
+
+#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(pro.lau.df) + 
+  #geom_point(aes(x=rda1,y=rda2)) + 
+  geom_point(aes(x=xrda1, y=xrda2)) +
+  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
+               color="burlywood", alpha=0.5)
+#dev.off()
 
 
-procrust2 <- procrustes(scaled.lau.pcoa$vectors[,1:3], Ver.lau.pcoa$vectors[,1:3], scale=FALSE,
+
+##### Estuary #####
+procrust.est <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
                        symmetric=FALSE)
   # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 2.08
-    # sum of squares = 2.34
-plot(procrust2)
-plot(procrust2,kind=2)
-pro2 <- protest(scaled.lau.pcoa$vectors[,1:3], Ver.lau.pcoa$vectors[,1:3])
+  # Sum of squares = 1.05
+plot(procrust.est)
+plot(procrust.est,kind=2)
+pro.est <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.33
-    # m12^2 (sum of squares) = 0.3417
-  # correlation = 0.8185
-    # correlation = 0.8114
-plot(pro2)
+  # m12^2 (sum of squares) = 0.09223
+  # correlation = 0.9528
+plot(pro.est)
+
+### Make a prettier Procrustes plot
+# Basic
+pro.est.df <- data.frame(rda1=procrust.est$Yrot[,1], rda2=procrust.est$Yrot[,2],
+                         xrda1=procrust.est$X[,1], xrda2=procrust.est$X[,2])
+pro.est.df$Depth <- sample_data(Ver.est)$Depth
+pro.est.df$Lake_Type <- sample_data(Ver.est)$Lake_Type
+pro.est.df$Fraction <- sample_data(Ver.est)$Fraction
+pro.est.df$Season <- sample_data(Ver.est)$Season
+
+#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(pro.est.df) + 
+  #geom_point(aes(x=rda1,y=rda2)) + 
+  geom_point(aes(x=xrda1, y=xrda2)) +
+  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
+               color="burlywood", alpha=0.5)
+#dev.off()
 
 
-
-
-
-
-
-########## ESTUARY ##########
-procrust <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
+##### Inland #####
+procrust.inl <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
                        symmetric=FALSE)
   # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 0.9803
-    # sum of squares = 1.05
-plot(procrust)
-plot(procrust,kind=2)
-pro <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
+  # Sum of squares = 5.545
+plot(procrust.inl)
+plot(procrust.inl,kind=2)
+pro.inl <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.08122
-    # m12^2 (sum of squares) = 0.09223
-  # correlation = 0.9585
-    # correlation = 0.9528
-plot(pro)
+  # m12^2 (sum of squares) = 0.3649
+  # correlation = 0.7969
+plot(pro.inl)
 
+### Make a prettier Procrustes plot
+# Basic
+pro.inl.df <- data.frame(rda1=procrust.inl$Yrot[,1], rda2=procrust.inl$Yrot[,2],
+                         xrda1=procrust.inl$X[,1], xrda2=procrust.inl$X[,2])
+pro.inl.df$Depth <- sample_data(Ver.inl)$Depth
+pro.inl.df$Lake_Type <- sample_data(Ver.inl)$Lake_Type
+pro.inl.df$Fraction <- sample_data(Ver.inl)$Fraction
+pro.inl.df$Season <- sample_data(Ver.inl)$Season
 
-procrust2 <- procrustes(scaled.est.pcoa$vectors[,1:3], Ver.est.pcoa$vectors[,1:3], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 1.315
-    # sum of squares = 1.257
-plot(procrust2)
-plot(procrust2,kind=2)
-pro2 <- protest(scaled.est.pcoa$vectors[,1:3], Ver.est.pcoa$vectors[,1:3])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.09107
-    # m12^2 (sum of squares) = 0.08774
-  # correlation = 0.9534
-    # correlation = 0.9551
-plot(pro2)
-
-
-
-
-
-
-########## INLAND ##########
-procrust <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 5.582
-    # sum of squares = 5.454
-plot(procrust)
-plot(procrust,kind=2)
-pro <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3757
-    # m12^2 (sum of squares) = 0.3649
-  # correlation = 0.7901
-    # correlation = 0.7969
-plot(pro)
-
-
-procrust2 <- procrustes(scaled.inl.pcoa$vectors[,1:3], Ver.inl.pcoa$vectors[,1:3], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 7.864
-    # sum of squares = 8.086
-plot(procrust2)
-plot(procrust2,kind=2)
-pro2 <- protest(scaled.inl.pcoa$vectors[,1:3], Ver.inl.pcoa$vectors[,1:3])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.4154
-    # m12^2 (sum of squares) = 0.4168
-  # correlation = 0.7646
-    # correlation = 0.7637
-plot(pro2)
-
+#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
+ggplot(pro.inl.df) + 
+  #geom_point(aes(x=rda1,y=rda2)) + 
+  geom_point(aes(x=xrda1, y=xrda2)) +
+  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
+               color="burlywood", alpha=0.5)
+#dev.off()
 
 
 
