@@ -2826,41 +2826,80 @@ adonis(scaled.inl.bray ~ Fraction + Season + Depth, data = sampledf)
 procrust <- procrustes(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2], scale=FALSE,
                        symmetric=FALSE)
   # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 12.43
+  # Sum of squares = 9.923
 plot(procrust)
 plot(procrust,kind=2)
 pro <- protest(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3896
-  # correlation = 0.7813
+  # m12^2 (sum of squares) = 0.4007
+  # correlation = 0.7741
 plot(pro)
 
 
 procrust2 <- procrustes(scaled.pcoa$vectors[,1:3], Ver.pcoa$vectors[,1:3], scale=FALSE,
                        symmetric=FALSE)
   # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
-  # Sum of squares = 11.72
+  # Sum of squares = 13.07
 plot(procrust2)
 plot(procrust2,kind=2)
 pro2 <- protest(scaled.pcoa$vectors[,1:3], Ver.pcoa$vectors[,1:3])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.2891
-  # correlation = 0.8431
+  # m12^2 (sum of squares) = 0.4068
+  # correlation = 0.7702
 plot(pro2)
 
 
 procrust3 <- procrustes(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3], scale=FALSE,
                        symmetric=FALSE)
   # Calculates procrustes based upon coordinates on axes 2 & 3 of the Bray-Curtis PCoA
-  # Sum of squares = 7.538
+  # Sum of squares = 8.608
 plot(procrust3)
 plot(procrust3,kind=2)
 pro3 <- protest(scaled.pcoa$vectors[,2:3], Ver.pcoa$vectors[,2:3])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3058
-  # correlation = 0.8332
+  # m12^2 (sum of squares) = 0.467
+  # correlation = 0.73
 plot(pro2)
 
+
+### Laurentian
+procrust.lau <- procrustes(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 1.901
+plot(procrust.lau)
+plot(procrust.lau,kind=2)
+pro.lau <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3399
+  # correlation = 0.8125
+plot(pro.lau)
+
+### Estuary
+procrust.est <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 1.05
+plot(procrust.est)
+plot(procrust.est,kind=2)
+pro.est <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.09223
+  # correlation = 0.9528
+plot(pro.est)
+
+### Inland
+procrust.inl <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
+                       symmetric=FALSE)
+  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+  # Sum of squares = 5.545
+plot(procrust.inl)
+plot(procrust.inl,kind=2)
+pro.inl <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3649
+  # correlation = 0.7969
+plot(pro.inl)
 
 
 
