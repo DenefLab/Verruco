@@ -1797,6 +1797,7 @@ adonis(Ver.lau.bray ~ Fraction + Season + Station + Depth, data = sampledf)
   ## Season R2= 0.43275; p-value = 0.001
   ## Station R2 = 0.03455; p-value = 0.013
   ## Depth R2= 0.04509; p-value = 0.003
+  ## Residuals = 0.31420
 
 
 ########## ESTUARY ##########
@@ -1977,6 +1978,7 @@ adonis(Ver.est.bray ~ Source + Fraction + Season + Station + Depth, data = sampl
   ## Season R2 = 0.21772; p-value = 0.001
   ## Station R2 = 0.06930; p-value = 0.001
   ## Depth R2 = 0.01287; p-value = 0.036
+  ## Residuals = 0.28691
 
 
 
@@ -2058,6 +2060,7 @@ adonis(Ver.inl.bray ~ Fraction + Season + Depth, data = sampledf)
   ## Fraction R2= 0.11226; p-value = 0.001
   ## Season R2= 0.07723; p-value = 0.001
   ## Depth R2= 0.03532; p-value = 0.001
+  ## Residuals = 0.77519
 ```
 
 
@@ -2605,6 +2608,7 @@ adonis(scaled.lau.bray ~ Fraction + Season + Station + Depth, data = sampledf)
   ## Season R2= 0.24164; p-value = 0.001
   ## Station R2= 0.04492; p-value = 0.007
   ## Depth R2= 0.03424; p-value = 0.010
+  ## Residuals = 0.33562
 
 
 ########## ESTUARY ##########
@@ -2785,6 +2789,7 @@ adonis(scaled.est.bray ~ Source + Fraction + Season + Station + Depth, data = sa
   ## Season R2= 0.17319; p-value = 0.001
   ## Station R2= 0.07651; p-value = 0.001
   ## Depth R2= 0.1684; p-value = 0.011
+  ## Residuals = 0.32043
 
 
 
@@ -2866,6 +2871,7 @@ adonis(scaled.inl.bray ~ Fraction + Season + Depth, data = sampledf)
   ## Fraction R2= 0.17221; p-value = 0.001
   ## Season R2= 0.09735; p-value = 0.001
   ## Depth R2= 0.04004; p-value = 0.001
+  ## Residuals = 0.69040
 ```
 
 
@@ -2949,6 +2955,8 @@ plot <- ggplot(pro.df) +
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         plot.title = element_text(size = 10, face="bold")) +
+  xlab("Axis.1") + ylab("Axis.2") + 
+  annotate("text", x= -0.38, y=0.45, label = "A", fontface = "bold", size=6, colour="black")
   guides(color = F, shape = F, fill=F)
   #guides(color = guide_legend(order=1, override.aes=list(size=2)),
   #       shape = guide_legend(order=2, override.aes=list(size=2)))
@@ -3021,7 +3029,7 @@ plot(procrust.est)
 plot(procrust.est,kind=2)
 pro.est <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.09223
+  # m12^2 (sum of squares) = 0.092233
   # correlation = 0.9528
 plot(pro.est)
 
