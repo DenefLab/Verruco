@@ -1778,11 +1778,25 @@ p$tab
   # p-value = 0.706
   # F = 0.1308235 
 
+
+### Station
+adonis(Ver.lau.bray ~ Station, data=sampledf)
+  # R2 = 0.03244
+  # p-value = 0.325
+beta.tax = betadisper(d=Ver.lau.bray, group=sampledf$Station)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.008
+  # F = 8.578097
+
+
+
 ##### Nested adonis #####
-adonis(Ver.lau.bray ~ Season + Fraction + Depth, data = sampledf)
-  ## Season R2= 0.43082; p-value = 0.001
-  ## Fraction R2= 0.17534; p-value = 0.001
-  ## Depth R2= 0.04616; p-value = 0.007
+adonis(Ver.lau.bray ~ Fraction + Season + Station + Depth, data = sampledf)
+  ## Fraction R2= 0.17341; p-value = 0.001
+  ## Season R2= 0.43275; p-value = 0.001
+  ## Station R2 = 0.03455; p-value = 0.013
+  ## Depth R2= 0.04509; p-value = 0.003
 
 
 ########## ESTUARY ##########
@@ -1945,12 +1959,24 @@ p$tab
   # p-value = 0.235
   # F = 1.431922
 
+### Station
+adonis(Ver.est.bray ~ Station, data=sampledf)
+  # R2 = 0.09334
+  # p-value = 0.061
+beta.tax = betadisper(d=Ver.est.bray, group=sampledf$Station)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.416
+  # F = 0.9683466
+
 
 ##### Nested adonis #####
-adonis(Ver.est.bray ~ Depth + Season + Fraction, data = sampledf)
-  ## Depth R2= 0.30094; p-value = 0.001
-  ## Season R2= 0.21645; p-value = 0.001
-  ## Fraction R2= 0.12687; p-value = 0.001
+adonis(Ver.est.bray ~ Source + Fraction + Season + Station + Depth, data = sampledf)
+  ## Source R2 = 0.28633; p-value = 0.001
+  ## Fraction R2 = 0.12687; p-value = 0.001
+  ## Season R2 = 0.21772; p-value = 0.001
+  ## Station R2 = 0.06930; p-value = 0.001
+  ## Depth R2 = 0.01287; p-value = 0.036
 
 
 
@@ -1970,7 +1996,7 @@ p$tab
 
 ### Season
 adonis(Ver.inl.bray ~ Season, data=sampledf)
-  # R2 = 0.7723
+  # R2 = 0.07723
   # p-value = 0.001
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
@@ -2562,11 +2588,23 @@ p$tab
   # p-value = 0.001
   # F = 52.05048
 
+### Station
+adonis(scaled.lau.bray ~ Station, data=sampledf)
+  # R2 = 0.04338
+  # p-value = 0.182
+beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Station)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.17
+  # F = 2.038993
+
+
 ##### Nested adonis #####
-adonis(scaled.lau.bray ~ Fraction + Season + Depth, data = sampledf)
+adonis(scaled.lau.bray ~ Fraction + Season + Station + Depth, data = sampledf)
   ## Fraction R2= 0.34359; p-value = 0.001
   ## Season R2= 0.24164; p-value = 0.001
-  ## Depth R2= 0.03411; p-value = 0.025
+  ## Station R2= 0.04492; p-value = 0.007
+  ## Depth R2= 0.03424; p-value = 0.010
 
 
 ########## ESTUARY ##########
@@ -2729,12 +2767,24 @@ p$tab
   # p-value = 0.43
   # F = 0.5958934
 
+### Station
+adonis(scaled.est.bray ~ Station, data=sampledf)
+  # R2 = 0.09631
+  # p-value = 0.04
+beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Station)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.554
+  # F = 0.7612833
+
 
 ##### Nested adonis #####
-adonis(scaled.est.bray ~ Depth + Season + Fraction, data = sampledf)
-  ## Depth R2= 0.30522; p-value = 0.001
-  ## Season R2= 0.17341; p-value = 0.001
+adonis(scaled.est.bray ~ Source + Fraction + Season + Station + Depth, data = sampledf)
+  ## Source R2= 0.28846; p-value = 0.001
   ## Fraction R2= 0.12457; p-value = 0.001
+  ## Season R2= 0.17319; p-value = 0.001
+  ## Station R2= 0.07651; p-value = 0.001
+  ## Depth R2= 0.1684; p-value = 0.011
 
 
 
