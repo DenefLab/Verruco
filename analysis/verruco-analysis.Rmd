@@ -2056,11 +2056,12 @@ p$tab
   # F = 8.083098
 
 ##### Nested adonis #####
-adonis(Ver.inl.bray ~ Fraction + Season + Depth, data = sampledf)
+adonis(Ver.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
   ## Fraction R2= 0.11226; p-value = 0.001
   ## Season R2= 0.07723; p-value = 0.001
+  ## Lake R2= 0.27145; p-value = 0.001
   ## Depth R2= 0.03532; p-value = 0.001
-  ## Residuals = 0.77519
+  ## Residuals = 0.50380
 ```
 
 
@@ -2867,11 +2868,12 @@ p$tab
   # F = 26.48775
 
 ##### Nested adonis #####
-adonis(scaled.inl.bray ~ Fraction + Season + Depth, data = sampledf)
+adonis(scaled.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
   ## Fraction R2= 0.17221; p-value = 0.001
   ## Season R2= 0.09735; p-value = 0.001
+  ## Lake R2 = 0.21003; p-value = 0.001
   ## Depth R2= 0.04004; p-value = 0.001
-  ## Residuals = 0.69040
+  ## Residuals = 0.48033
 ```
 
 
@@ -2956,11 +2958,18 @@ plot <- ggplot(pro.df) +
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         plot.title = element_text(size = 10, face="bold")) +
   xlab("Axis.1") + ylab("Axis.2") + 
-  annotate("text", x= -0.38, y=0.45, label = "A", fontface = "bold", size=6, colour="black")
+  annotate("text", x= -0.25, y=0.38, label = "p-value=0.001", size=3,
+           colour="black") +
+  geom_text(data = ann_text,aes(label=lab), x=c(-0.21,-0.21,-0.21),
+            y=c(0.34,0.34,0.34), size=3) +
   guides(color = F, shape = F, fill=F)
   #guides(color = guide_legend(order=1, override.aes=list(size=2)),
   #       shape = guide_legend(order=2, override.aes=list(size=2)))
 #dev.off()
+
+
+ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlation=0.797"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),levels = c("Laurentian","Estuary","Inland")))
+
 
  ##### Let's steal the legend 
   g_legend <- function(a.gplot){
@@ -2971,7 +2980,7 @@ plot <- ggplot(pro.df) +
   legend <- g_legend(plot)
 
 
-png("procrustes.png", width = 17.8, height = 10, units = "cm", res = 600)
+tiff("procrustes.tiff", width = 17.8, height = 10, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,0.9), heights=c(1)))))
 print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -3944,7 +3953,7 @@ nopref <- which(eco.frac == "0")
 nopref<- row.names(eco.frac)[nopref]
 frac.tre <- drop.tip(ver.sig.tre, nopref)
 
-# Test for phylogenetic signal in lake affinity
+# Test for phylogenetic signal in fraction affinity
 optimal <- fitDiscrete(frac.tre, sig.frac, treeTransform="lambda")
 phy.Lambda0 <- rescale(frac.tre, "lambda", 0)
 zero <- fitDiscrete(phy.Lambda0, sig.frac)
