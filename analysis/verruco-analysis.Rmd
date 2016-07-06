@@ -3987,7 +3987,18 @@ p.lambda
 ```
 
 
+### Bootstrap Values
+```{r bootstrap}
+library("Biostrings")
+https://cran.r-project.org/web/packages/phangorn/vignettes/Trees.pdf
 
+
+#seqs <- readDNAStringSet("combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.fasta")
+
+seqs <- read.phyDat("combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.fasta", format="fasta", type="DNA")
+
+pml(ver.sig.tre, seqs)
+```
 
 
 
