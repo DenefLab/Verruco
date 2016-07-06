@@ -668,105 +668,49 @@ normal.Ver <- merge_phyloseq(tax, otu, samp)
 
 ```
 
-
-### Box-And-Whisker Plots
-```{r}
-######## YOU'RE USING THE PHY.VER.OTU DATAFRAME WITH THE NORMAL DATA ########
-tphy.Ver.otu <- t(phy.Ver.otu)
-phy.Ver.samp.norm <- data.frame(sample_data(phy.Ver))
-phy.Ver.samp.norm$Relative_Abundance <- tphy.Ver.otu[,1]
-phy.Ver.samp.norm$Lake_Type <- ordered(phy.Ver.samp.norm$Lake_Type, levels=c("Laurentian","Estuary","Inland"))
-phy.Ver.samp.norm$Lake <- ordered(phy.Ver.samp.norm$Lake, levels=c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
-phy.Ver.samp.norm$Fraction <- ordered(phy.Ver.samp.norm$Fraction, levels = c("Particle", "Free", "Sediment"))
-phy.Ver.samp.norm$Depth <- ordered(phy.Ver.samp.norm$Depth, levels = c("Top", "Bottom", "Sediment"))
-
-phy.Ver.otu.box <- data.frame(otu_table(phy.Ver))
-tphy.Ver.box <- t(phy.Ver.otu.box)
-phy.Ver.samp <- data.frame(sample_data(phy.Ver))
-phy.Ver.samp$Relative_Abundance <- tphy.Ver.box[,1]
-phy.Ver.samp$Lake_Type <- ordered(phy.Ver.samp$Lake_Type, levels=c("Laurentian","Estuary","Inland"))
-phy.Ver.samp$Lake <- ordered(phy.Ver.samp$Lake, levels=c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
-phy.Ver.samp$Fraction <- ordered(phy.Ver.samp$Fraction, levels = c("Particle", "Free", "Sediment"))
-phy.Ver.samp$Depth <- ordered(phy.Ver.samp$Depth, levels = c("Top", "Bottom", "Sediment"))
+### Updated Box-And-Whisker Plots
+```{r boxwisk}
+Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
+Ver.box <- data.frame(sample_data(Ver.box))
+Ver.box$Relative_Abundance <- data.frame(otu_table(Ver.box.phy))
 
 
+### Plotting Time!
+#tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
+plot <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
+  xlab("Relative Abundance (%)") + ylab("Lake Type") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=10),
+        axis.text.y = element_text(colour="black", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9)) +
+  guides(fill=F)
+#dev.off()
 
-################### BOXPLOT BY Lake_Type & FRACTION ###################
-tiff("boxplot.tiff", width = 7, height = 5, units = "in", res = 500)
-boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Lake_Type + phy.Ver.samp$Fraction, xlab = "Sample", ylab = "Relative Abundance", main = "Verrucomicrobia Abundance", names = rep("",9))
+# Steal the legend
+g_legend <- function(a.gplot){
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    return(legend)}
+legend <- g_legend(plot)
+
+
+
+tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,2.15), heights=c(1)))))
+print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
+grid.draw(legend)
 dev.off()
 
-Lake_Type.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Lake_Type, xlab = "Lake_Type", ylab = "Relative Abundance")
-pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Lake_Type, p.adjust="bonferroni")
-    ## SIGNIFICANT btwn Estuary/Laurentian & Inland/Laurentian
-    ## NOT SIGNIFICANT btwn Estuary & Inland
-
-lake.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Lake, data = phy.Ver.samp, xlab = "Lake Type", ylab = "Relative Abundance", main = "Lake Type", ylim = c(0,0.45))
-anova(lm(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Lake))
-    ## Significant
-pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Lake, p.adjust="bonferroni")
-    ## SIGNIFICANT btwn Michigan/Muskegon, Michigan/Bruin, Michigan/Heron, Michigan/Independence, Michigan/North, Michigan/Sand, Michigan/Whitmore;; Michigan/Lobdell is on the cusp
-    ## SIGNIFICANT btwn Muskegon/Michigan, Muskegon/North
-    ## SIGNIFICANT btwn North & Michigan, Cedar
-
-fraction.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Fraction, xlab = "Fraction", ylab = "Relative Abundance", main = "Fraction")
-pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Fraction, p.adjust="bonferroni")
-    ## SIGNIFICANT between Sed/Part & Sed/Free
-    ## NOT SIGNIFICANT btwn Part & Free
-
-depth.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Depth, xlab = "Depth", ylab = "Relative Abundance", main = "Depth")
-pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Depth, p.adjust="bonferroni")
-    ## SIGNIFICANT between Sed/Top & Sed/Bottom
-    ## NOT SIGNIFICANT btwn Top & Bottom
-
-date.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Season, xlab = "Season", ylab = "Relative Abundance", main = "Season")
-pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Season, p.adjust="bonferroni")
-    ## NOT SIGNIFICANT (p-value=1)
-
-origin.box <- boxplot(phy.Ver.samp$Relative_Abundance ~ phy.Ver.samp$Origin, xlab = "Season", ylab = "Relative Abundance", main = "Season")
-pairwise.t.test(x = phy.Ver.samp.norm$Relative_Abundance, g=phy.Ver.samp.norm$Origin, p.adjust="bonferroni")
-    ## SIGNIFICANT (p-value = 0.001)
-
-
-############################## Just water column samples (NO SEDIMENT) ##############################
-######## YOU'RE USING THE PHY.VER.WATER.OTU DATAFRAME WITH THE NORMAL DATA ########
-phy.Ver.water.otu <- data.frame(otu_table(phy.Ver.water))
-tphy.Ver.water.otu <- t(phy.Ver.water.otu)
-phy.Ver.water.samp <- data.frame(sample_data(phy.Ver.water))
-phy.Ver.water.samp$Relative_Abundance <- tphy.Ver.water.otu[,1]
-phy.Ver.water.samp$Lake_Type <- ordered(phy.Ver.water.samp$Lake_Type, levels=c("Laurentian","Estuary","Inland"))
-phy.Ver.water.samp$Lake <- ordered(phy.Ver.water.samp$Lake, levels=c("Michigan", "Muskegon", "BigSeven", "Bishop", "Bruin", "Cedar", "Halfmoon", "Heron", "Independence", "Lobdell", "North", "Sand", "Whitmore", "Woodland"))
-phy.Ver.water.samp$Fraction <- ordered(phy.Ver.water.samp$Fraction, levels = c("Particle", "Free"))
-phy.Ver.water.samp$Depth <- ordered(phy.Ver.water.samp$Depth, levels = c("Top", "Bottom"))
-
-### By Lake_Type ###
-boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Lake_Type, xlab = "Lake Type", ylab = "Relative Abundance", main = "Lake Type")
-pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Lake_Type, p.adjust="bonferroni")
-    ## SIGNIFICANT btwn Estuary/Laurentian & Inland/Laurentian
-    ## NOT SIGNIFICANT btwn Estuary & Inland
-
-### By Lake ###
-boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Lake, data = phy.Ver.samp, xlab = "Lake Type", ylab = "Relative Abundance", main = "Lake Type", ylim = c(0,0.45))
-anova(lm(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Lake))
-    ## Significant
-pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Lake, p.adjust="bonferroni")
-    ## SIGNIFICANT btwn Michigan/Muskegon, Michigan/Bruin, Michigan/Heron, Michigan/Independence, Michigan/North, Michigan/Sand, Michigan/Whitmore;; Michigan/Lobdell is on the cusp
-    ## SIGNIFICANT btwn Muskegon/Michigan
-    ## SIGNIFICANT btwn North & Michigan, BigSeven, Bishop, Bruin, Cedar
-
-### By Fraction ###
-boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Fraction, xlab = "Fraction", ylab = "Relative Abundance", main = "Fraction")
-pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Fraction, p.adjust="bonferroni")
-    ## NOT SIGNIFICANT btwn Part & Free
-
-### By Depth ###
-boxplot(phy.Ver.water.samp$Relative_Abundance ~ phy.Ver.water.samp$Depth, xlab = "Depth", ylab = "Relative Abundance", main = "Depth")
-pairwise.t.test(x = phy.Ver.water.samp$Relative_Abundance, g=phy.Ver.water.samp$Depth, p.adjust="bonferroni")
-    ## NOT SIGNIFICANT btwn Top & Bottom
-
-
-################### REMOVING SED DOESN'T HAVE AN EFFECT ON SIG BY Lake_Type OR LAKE ###################
 ```
+
 
 ### Verruco Relative Abundaunce to test normality
 ```{r}
@@ -2987,9 +2931,6 @@ print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
 legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
 grid.draw(legend)
 dev.off()
-
-
-
 
 ```
 
