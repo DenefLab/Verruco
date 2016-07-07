@@ -26,6 +26,7 @@ library(pander)
 library(ade4)
 library(labdsv)
 library(geiger)
+library(sciplot)
 #library(shiny)
 #library(shinyFiles)
 #library(samr)
@@ -668,7 +669,7 @@ normal.Ver <- merge_phyloseq(tax, otu, samp)
 
 ```
 
-### Updated Box-And-Whisker Plots
+### Box-And-Whisker Plots
 ```{r boxwisk}
 Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
 Ver.box <- data.frame(sample_data(Ver.box))
@@ -708,6 +709,100 @@ print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
 legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
 grid.draw(legend)
 dev.off()
+
+```
+
+
+
+### Diversity
+```{r}
+min_lib <- min(sample_sums(Ver))
+
+# We will subsample to 35, the minimum number of reads. We will repeat this 100 times and average the diversity estimates from each trial.
+
+# Initialize matrices to store richness and evenness estimates
+nsamp = nsamples(Ver)
+trials = 100
+
+richness <- matrix(nrow = nsamp, ncol = trials)
+row.names(richness) <- sample_names(Ver)
+evenness <- matrix(nrow = nsamp, ncol = trials)
+row.names(evenness) <- sample_names(Ver)
+
+for (i in 1:100) {
+  # Subsample
+  r <- rarefy_even_depth(Ver, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Calculate richness
+  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+  richness[ ,i] <- rich
+  
+  # Calculate evenness
+  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+  evenness[ ,i] <- even
+}
+
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+SampleID <- row.names(richness)
+mean <- apply(richness, 1, mean)
+sd <- apply(richness, 1, sd)
+measure <- rep("Richness", nsamp)
+rich_stats <- data.frame(SampleID, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+SampleID <- row.names(evenness)
+mean <- apply(evenness, 1, mean)
+sd <- apply(evenness, 1, sd)
+measure <- rep("Inverse Simpson", nsamp)
+even_stats <- data.frame(SampleID, mean, sd, measure)
+
+# Calculate Simpson's Evennes
+simps_stats<- data.frame(matrix(nrow = nrow(even_stats), ncol = 4))
+colnames(simps_stats) = c("SampleID", "mean", "sd", "measure")
+simps_stats$SampleID <- even_stats$SampleID
+simps_stats$mean <- even_stats$mean/rich_stats$mean
+simps_stats$sd <- even_stats$sd/rich_stats$sd
+simps_stats$measure <- "Simpson's Evenness"
+
+
+# Combine the estimates for richness and evenness into one dataframe
+alpha <- rbind(rich_stats, even_stats, simps_stats)
+
+# Add the sample metadata into this dataframe using the merge() command
+s <- data.frame(sample_data(Ver))
+alphadiv <- merge(alpha, s, by = "SampleID") 
+
+# Group samples together by Lake_Type and Fraction
+sum.stats <- alphadiv %>%
+  group_by(Lake_Type, Fraction, measure) %>%
+  summarize(Mean = mean(mean), 
+            SE = se(mean), 
+            SD = sd(mean), 
+            Median = median(mean))
+
+final.stats <- left_join(alphadiv, sum.stats, by=c("Lake_Type", "Fraction", "measure"))
+
+final.stats <- within(final.stats, Lake_frac <- paste(Lake_Type, Fraction, sep='_'))
+
+
+
+### Plotting Time!
+ggplot(final.stats, aes(x = Lake_frac, y = mean)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+                position=position_dodge(0.9)) +
+  layer(data = final.stats, mapping=aes(x=Lake_frac, y=Median), geom="point")
+  
+  
+   layer(data = final_summed_alpha_stats, mapping = aes(x = prod_lim, y = median), 
+        geom = "point", pch = 95, size = 7, color = "black") + 
+  layer(data = final_summed_alpha_stats, mapping = aes(x = prod_lim, y = mean), 
+        geom = "point", pch = 126, size = 7, color = "black") + 
+  facet_grid(Test ~ ProdLevel, scales="free", space="free_x") +
+
+
+  
 
 ```
 
