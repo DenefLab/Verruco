@@ -747,7 +747,7 @@ for (i in 1:100) {
 SampleID <- row.names(richness)
 mean <- apply(richness, 1, mean)
 sd <- apply(richness, 1, sd)
-measure <- rep("Richness", nsamp)
+measure <- rep("Observed Richness", nsamp)
 rich_stats <- data.frame(SampleID, mean, sd, measure)
 
 # Create a new dataframe to hold the means and standard deviations of evenness estimates
@@ -782,28 +782,35 @@ sum.stats <- alphadiv %>%
             Median = median(mean))
 
 final.stats <- left_join(alphadiv, sum.stats, by=c("Lake_Type", "Fraction", "measure"))
+final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
 
-final.stats <- within(final.stats, Lake_frac <- paste(Lake_Type, Fraction, sep='_'))
+
+#final.stats <- within(final.stats, Lake_frac <- paste(Lake_Type, Fraction, sep='_'))
 
 
 
 ### Plotting Time!
-ggplot(final.stats, aes(x = Lake_frac, y = mean)) +
-  geom_point(size = 3, alpha = 0.7) +
+png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
+ggplot(final.stats, aes(x = Fraction, y = mean)) +
   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-                position=position_dodge(0.9)) +
-  layer(data = final.stats, mapping=aes(x=Lake_frac, y=Median), geom="point")
-  
-  
-   layer(data = final_summed_alpha_stats, mapping = aes(x = prod_lim, y = median), 
-        geom = "point", pch = 95, size = 7, color = "black") + 
-  layer(data = final_summed_alpha_stats, mapping = aes(x = prod_lim, y = mean), 
-        geom = "point", pch = 126, size = 7, color = "black") + 
-  facet_grid(Test ~ ProdLevel, scales="free", space="free_x") +
-
-
-  
-
+                position=position_dodge(1)) +
+  geom_point(data=final.stats, aes(x=Fraction, y=Median), pch=95, size=7) +
+  geom_point(data=final.stats, aes(x=Fraction, y=Mean), pch=126, size=7) +
+  facet_grid(measure ~ Lake_Type, scales = "free", space = "free_x") +
+  ylab("Mean") + 
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(colour = "black", size=7),
+        axis.text.y = element_text(colour = "black", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size = 10),
+        strip.text.x = element_text(size=10, face="bold"),
+        strip.text.y = element_text(size=10, face="bold"),
+        #legend.title = element_text(size=8, face="bold"),
+        #legend.text = element_text(size = 8),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        strip.background = element_blank(),
+        legend.position="none")
+dev.off()
 ```
 
 
