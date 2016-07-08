@@ -307,53 +307,6 @@ ggplot(phylum_sort, aes(x=Sample, y=Abundance, fill=Phylum)) +
 
 ```
 
-### LOOKING AT INTRA-VERRUCO COMMUNITY
-```{r}
-phy.Ver <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
-# This is the relative abundance of Verrucos in each sample
-# min, max, & mean
-mins <- min(sample_sums(phy.Ver))
-paste(c("The minimum sample read count is", mins))
-means <- mean(sample_sums(phy.Ver))
-paste(c("The mean sample read count is", means))
-maxs <- max(sample_sums(phy.Ver))
-paste(c("The max sample read count is", maxs))
-
-# Merge samples by Lake_Type
-phy.Lake_Type.Ver <- merge_samples(phy.Ver, "Lake_Type")
-
-# Average Lake_Types
-Lake_Type.Ver <- data.frame(otu_table(phy.Lake_Type.Ver))
-Lake_Type.Ver[1,] <- (Lake_Type.Ver[1,]/64)
-    ## Averaging Estuary
-Lake_Type.Ver[2,] <- (Lake_Type.Ver[2,]/123)
-    ## Averaging Inland
-Lake_Type.Ver[3,] <- (Lake_Type.Ver[3,]/32)
-    ## Averaging Laurentian
-#tLake_Type.Ver <- t(Lake_Type.Ver)
-#tLake_Type.Ver <- data.frame(tLake_Type.Ver)
-Lake_Type.Ver$Lake_Type <- rownames(Lake_Type.Ver)
-
-# Really crappy bar plot
-# Averaged relative abundance of Verrucos in each Lake_Type of lake
-ggplot(data = Lake_Type.Ver, aes(x = Lake_Type, y = Otu000049)) +
-  geom_bar(stat = "identity", fill = "dark grey", colour = "black") 
-
-# Unclassifed phylum
-phy.unclas <- subset_taxa(phylum.99, Phylum == "unclassified")
-# Relative abundance of unclassified taxa in each sample
-# min, max, & mean
-mins <- min(sample_sums(phy.unclas))
-paste(c("The minimum sample read count is",mins))
-means <- mean(sample_sums(phy.unclas))
-paste(c("The mean sample read count is",means))
-maxs <- max(sample_sums(phy.unclas))
-paste(c("The max sample read count is",maxs))
-
-
-```
-
-
 ### Separate out Verrucos
 ```{r}
 # Phyloseq object of ALL Verruco OTUs
@@ -672,7 +625,7 @@ normal.Ver <- merge_phyloseq(tax, otu, samp)
 ### Box-And-Whisker Plots
 ```{r boxwisk}
 Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
-Ver.box <- data.frame(sample_data(Ver.box))
+Ver.box <- data.frame(sample_data(Ver))
 Ver.box$Relative_Abundance <- data.frame(otu_table(Ver.box.phy))
 
 
