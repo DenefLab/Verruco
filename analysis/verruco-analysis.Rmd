@@ -678,10 +678,29 @@ normal.Ver <- merge_phyloseq(tax, otu, samp)
 ```
 
 ### Box-And-Whisker Plots
-```{r boxwisk}
+```{r}
 Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
 Ver.box <- data.frame(sample_data(Ver))
-Ver.box$Relative_Abundance <- data.frame(otu_table(Ver.box.phy))
+Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
+
+sum.box <- Ver.box%>%
+  group_by(Lake_Type, Fraction) %>%
+  summarize(Mean = mean(Relative_Abundance), 
+            SE = se(Relative_Abundance), 
+            SD = sd(Relative_Abundance), 
+            Median = median(Relative_Abundance))
+
+sum.box <- Ver.box %>%
+  group_by(Lake_Type, Fraction) %>%
+  summarize(Mean = mean(Relative_Abundance), 
+            SE = se(Relative_Abundance), 
+            SD = sd(Relative_Abundance), 
+            Median = median(Relative_Abundance))
+
+sum.box <- group_by(Ver.box, Lake_Type, Fraction)
+
+
+
 
 
 ### Plotting Time!
@@ -819,6 +838,211 @@ ggplot(final.stats, aes(x = Fraction, y = mean)) +
         strip.background = element_blank(),
         legend.position="none")
 dev.off()
+```
+
+
+
+### Picante
+```{r}
+#http://picante.r-forge.r-project.org/picante-intro.pdf
+library(picante)
+
+### Unweighted
+ver.tree <- read.newick(file="ver.tre")
+pre.picante <- merge_phyloseq(Ver.rel, ver.tree)
+picante.phy <- phy_tree(pre.picante)
+picante.com <- data.frame(otu_table(pre.picante))
+
+# Calculate Faith's Phylogenetic Diversity
+pd.result <- pd(picante.com, picante.phy, include.root=T)
+pd <- data.frame(pd.result)
+
+phydist <- cophenetic(picante.phy)
+ses.mpd.result <- ses.mpd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
+ses.mntd.result <- ses.mntd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
+
+mpd <- data.frame(ses.mpd.result)
+mntd <- data.frame (ses.mntd.result)
+
+
+### Weighted
+#ver.tree <- read.newick(file="ver.tre")
+pre.picante <- merge_phyloseq(Ver, ver.tree)
+phy <- phy_tree(pre.picante)
+com <- data.frame(otu_table(pre.picante))
+
+# Calculate Faith's Phylogenetic Diversity
+pd.result.weigh <- pd(com, phy, include.root=T)
+
+phydist.weigh <- cophenetic(phy)
+ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
+ses.mntd.result.weigh <- ses.mntd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
+
+mpd.weigh <- data.frame(ses.mpd.result.weigh)
+mntd.weigh <- data.frame (ses.mntd.result.weigh)
+
+
+##### Unweigh: Preparing to plot #####
+
+mpd$SampleID <- row.names(mpd)
+mntd$SampleID <- row.names(mntd)
+pd$SampleID <- row.names(pd)
+  # Make sure all SampleID's match!
+
+# Let's pull out the first Stat in each of the 3 tests I ran
+pd.stats <- data.frame(pd$SampleID, pd$PD)
+pd.stats$Measure <- rep("PD", 226)
+colnames(pd.stats) <- c("SampleID", "Stat", "Measure")
+mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.z)
+mpd.stats$Measure <- rep("MPD SES",226)
+colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
+mntd.stats <- data.frame(mntd$SampleID, mntd$mntd.obs.z)
+mntd.stats$Measure <- rep("MNTD SES", 226)
+colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
+
+# Let's combine those initial stats into one big dataframe
+unweigh.stats <- rbind(pd.stats, mpd.stats, mntd.stats)
+
+# Now let's pull out the second stat in the mpd and mntd stats test
+mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.p)
+mpd.stats$Measure <- rep("MPD p-value",226)
+colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
+mntd.stats <- data.frame(mntd$SampleID, mntd$mntd.obs.p)
+mntd.stats$Measure <- rep("MNTD p-value", 226)
+colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
+
+# Making the final dataframe to use!
+unweigh.stats <- rbind(unweigh.stats, mpd.stats, mntd.stats)
+
+# Pull out sample data
+s <- data.frame(sample_data(Ver))
+# Combine sample data with unweighted stats data
+unweigh.stats <- merge(unweigh.stats, s, by="SampleID")
+
+# Group samples together by Lake_Type and Fraction
+sum.unweigh <- unweigh.stats %>%
+  group_by(Lake_Type, Fraction, Measure) %>%
+  summarize(Mean = mean(Stat),
+            SE = se(Stat),
+            SD = sd(Stat),
+            Median = median(Stat))
+
+# Combine the raw stats with the summarized stats
+final.unweigh <- left_join(unweigh.stats, sum.unweigh, by=c("Lake_Type", "Fraction", "Measure"))
+final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
+
+
+
+##### UNWEIGH: PLOT IT! #####
+#png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
+unweigh.plot <- ggplot(final.unweigh, aes(x = Fraction, y = Stat)) +
+  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+                position=position_dodge(1)) +
+  geom_point(data=final.unweigh, aes(x=Fraction, y=Median), pch=95, size=7) +
+  geom_point(data=final.unweigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
+  facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
+  ylab("Mean") + ggtitle("Unweighted") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(colour = "black", size=7),
+        axis.text.y = element_text(colour = "black", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size = 10),
+        strip.text.x = element_text(size=10, face="bold"),
+        strip.text.y = element_text(size=10, face="bold"),
+        #legend.title = element_text(size=8, face="bold"),
+        #legend.text = element_text(size = 8),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        strip.background = element_blank(),
+        legend.position="none")
+#dev.off()
+
+
+
+
+
+##### Weigh: Preparing to plot #####
+
+mpd.weigh$SampleID <- row.names(mpd.weigh)
+mntd.weigh$SampleID <- row.names(mntd.weigh)
+pd.result.weigh$SampleID <- row.names(pd.result.weigh)
+  # Make sure all SampleID's match!
+
+# Let's pull out the first Stat in each of the 3 tests I ran
+pd.w.stats <- data.frame(pd.result.weigh$SampleID, pd.result.weigh$PD)
+pd.w.stats$Measure <- rep("PD", 226)
+colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
+mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.z)
+mpd.w.stats$Measure <- rep("MPD SES",226)
+colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
+mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.z)
+mntd.w.stats$Measure <- rep("MNTD SES", 226)
+colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
+
+# Let's combine those initial stats into one big dataframe
+weigh.stats <- rbind(pd.w.stats, mpd.w.stats, mntd.w.stats)
+
+# Now let's pull out the second stat in the mpd and mntd stats test
+mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.p)
+mpd.w.stats$Measure <- rep("MPD p-value",226)
+colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
+mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.p)
+mntd.w.stats$Measure <- rep("MNTD p-value", 226)
+colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
+
+# Making the final dataframe to use!
+weigh.stats <- rbind(weigh.stats, mpd.w.stats, mntd.w.stats)
+
+# Pull out sample data
+s <- data.frame(sample_data(Ver))
+# Combine sample data with unweighted stats data
+weigh.stats <- merge(weigh.stats, s, by="SampleID")
+
+# Group samples together by Lake_Type and Fraction
+sum.weigh <- weigh.stats %>%
+  group_by(Lake_Type, Fraction, Measure) %>%
+  summarize(Mean = mean(Stat),
+            SE = se(Stat),
+            SD = sd(Stat),
+            Median = median(Stat))
+
+# Combine the raw stats with the summarized stats
+final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
+final.weigh$Measure <- factor(final.weigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
+
+
+
+##### WEIGH: PLOT IT! #####
+#png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
+weigh.plot <- ggplot(final.weigh, aes(x = Fraction, y = Stat)) +
+  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+                position=position_dodge(1)) +
+  geom_point(data=final.weigh, aes(x=Fraction, y=Median), pch=95, size=7) +
+  geom_point(data=final.weigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
+  facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
+  ylab("Mean") + ggtitle("Weighted") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(colour = "black", size=7),
+        axis.text.y = element_text(colour = "black", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size = 10),
+        strip.text.x = element_text(size=10, face="bold"),
+        strip.text.y = element_text(size=10, face="bold"),
+        #legend.title = element_text(size=8, face="bold"),
+        #legend.text = element_text(size = 8),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        strip.background = element_blank(),
+        legend.position="none")
+#dev.off()
+
+
+##### COMBINE PLOTS #####
+tiff("phylodiv.tiff", width = 17, height = 17, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(1,2, widths=c(1,1), heights=c(1.5,1.5)))))
+print(unweigh.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(weigh.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+dev.off()
+
 ```
 
 
