@@ -27,6 +27,7 @@ library(ade4)
 library(labdsv)
 library(geiger)
 library(sciplot)
+library(picante)
 #library(shiny)
 #library(shinyFiles)
 #library(samr)
@@ -845,7 +846,6 @@ dev.off()
 ### Picante
 ```{r}
 #http://picante.r-forge.r-project.org/picante-intro.pdf
-library(picante)
 
 ### Unweighted
 ver.tree <- read.newick(file="ver.tre")
@@ -4265,7 +4265,7 @@ p.lambda
 ### Bootstrap Values
 ```{r bootstrap}
 library("Biostrings")
-https://cran.r-project.org/web/packages/phangorn/vignettes/Trees.pdf
+#https://cran.r-project.org/web/packages/phangorn/vignettes/Trees.pdf
 
 
 #seqs <- readDNAStringSet("combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.fasta")
@@ -4276,6 +4276,198 @@ pml(ver.sig.tre, seqs)
 ```
 
 
+### Bioenv
+```{r}
+# Trim otu_table so that samples match metadata samples
+meta.otus <- subset_samples(Ver, SampleID != "Su13.ED.MM15.DN")
+meta.otus <- subset_samples(meta.otus, SampleID != "Su13.BD.MM15.DN")
+meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.ED.MM15.SN")
+meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.ED.MM15.DD")
+meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.ED.MM110.DD")
+meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.BD.MM15.DD")
+meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.BD.MM110.DD")
+meta.otus <- subset_samples(meta.otus, SampleID != "Fa13.BD.MM110.SD")
+meta.otus <- subset_samples(meta.otus, SampleID != "Fa13.BD.MM110.SN")
+meta.otus <- subset_samples(meta.otus, SampleID != "Fa13.BD.MM15.DN")
+meta.otus <- subset_samples(meta.otus, SampleID != "Fa13.ED.MM15.DN")
+meta.otus <- subset_samples(meta.otus, Station != "Buoy")
+meta.otus <- subset_samples(meta.otus, Source != "Sediment")
+meta.otus <- subset_samples(meta.otus, SampleID != "Z14.060.P")
+meta.otus <- subset_samples(meta.otus, SampleID != "Z14.060.F")
+
+
+
+# I'll be examining Laurentian, Estuary, and Inland Lake samples separately
+# First separate the samples based on Lake Type
+lau.otus <- data.frame(t(otu_table(subset_samples(meta.otus,
+                                                  Lake_Type=="Laurentian"))))
+est.otus <- data.frame(t(otu_table(subset_samples(meta.otus,
+                                                  Lake_Type=="Estuary"))))
+inl.otus <- data.frame(t(otu_table(subset_samples(meta.otus
+                                                  , Lake_Type=="Inland"))))
+
+# Read in metadata files
+lau.env <- read.table("metadata_laurentian.csv", header=T, sep=",")
+est.env <- read.table("metadata_estuary.csv", header=T, sep=",")
+inl.env <- read.table("metadata_inland.csv", header=T, sep=",")
+
+# Trim otu tables so that they match metadata samples
+# Laurentian
+lau.otus <- subset
+
+
+# Laurentian metadata - Test for normality
+shapiro.test(lau.env$Temperature..C)
+  # p-value = 0.003358; not normal
+shapiro.test(lau.env$SpCond...S.cm)
+  # p-value = 0.000349; not normal
+shapiro.test(lau.env$DO.Probe..mg.L.)
+  # p-value = 0.0002237; not normal
+shapiro.test(lau.env$Chl.Probe...g.L.)
+  # p-value = 1.947e-06; not normal
+shapiro.test(lau.env$Chl.Lab..ug.L.)
+  # p-value = 2.712e-05; not normal
+shapiro.test(lau.env$TP.ug.L)
+  # p-value = 7.47e-08; not normal
+shapiro.test(lau.env$PP.ug.L)
+  # p-value = 8.309e-08; not normal
+shapiro.test(lau.env$TDP.ug.L)
+  # p-value = 7.005e-07
+shapiro.test(lau.env$TDP.SRP)
+  # p-value = 7.005e-07
+shapiro.test(lau.env$POC.mg.L)
+  # p-value = 0.01825; not normal
+shapiro.test(lau.env$PON.mg.L)
+  # p-value = 0.0217; not normal
+shapiro.test(lau.env$DOC.mg.L)
+  # p-value = 6.264e-06; not normal
+shapiro.test(lau.env$SiO2.mg.L)
+  # p-value = 0.00238; not normal
+shapiro.test(lau.env$TSS.mg.L)
+  # p-value = 8.456e-08; not normal
+shapiro.test(lau.env$Fluorescence.mg.m3.)
+  # p-value = 1.479e-06; not normal
+shapiro.test(lau.env$PAR)
+  # p-value = 3.161e-07; not normal
+
+# Estuary metadata - Test for normality
+shapiro.test(est.env$Temperature..C)
+  # p-value = 0.0006905; not normal
+shapiro.test(est.env$SpCond...S.cm.)
+  # p-value = 0.0005477; not normal
+shapiro.test(est.env$TDS..mg.L.)
+  # p-value = 0.0005534; not normal
+shapiro.test(est.env$pH)
+  # p-value = 0.0005803; not normal
+shapiro.test(est.env$ORP..mV.)
+  # p-value = 9.753e-07; not normal
+shapiro.test(est.env$Chl.Lab..ug.L.)
+  # p-value = 6.355e-06; not normal
+shapiro.test(est.env$BGA.cells.mL)
+  # p-value = 9.826e-12; not normal
+shapiro.test(est.env$Cl.mg.L)
+  # p-value = 0.03225; not normal
+shapiro.test(est.env$SO4.mg.L)
+  # p-value = 4.367e-05; not normal
+shapiro.test(est.env$NO3.mg.L)
+  # p-value = 7.682e-05; not normal
+shapiro.test(est.env$NH3.mg.L)
+  # p-value = 1.03e-06; not normal
+shapiro.test(est.env$TKN.mg.L)
+  # p-value = 0.02124; not normal
+shapiro.test(est.env$SRP.ug.L)
+  # p-value = 1.462e-11; not normal
+shapiro.test(est.env$TP.ug.L)
+  # p-value = 4.798e-09; not normal
+shapiro.test(est.env$Alk.mg.L)
+  # p-value = 0.0001785; not normal
+shapiro.test(est.env$DO.Lab.mg.L)
+  # p-value = 3.206e-09; not normal
+shapiro.test(est.env$DO..)
+  # p-value = 4.353e-07; not normal
+shapiro.test(est.env$Turb.NTU)
+  # p-value = 0.01459; not normal
+
+# Estuary metdata - Plot
+plot(est.env$Temperature..C.)
+plot(est.env$SpCond...S.cm.)
+plot(est.env$TDS..mg.L.)
+plot(est.env$pH)
+plot(est.env$ORP..mV.)
+plot(est.env$Chl.Lab..ug.L.)
+plot(est.env$BGA.cells.mL)
+  # Looks like a line
+plot(est.env$Cl.mg.L)
+plot(est.env$SO4.mg.L)
+plot(est.env$NO3.mg.L)
+plot(est.env$NH3.mg.L)
+plot(est.env$TKN.mg.L)
+plot(est.env$SRP.ug.L)
+  # Is a line
+plot(est.env$TP.ug.L)
+plot(est.env$Alk.mg.L)
+plot(est.env$DO.Lab.mg.L)
+plot(est.env$DO..)
+plot(est.env$Turb.NTU)
+
+
+
+
+
+# Inland metadata - Test for normality
+shapiro.test(sqrt(inl.env$Chl.Lab..ug.L.))
+  # p-value = 1.441e-15; not normal
+shapiro.test(sqrt(inl.env$NO3.mg.L))
+  # p-value = <2.2e-16; not normal
+shapiro.test(sqrt(inl.env$SRP.ug.L))
+  # p-value = <2.2e-16; not normal
+shapiro.test(inl.env$TP.ug.L)
+  # p-value = <2.2e-16; not normal
+shapiro.test(inl.env$TDP.ug.L)
+  # p-value = <2.2e-16; not normal
+shapiro.test(inl.env$NH4.ug.L)
+  # p-value = <2.2e-16; not normal
+
+
+# Inland metdata - Plot
+plot(inl.env$Chl.Lab..ug.L.)
+plot(inl.env$NO3.mg.L)
+  # Looks like a straight line
+plot(inl.env$SRP.ug.L)
+  # Looks like a straight line
+plot(inl.env$TP.ug.L)
+  # Looks like a straight line
+plot(inl.env$TDP.ug.L)
+  # It IS a straight line
+plot(inl.env$NH4.ug.L)
+  # Looks like a straight line
+
+
+# Run Bioenv
+bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + SpCond...S.cm. + DO.Probe..mg.L. + Chl.Probe...g.L. + Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L + PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, lau.env, method = "spearman", index = "bray", trace = TRUE, partial = NULL)
+
+
+
+bioenv.inl <- bioenv(inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L, inl.env, method = "spearman", index = "bray", trace = TRUE, partial = NULL)
+
+bioenv.inl <- bioenv(comm = inl.otus, env = test.env)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
 
 
 
@@ -4316,44 +4508,5 @@ plot_deSEQ <- function(deSEQdata, title){
           legend.position="right")
 }
 
-
-
-phyloseq_to_adonis <- function(physeq, distmat = NULL, dist = "bray", formula) {
-  if(!is.null(distmat)){
-    phydist <- distmat
-  } else {
-    phydist <- phyloseq::distance(physeq, dist)
-  }
-  metadata <- as(sample_data(physeq), "data.frame")
-  
-  # Adonis test
-  f <- reformulate(formula, response = "phydist")
-  adonis.test <- adonis(f, data = metadata)
-  print(adonis.test)
-  
-  # Run homogeneity of dispersion test if there is only 1 variable
-  if (length(formula) == 1) {
-    Lake_Type <- metadata[,formula]
-    beta <- betadisper(phydist, Lake_Type)
-    disper.test = permutest(beta)
-    print(disper.test)
-  
-    l <- list(
-      dist = phydist, 
-      formula = f, 
-      adonis = adonis.test, 
-      disper = disper.test
-    )
-    
-  } else {
-    
-    l <- list(
-      dist = phydist, 
-      formula = f, 
-      adonis = adonis.test
-    )
-  }
-  return (l)
-}
 ```
 
