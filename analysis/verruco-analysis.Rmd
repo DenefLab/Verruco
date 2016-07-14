@@ -4472,6 +4472,7 @@ bioenv.inl <- bioenv(inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L + TP.ug.L +
 
 ### Bio.env Function
 # Offers flexibility to the original bioenv function by finding the best correlations
+# http://menugget.blogspot.com/2011/06/clarke-and-ainsworths-bioenv-and-bvstep.html#more
 bio.env.lau <- bio.env(lau.otus, lau.env, fix.dist.method="bray",
                        var.dist.method="euclidean", scale.fix=F, scale.var=T)
   # Best = DO.Probe..mg.L.; rho = 0.4831769
@@ -4487,6 +4488,7 @@ bio.env.inl <- bio.env(inl.otus, inl.env, fix.dist.method="bray",
 
 ### Calculate p-value for Laurentian correlation
 # Perform random permutations of row names
+# Laurentian
 x <- 0
 result.lau <- vector(mode="numeric", length = 100)
 while (x < 100){
@@ -4499,6 +4501,7 @@ while (x < 100){
   print(x)
 }
 
+# Estuary
 x <- 0
 result.est <- vector(mode="numeric", length = 100)
 while (x < 100){
@@ -4511,6 +4514,7 @@ while (x < 100){
   print(x)
 }
 
+# Inland
 x <- 0
 result.inl <- vector(mode="numeric", length = 100)
 while (x < 100){
@@ -4522,26 +4526,6 @@ while (x < 100){
   result.inl[x] = max(tmp)
   print(x)
 }
-
-
-
-#performing random permutations of row names to get p value for correlation FL
-x <- 0
-result <- vector(mode = "numeric", length = 100)
-while (x < 100){
-    table_bio_rand<-table_bio[sample(1:nrow(table_bio_FL)),] 
-    x <- x + 1
-    bioenv_rand <- bioenv(table_bio_rand ~T+DO+log(Chla)+log(TP)+POC+PON+log(DOC)+SiO2+log(TSS)+log(PAR), table_env_FL,  method = "spearman", index = "bray", trace = TRUE, partial = NULL)
-    tmp<-data.frame(summary(bioenv_rand)[2])
-    result[x]=max(tmp)
-    print(x)
-    }
-hist(result)
-print(mean(result))#0.18
-print(max(result))#0.55
-print(quantile(result,0.95))#0.38
-print(quantile(result,0.99)) #0.50
-
 
 ```
 
