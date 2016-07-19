@@ -202,7 +202,7 @@ good_phylum <- tax_glom(scaled, taxrank = "Phylum")
 phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
 
 # If a phylum has <1% rel abun, change that to 0%
-otu_table(phylum.99)[otu_table(phylum.99) < 0.01] <- 0
+otu_table(phylum.99)[otu_table(phylum.99) < 1] <- 0
 
 # Remove anything with 0% rel abun
 phylum.99 = prune_taxa(taxa_sums(phylum.99) > 0, phylum.99)
@@ -223,13 +223,10 @@ top5phyla.barplot <- barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylu
 
 ```
 
-### STACKED BAR PLOT OF Lake_Type
-```{r, fig.width = 7, fig.height = 8}
-################# TIME TO CREATE STACKED BAR PLOT OF Lake_Type #################
-
+### UNSTACKED BAR PLOT OF Lake_Type
+```{r}
 # Merge samples by Lake_Type
 phy.Lake_Type <- merge_samples(phylum.99, "Lake_Type")
-
 
 ## But this only sums them
 phy.samp <- data.frame(sample_data(phy.Lake_Type))
@@ -237,30 +234,72 @@ phy.samp <- data.frame(sample_data(phy.Lake_Type))
 # Average Lake_Types
 phy.otu <- data.frame(otu_table(phy.Lake_Type))
 phy <- data.frame(tax_table(phy.Lake_Type))
-phy.otu[1,] <- (phy.otu[1,]/64)
-    ## Averaging Estuary
-phy.otu[2,] <- (phy.otu[2,]/123)
-    ## Averaging Inland
-phy.otu[3,] <- (phy.otu[3,]/32)
-    ## Averaging Laurentian
-#colnames(phy.otu) <- c("Proteobacteria","Actinobacteria","Cyanobacteria","Bacteroidetes","Planctomycetes","Chloroflexi","Verrucomicrobia","Armatimonadetes","NPL-UPA2","Chlorobi","Gemmatimonadetes","Acidobacteria","Candidate_division_OP3","Nitrospirae","Candidate_division_OD1","Spirochaetae","Candidate_division_OP8","Chlamydiae","Lentisphaerae","BD1-5","TM6","unclassified","Firmicutes", "Candidate_division_WS3","Fibrobacteres","Candidate_division_SR1")
+# First average Laurentian
+phy.otu[1,] <- (phy.otu[1,]/35)
+# Next average Estuary
+phy.otu[2,] <- (phy.otu[2,]/65)
+# Then average Inland
+phy.otu[3,] <- (phy.otu[3,]/126)
+
+# Now back into a phyloseq object
 tphy.otu <- t(phy.otu)
 phy.otu <- otu_table(tphy.otu, taxa_are_rows = T)
 phy.tax <- tax_table(phy.Lake_Type)
-phy.samp <- sample_data(phy.Lake_Type)
+
+phy.samp <- data.frame(sample_data(phy.Lake_Type))
+phy.samp$Lake_Type <- rownames(phy.samp)
+phy.samp <- sample_data(phy.samp)
+
+# This makes a new phyloseq object with Lake Types
 phy.Lake_Type.merge <- merge_phyloseq(phy.tax, phy.otu, phy.samp)
-    ## Makes new phyloseq object of 3 Lake_Types: Estuary, Inland, Laurentian
+
 # Remove taxa with a relative abundane of less than 1%
 otu_table(phy.Lake_Type.merge)[otu_table(phy.Lake_Type.merge) < 1] <- 0
-phy.Lake_Type.merge <- prune_taxa(taxa_sums(phy.Lake_Type.merge) > 0, phy.Lake_Type.merge)
+phy.Lake_Type.merge <- prune_taxa(taxa_sums(phy.Lake_Type.merge) > 0,
+                                  phy.Lake_Type.merge)
 
+# Separate out Lake Type data
+phy.lau <- subset_samples(phy.Lake_Type.merge, Lake_Type=="Laurentian")
+phy.est <- subset_samples(phy.Lake_Type.merge, Lake_Type=="Estuary")
+phy.inl <- subset_samples(phy.Lake_Type.merge, Lake_Type=="Inland")
+
+# Calculate mean & standard deviation by Lake_Type
+# You'll use this later to add error bars to your unstacked bar plot
+phy.df <- psmelt(phylum.99)
+phy.sum <- ddply(phy.df, c("Lake_Type", "Phylum"),
+                 summarise,
+                 Mean = mean(Abundance),
+                 Median = median(Abundance),
+                 SD = sd(Abundance, na.rm = T),
+                 SE = se(Abundance, na.rm=T))
+
+# Remove phyla that are <1% rel abun (median) in all 3 Lake Types
+phy.trim <- phy.sum[-which(phy.sum$Phylum== "BD1-5"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OD1"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP3"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP8"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_SR1"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_WS3"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Fibrobacteres"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Firmicutes"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Gemmatimonadetes"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Lentisphaerae"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "NPL-UPA2"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Spirochaetae"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "TM6"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Nitrospirae"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "unclassified"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Acidobacteria"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Chloroflexi"),]
+
+# Break up summaries by Lake_Type
+phy.lau.sum <- phy.trim[1:8,]
+phy.est.sum <- phy.trim[9:16,]
+phy.inl.sum <- phy.trim[17:24,]
 
 
         
 ########### MAKE OBJECT TO BE USED IN GGPLOT ###########
-phylum_long <- psmelt(phy.Lake_Type.merge)
-phylum_sort <- arrange(phylum_long, Phylum)
-phylum_sort$Sample <- factor(phylum_sort$Sample, levels = c("Laurentian", "Estuary", "Inland"))
 
 # Set phylum plotting colors for 12 taxa
 phylum.colors <- c(Acidobacteria="lightblue1",
@@ -270,27 +309,86 @@ phylum.colors <- c(Acidobacteria="lightblue1",
                    Chlorobi="gold",
                    Chloroflexi="#ff7f00",
                    Cyanobacteria="#33a02c",
-                   Firmicutes="red",
-                   Nitrospirae="midnightblue",
-                   Lentispherae="white",
+                   #Firmicutes="red",
+                   #Nitrospirae="midnightblue",
+                   #Lentispherae="white",
                    Planctomycetes="deepskyblue",
                    Proteobacteria="khaki1",
                    Verrucomicrobia="lightslateblue",
                    unclassified="#662506")
 
-# Set phylum plotting colors for 26 taxa
-#phylum.colors <- c(Acidobacteria = "lightblue1", Actinobacteria = "firebrick3", Armatimonadetes = "salmon", "BD1-5" = "gold", Bacteroidetes = "mediumorchid3", "Candidate_division_OD1" = "tan", "Candidate_division_OP3" = "grey76", "Candidate_division_OP8" = "darkolivegreen1", "Candidate_division_SR1" = "cornflowerblue", "Candidate_division_WS3" = "purple4", Clamydiae = "violetred1", Chlorobi = "goldenrod", Chloroflexi = "firebrick4", Cyanobacteria = "chartreuse3", Fibrobacteres = "black", Firmicutes = "white", Gemmatimonadetes = "grey", Lentisphaerae = "yellow", "NPL-UPA2" = "hotpink", Nitrospirae = "midnightblue", Planctomycetes = "deepskyblue", Proteobacteria = "khaki1", Spirochaetae = "coral1", "TM6" = "slategray1", Verrucomicrobia = "lightslateblue", unclassified = "green4")
-  
-  #c(Proteobacteria = "deepskyblue", Actinobacteria = "royalblue", Cyanobacteria = "chartreuse3", Bacteroidetes = "darkorange", Planctomycetes = "mediumorchid3", Chloroflexi = "darkgreen", Verrucomicrobia = "purple4", Armatimonadetes = "red", "NPL-UPA2"="#652926", Chlorobi = "cyan2", Gemmatimonadetes = "black", Acidobacteria = "grey76", "Candidate_division_OP3" = "hotpink", Nitrospirae = "blue", "Candidate_division_OD1" = "brown", Spirochaetae = "gold3", "Candidate_division_OP8" = "goldenrod1", Chlamydiae = "violet", Lentisphaerae = "yellow1", "BD1-5" = "chartreuse", "TM6" = "olivedrab", unclassified = "grey", Firmicutes = "blue4", "Candidate_division_WS3"= "magenta", Fibrobacteres = "darkred", "Candidate_division_SR1" = "tan3" )
-  
-  #c(Acidobacteria = "grey26", Actinobacteria = "royalblue", Alphaproteobacteria = "plum2", Armatimonadetes = "red", Bacteroidetes = "darkorange", "BD1-5" = "chartreuse", Betaproteobacteria = "slateblue2", "Candidate_division_BRC1" = "violetred4", "Candidate_division_OD1" = "#6DDE88", "Candidate_division_OP3" = "hotpink", "Candidate_division_OP8" = "goldenrod1",  "Candidate_division_SR1" = "tan3", "Candidate_division_TM7" = "skyblue1", "Candidate_division_WS3" = "magenta", Chlamydiae="violet", Chlorobi="cyan2", Chloroflexi="darkgreen", Cyanobacteria = "chartreuse3", Deferribacteres = "slateblue3", "Deinococcus-Thermus" = "violetred", Deltaproteobacteria = "deepskyblue", Elusimicrobia = "yellow3", Epsilonproteobacteria = "lightskyblue", Fibrobacteres = "darkred", Firmicutes = "blue4", Fusobacteria = "slateblue1", Gammaproteobacteria = "steelblue4", Gemmatimonadetes="black", Lentisphaerae = "yellow1", "NPL-UPA2"="#652926", Planctomycetes = "mediumorchid3", Proteobacteria = "deepskyblue", Spirochaetae = "gold3", Tenericutes="pink", Thermotogae = "chocolate1", TM6 = "olivedrab", unclassified = "grey", Verrucomicrobia = "purple4", "WCHB1-60" = "palegreen")
 
-# GGPLOT it
+
+##### Laurentian #####
+phy.lau.long <- psmelt(phy.lau)
+# Removing phylum "unclassified" since that's not in phy.lau.long
+phy.lau.sum <- phy.lau.sum[-12,]
+# Add standard deviation column to our ggplot data
+phy.lau.long$SD <- sort(phy.lau.sum$SD, decreasing=T)
+# Add median column to our ggplot data
+phy.lau.long$Median <- sort(phy.lau.sum$Median, decreasing=T)
+# Add standard error column to our ggplot data
+phy.lau.long$SE <- sort(phy.lau.sum$SE, decreasing=T)
+
 
 #tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-ggplot(phylum_sort, aes(x=Sample, y=Abundance, fill=Phylum)) +
-          geom_bar(stat="identity", position="fill", color="black") +
-          scale_y_continuous(labels = percent_format()) +
+ggplot(phy.lau.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
+          geom_bar(stat="identity", position="dodge", color="black") +
+          #scale_y_continuous(labels = percent_format()) +
+          scale_fill_manual(values = phylum.colors, name="Phylum") +
+  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
+  scale_x_discrete(breaks=NULL) +
+          theme(axis.title.x = element_text(size=10, face = "bold"),
+                axis.text.x = element_blank(),
+                axis.text.y = element_text(size=8),
+                axis.title.y = element_blank(),
+                plot.title = element_text(size = 12, face="bold"),
+                legend.title = element_text(size=10, face="bold"),
+                legend.text = element_text(size = 8),
+                legend.position="right") +
+          guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+          xlab("Phyla")  
+          #ylab("Relative Abundance (taxa>1%)") +
+          #ggtitle("Lake Bacterial Community Composition")
+#dev.off()
+
+
+
+##### Estuary #####
+phy.est.long <- psmelt(phy.est)
+
+
+#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
+x=reorder(Phylum, order(Abundance, decreasing=TRUE))
+
+ggplot(phy.est.sort, aes(x=reorder(Phylum, order(Abundance, decreasing=TRUE)),
+                         y=Abundance, fill=Phylum)) +
+          geom_bar(stat="identity", position="dodge", color="black") +
+          #scale_y_continuous(labels = percent_format()) +
+          scale_fill_manual(values = phylum.colors, name="Phylum") + 
+          theme(axis.title.x = element_text(size=16, face = "bold"),
+                axis.text.x = element_text(angle=50, colour = "black", vjust=1, hjust = 1, size=14),
+                axis.text.y = element_text(colour = "black", size=14),
+                axis.title.y = element_text(size=16, face="bold"),
+                plot.title = element_text(size = 18, face="bold"),
+                legend.title = element_text(size=14),
+                legend.text = element_text(size = 13),
+                legend.position="right") +
+          guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) + 
+          xlab("Lake_Type") +
+          ylab("Relative Abundance (taxa>1%)") +
+          ggtitle("Lake Bacterial Community Composition")
+#dev.off()
+
+
+##### Inland #####
+phy.inl.long <- psmelt(phy.inl)
+phy.inl.sort <- arrange(phy.inl.long, Phylum)
+
+#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
+ggplot(phy.inl.sort, aes(x=reorder(Phylum, order(Abundance, decreasing=TRUE)), y=Abundance, fill=Phylum)) +
+          geom_bar(stat="identity", position="dodge", color="black") +
+          #scale_y_continuous(labels = percent_format()) +
           scale_fill_manual(values = phylum.colors, name="Phylum") + 
           theme(axis.title.x = element_text(size=16, face = "bold"),
                 axis.text.x = element_text(angle=50, colour = "black", vjust=1, hjust = 1, size=14),
