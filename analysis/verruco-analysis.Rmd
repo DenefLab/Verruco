@@ -225,53 +225,15 @@ top5phyla.barplot <- barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylu
 
 ### UNSTACKED BAR PLOT OF Lake_Type
 ```{r}
-# Merge samples by Lake_Type
-phy.Lake_Type <- merge_samples(phylum.99, "Lake_Type")
-
-## But this only sums them
-phy.samp <- data.frame(sample_data(phy.Lake_Type))
-
-# Average Lake_Types
-phy.otu <- data.frame(otu_table(phy.Lake_Type))
-phy <- data.frame(tax_table(phy.Lake_Type))
-# First average Laurentian
-phy.otu[1,] <- (phy.otu[1,]/35)
-# Next average Estuary
-phy.otu[2,] <- (phy.otu[2,]/65)
-# Then average Inland
-phy.otu[3,] <- (phy.otu[3,]/126)
-
-# Now back into a phyloseq object
-tphy.otu <- t(phy.otu)
-phy.otu <- otu_table(tphy.otu, taxa_are_rows = T)
-phy.tax <- tax_table(phy.Lake_Type)
-
-phy.samp <- data.frame(sample_data(phy.Lake_Type))
-phy.samp$Lake_Type <- rownames(phy.samp)
-phy.samp <- sample_data(phy.samp)
-
-# This makes a new phyloseq object with Lake Types
-phy.Lake_Type.merge <- merge_phyloseq(phy.tax, phy.otu, phy.samp)
-
-# Remove taxa with a relative abundane of less than 1%
-otu_table(phy.Lake_Type.merge)[otu_table(phy.Lake_Type.merge) < 1] <- 0
-phy.Lake_Type.merge <- prune_taxa(taxa_sums(phy.Lake_Type.merge) > 0,
-                                  phy.Lake_Type.merge)
-
-# Separate out Lake Type data
-phy.lau <- subset_samples(phy.Lake_Type.merge, Lake_Type=="Laurentian")
-phy.est <- subset_samples(phy.Lake_Type.merge, Lake_Type=="Estuary")
-phy.inl <- subset_samples(phy.Lake_Type.merge, Lake_Type=="Inland")
-
-# Calculate mean & standard deviation by Lake_Type
-# You'll use this later to add error bars to your unstacked bar plot
+# Summarize data by Lake_Type
 phy.df <- psmelt(phylum.99)
-phy.sum <- ddply(phy.df, c("Lake_Type", "Phylum"),
-                 summarise,
-                 Mean = mean(Abundance),
-                 Median = median(Abundance),
-                 SD = sd(Abundance, na.rm = T),
-                 SE = se(Abundance, na.rm=T))
+phy.sum <- phy.df %>%
+  group_by(Lake_Type, Phylum) %>%
+  summarize(Mean = mean(Abundance),
+            Median = median(Abundance),
+            SD = sd(Abundance),
+            SE = se(Abundance))
+
 
 # Remove phyla that are <1% rel abun (median) in all 3 Lake Types
 phy.trim <- phy.sum[-which(phy.sum$Phylum== "BD1-5"),]
@@ -297,112 +259,106 @@ phy.lau.sum <- phy.trim[1:8,]
 phy.est.sum <- phy.trim[9:16,]
 phy.inl.sum <- phy.trim[17:24,]
 
-
-        
-########### MAKE OBJECT TO BE USED IN GGPLOT ###########
-
-# Set phylum plotting colors for 12 taxa
-phylum.colors <- c(Acidobacteria="lightblue1",
-                   Actinobacteria="firebrick",
-                   Armatimonadetes="salmon",
-                   Bacteroidetes="mediumorchid3",
-                   Chlorobi="gold",
+# Set phylum plotting colors for 8 taxa
+phylum.colors <- c(Actinobacteria="firebrick3",
+                   Armatimonadetes="lightsalmon",
+                   Bacteroidetes="lightblue1",
+                   Chlorobi="goldenrod1",
                    Chloroflexi="#ff7f00",
                    Cyanobacteria="#33a02c",
-                   #Firmicutes="red",
-                   #Nitrospirae="midnightblue",
-                   #Lentispherae="white",
-                   Planctomycetes="deepskyblue",
+                   Planctomycetes="tomato4",
                    Proteobacteria="khaki1",
-                   Verrucomicrobia="lightslateblue",
-                   unclassified="#662506")
+                   Verrucomicrobia="lightslateblue")
 
 
 
 ##### Laurentian #####
-phy.lau.long <- psmelt(phy.lau)
-# Removing phylum "unclassified" since that's not in phy.lau.long
-phy.lau.sum <- phy.lau.sum[-12,]
-# Add standard deviation column to our ggplot data
-phy.lau.long$SD <- sort(phy.lau.sum$SD, decreasing=T)
-# Add median column to our ggplot data
-phy.lau.long$Median <- sort(phy.lau.sum$Median, decreasing=T)
-# Add standard error column to our ggplot data
-phy.lau.long$SE <- sort(phy.lau.sum$SE, decreasing=T)
-
-
 #tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-ggplot(phy.lau.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
+phy.lau.plot<- ggplot(phy.lau.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", position="dodge", color="black") +
           #scale_y_continuous(labels = percent_format()) +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
   geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
   scale_x_discrete(breaks=NULL) +
-          theme(axis.title.x = element_text(size=10, face = "bold"),
+  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
+          theme(axis.title.x = element_blank(),
                 axis.text.x = element_blank(),
                 axis.text.y = element_text(size=8),
-                axis.title.y = element_blank(),
+                axis.title.y = element_text(size=8, face="bold"),
+                plot.title = element_text(size = 12, face="bold"),
+                legend.title = element_text(size=10, face="bold"),
+                legend.text = element_text(size =8),
+                legend.position="right") +
+  guides(fill=F) + xlab("Phyla") + ylab("Laurentian")
+  #        guides(fill = guide_legend(keywidth = 1, keyheight = 1))
+#dev.off()
+
+ ##### Let's steal the legend 
+  g_legend <- function(a.gplot){
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    return(legend)}
+  legend <- g_legend(phy.lau.plot)
+
+
+##### Estuary #####
+#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
+phy.est.plot <- ggplot(phy.est.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
+          geom_bar(stat="identity", position="dodge", color="black") +
+          #scale_y_continuous(labels = percent_format()) +
+          scale_fill_manual(values = phylum.colors, name="Phylum") +
+  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
+  scale_x_discrete(breaks=NULL) +
+  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
+          theme(axis.title.x = element_blank(),
+                axis.text.x = element_blank(),
+                axis.text.y = element_text(size=8),
+                axis.title.y = element_text(size=8, face="bold"),
                 plot.title = element_text(size = 12, face="bold"),
                 legend.title = element_text(size=10, face="bold"),
                 legend.text = element_text(size = 8),
                 legend.position="right") +
-          guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-          xlab("Phyla")  
-          #ylab("Relative Abundance (taxa>1%)") +
-          #ggtitle("Lake Bacterial Community Composition")
-#dev.off()
-
-
-
-##### Estuary #####
-phy.est.long <- psmelt(phy.est)
-
-
-#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-x=reorder(Phylum, order(Abundance, decreasing=TRUE))
-
-ggplot(phy.est.sort, aes(x=reorder(Phylum, order(Abundance, decreasing=TRUE)),
-                         y=Abundance, fill=Phylum)) +
-          geom_bar(stat="identity", position="dodge", color="black") +
-          #scale_y_continuous(labels = percent_format()) +
-          scale_fill_manual(values = phylum.colors, name="Phylum") + 
-          theme(axis.title.x = element_text(size=16, face = "bold"),
-                axis.text.x = element_text(angle=50, colour = "black", vjust=1, hjust = 1, size=14),
-                axis.text.y = element_text(colour = "black", size=14),
-                axis.title.y = element_text(size=16, face="bold"),
-                plot.title = element_text(size = 18, face="bold"),
-                legend.title = element_text(size=14),
-                legend.text = element_text(size = 13),
-                legend.position="right") +
-          guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) + 
-          xlab("Lake_Type") +
-          ylab("Relative Abundance (taxa>1%)") +
-          ggtitle("Lake Bacterial Community Composition")
+          #guides(fill = guide_legend(keywidth = 1, keyheight = 1)) +
+          guides(fill=F) + xlab("Phyla") + ylab("Estuary")
 #dev.off()
 
 
 ##### Inland #####
-phy.inl.long <- psmelt(phy.inl)
-phy.inl.sort <- arrange(phy.inl.long, Phylum)
-
 #tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-ggplot(phy.inl.sort, aes(x=reorder(Phylum, order(Abundance, decreasing=TRUE)), y=Abundance, fill=Phylum)) +
+phy.inl.plot <- ggplot(phy.inl.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", position="dodge", color="black") +
           #scale_y_continuous(labels = percent_format()) +
-          scale_fill_manual(values = phylum.colors, name="Phylum") + 
-          theme(axis.title.x = element_text(size=16, face = "bold"),
-                axis.text.x = element_text(angle=50, colour = "black", vjust=1, hjust = 1, size=14),
-                axis.text.y = element_text(colour = "black", size=14),
-                axis.title.y = element_text(size=16, face="bold"),
-                plot.title = element_text(size = 18, face="bold"),
-                legend.title = element_text(size=14),
-                legend.text = element_text(size = 13),
+          scale_fill_manual(values = phylum.colors, name="Phylum") +
+  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
+  scale_x_discrete(breaks=NULL) +
+  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
+          theme(axis.title.x = element_text(size=10, face = "bold"),
+                axis.text.x = element_blank(),
+                axis.text.y = element_text(size=8),
+                axis.title.y = element_text(size=8, face="bold"),
+                plot.title = element_text(size = 12, face="bold"),
+                legend.title = element_text(size=10, face="bold"),
+                legend.text = element_text(size = 8),
                 legend.position="right") +
-          guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) + 
-          xlab("Lake_Type") +
-          ylab("Relative Abundance (taxa>1%)") +
-          ggtitle("Lake Bacterial Community Composition")
+          #guides(fill = guide_legend(keywidth = 1, keyheight = 1)) +
+          guides(fill=F) + xlab("Phyla") + ylab("Inland")
 #dev.off()
+
+
+##### Make big plot #####
+tiff("phy.relabund.tiff", width = 8.7, height = 10, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(3,3, widths=c(0.4,7,3.5), heights=c(1,1,1.13)))))
+grid.text("Relative Abundance (Taxa > 1%)", rot=90,
+          vp=viewport(layout.pos.row=c(1,3), layout.pos.col = 1),
+                      gp=gpar(fontsize=10, fontface="bold"))
+print(phy.lau.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(phy.est.plot, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+print(phy.inl.plot, vp=viewport(layout.pos.row=3, layout.pos.col=2))
+legend$vp <- viewport(layout.pos.row = 2, layout.pos.col = 3)
+grid.draw(legend)
+dev.off()
 
 ```
 
@@ -782,31 +738,20 @@ Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
 Ver.box <- data.frame(sample_data(Ver))
 Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
 
-sum.box <- Ver.box%>%
-  group_by(Lake_Type, Fraction) %>%
-  summarize(Mean = mean(Relative_Abundance), 
-            SE = se(Relative_Abundance), 
-            SD = sd(Relative_Abundance), 
-            Median = median(Relative_Abundance))
-
-sum.box <- Ver.box %>%
-  group_by(Lake_Type, Fraction) %>%
-  summarize(Mean = mean(Relative_Abundance), 
-            SE = se(Relative_Abundance), 
-            SD = sd(Relative_Abundance), 
-            Median = median(Relative_Abundance))
-
-sum.box <- group_by(Ver.box, Lake_Type, Fraction)
-
-
+# sum.box <- Ver.box %>%
+#   group_by(Lake_Type, Fraction) %>%
+#   summarize(Mean = mean(Relative_Abundance),
+#             Median = median(Relative_Abundance),
+#             SD = sd(Relative_Abundance),
+#             SE = se(Relative_Abundance))
 
 
 
 ### Plotting Time!
 #tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
-plot <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
+frac.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
+  scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
   xlab("Relative Abundance (%)") + ylab("Lake Type") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=10),
@@ -814,8 +759,7 @@ plot <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
         axis.title.y = element_text(face="bold", size=10),
         plot.title = element_text(face="bold", size=10),
         legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9)) +
-  guides(fill=F)
+        legend.text = element_text(size = 9))
 #dev.off()
 
 # Steal the legend
@@ -828,6 +772,23 @@ legend <- g_legend(plot)
 
 
 
+
+
+seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season)) +
+  geom_boxplot(position=position_dodge(1)) +
+  #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
+  xlab("Relative Abundance (%)") + ylab("Lake Type") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=10),
+        axis.text.y = element_text(colour="black", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9))
+
+
+
+
 tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,2.15), heights=c(1)))))
@@ -835,6 +796,110 @@ print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
 legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
 grid.draw(legend)
 dev.off()
+
+
+
+##### Kruskal-Wallis #####
+
+### Test between lake types ###
+kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Estuary")
+  # p-value = 4.219e-8
+kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Inland")
+  # p-value = 1.206e-10
+kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Estuary" | Lake_Type=="Inland")
+  # p-value = 0.8792
+
+
+### Test Fraction within Lake Type ###
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box)
+  # p-value = 0.0003097
+kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box)
+  # Source
+  # p-value = 0.0001692
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Sediment")
+  # Free vs Part
+  # p-value = 0.1491
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Free")
+  # Part vs Sed
+  # p-value = 0.0005459
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Particle")
+  # Free vs Sed
+  # p-value = 0.0001081
+
+# Laurentian
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # p-value = 0.01748
+
+# Estuary
+kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_Type=="Estuary")
+  # p-value = 6.914e-06
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
+  # Estuary Free vs Part
+  # p-value = 0.02291
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Free")
+  # Estuary Part vs Sed
+  # p-value = 3.859e-06
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Particle")
+  # Estuary Free vs Sed
+  # p-value = 0.000259
+
+# Inland
+kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Inland")
+  # p-value = 3.624e-05
+
+
+### Test Season within Lake Type ###
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box)
+  # p-value = 0.6103
+
+# Laurentian
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # p-value = 0.241
+
+# Estuary
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Estuary")
+  # p-value = 0.2177
+
+# Inland
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland")
+  # p-value = 0.0009751
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland" & Season != "Spring")
+  # Summer vs Fall
+  # p-value = 0.0005545
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland" & Season != "Summer")
+  # Spring vs Fall
+  # p-value = 0.0007583
+kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland" & Season != "Fall")
+  # Spring vs Summer
+  # p-value = 0.3826
+
+### Test Depth within Lake Type ###
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box)
+  # p-value = 0.004995
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset = Depth !="Sediment")
+  # Top vs Bot
+  # p-value = 0.3348
+
+# Laurentian
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # p-value = 0.07562
+
+# Estuary
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary")
+  # p-value = 1.348e-05
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Source == "Water")
+  # Top vs Bot
+  # p-value = 0.1037
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Top")
+  # Bot vs Sed
+  # p-value = 9.896e-06
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Bottom")
+  # Top vs Sed
+  # p-value = 0.0001089
+
+# Inland
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Inland")
+  # p-value = 0.1201
 
 ```
 
@@ -911,10 +976,6 @@ final.stats <- left_join(alphadiv, sum.stats, by=c("Lake_Type", "Fraction", "mea
 final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
 
 
-#final.stats <- within(final.stats, Lake_frac <- paste(Lake_Type, Fraction, sep='_'))
-
-
-
 ##### PLOT #####
 png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
 ggplot(final.stats, aes(x = Fraction, y = mean)) +
@@ -937,6 +998,41 @@ ggplot(final.stats, aes(x = Fraction, y = mean)) +
         strip.background = element_blank(),
         legend.position="none")
 dev.off()
+
+
+##### Inverse Simpson #####
+
+# Pull out just Inverse Simpson
+inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
+inv.simp$measure <- factor(inv.simp$measure, levels="Inverse Simpson")
+
+
+final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
+
+### plot ###
+#png("inv.simp.png", width = 8.7, height = 13, units = "cm", res = 600)
+ggplot(inv.simp, aes(x = Fraction, y = mean)) +
+  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+                position=position_dodge(1)) +
+  geom_point(data=final.stats, aes(x=Fraction, y=Median), pch=95, size=7) +
+  geom_point(data=final.stats, aes(x=Fraction, y=Mean), pch=126, size=7) +
+  facet_grid(~Lake_Type, scales = "free", space = "free_x") +
+  ylab("Mean") + 
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(colour = "black", size=7),
+        axis.text.y = element_text(colour = "black", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size = 10),
+        strip.text.x = element_text(size=10, face="bold"),
+        strip.text.y = element_text(size=10, face="bold"),
+        #legend.title = element_text(size=8, face="bold"),
+        #legend.text = element_text(size = 8),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        strip.background = element_blank(),
+        legend.position="none")
+#dev.off()
+
+
 ```
 
 
