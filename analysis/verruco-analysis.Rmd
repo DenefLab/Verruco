@@ -752,7 +752,8 @@ Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
 frac.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
-  xlab("Relative Abundance (%)") + ylab("Relative Abundance (%)") +
+  xlab("Lake Type") + ylab("Relative Abundance (%)") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
         axis.text.y = element_text(colour="black", size=8),
@@ -760,13 +761,16 @@ frac.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction
         plot.title = element_text(face="bold", size=10),
         legend.title = element_text(size=10, face="bold"),
         legend.text = element_text(size = 9),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  annotate("text", x= 1, y=41, label = "*", size=6, colour="red")
 #dev.off()
 
 seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
   #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
-  xlab("Relative Abundance (%)") + ylab("Relative Abundance (%)") +
+  xlab("Lake Type") + ylab("Relative Abundance (%)") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
         axis.text.y = element_text(colour="black", size=8),
@@ -774,7 +778,24 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
         plot.title = element_text(face="bold", size=10),
         legend.title = element_text(size=10, face="bold"),
         legend.text = element_text(size = 9),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1), y=c(41,41,41), size=6, color="red")
+
+ann_text <- data.frame(lab=c(" ", " ", "*"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"), levels = c("Laurentian", "Estuary", "Inland")), Season = factor(c("Spring", "Summer", "Fall")))
+
+
+
+  geom_text(data = ann_text,aes(label=lab), x=c(-0.21,-0.21,-0.21),
+            y=c(0.34,0.34,0.34), size=3) +
+  guides(color = F, shape = F, fill=F)
+  #guides(color = guide_legend(order=1, override.aes=list(size=2)),
+  #       shape = guide_legend(order=2, override.aes=list(size=2)))
+#dev.off()
+
+
+ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlation=0.797"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),levels = c("Laurentian","Estuary","Inland")))
+
 
 # tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
 # grid.newpage()
@@ -1019,7 +1040,7 @@ inv.simp.plot <- ggplot(inv.simp, aes(x = Fraction, y = mean)) +
 
 ### RelAbun + Inverse Simpson Plot
 ```{r}
-tiff("boxplot.invsimp.tiff", width = 17.8, height = 15, units = "cm", res = 600)
+png("boxplot.invsimp.png", width = 17.8, height = 15, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
 print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
