@@ -752,50 +752,37 @@ Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
 frac.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
-  xlab("Relative Abundance (%)") + ylab("Lake Type") +
+  xlab("Relative Abundance (%)") + ylab("Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=10),
-        axis.text.y = element_text(colour="black", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
         axis.title.y = element_text(face="bold", size=10),
         plot.title = element_text(face="bold", size=10),
         legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9))
+        legend.text = element_text(size = 9),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
 #dev.off()
-
-# Steal the legend
-g_legend <- function(a.gplot){
-    tmp <- ggplot_gtable(ggplot_build(a.gplot))
-    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-    legend <- tmp$grobs[[leg]]
-    return(legend)}
-legend <- g_legend(plot)
-
-
-
-
 
 seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
   #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
-  xlab("Relative Abundance (%)") + ylab("Lake Type") +
+  xlab("Relative Abundance (%)") + ylab("Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=10),
-        axis.text.y = element_text(colour="black", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
         axis.title.y = element_text(face="bold", size=10),
         plot.title = element_text(face="bold", size=10),
         legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9))
+        legend.text = element_text(size = 9),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
 
-
-
-
-tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,2.15), heights=c(1)))))
-print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
-grid.draw(legend)
-dev.off()
+# tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
+# grid.newpage()
+# pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,2.15), heights=c(1)))))
+# print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+# legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
+# grid.draw(legend)
+# dev.off()
 
 
 
@@ -1000,38 +987,45 @@ ggplot(final.stats, aes(x = Fraction, y = mean)) +
 dev.off()
 
 
-##### Inverse Simpson #####
+##### Isolate Inverse Simpson #####
 
 # Pull out just Inverse Simpson
 inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
-inv.simp$measure <- factor(inv.simp$measure, levels="Inverse Simpson")
-
-
-final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
 
 ### plot ###
 #png("inv.simp.png", width = 8.7, height = 13, units = "cm", res = 600)
-ggplot(inv.simp, aes(x = Fraction, y = mean)) +
+inv.simp.plot <- ggplot(inv.simp, aes(x = Fraction, y = mean)) +
   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
                 position=position_dodge(1)) +
-  geom_point(data=final.stats, aes(x=Fraction, y=Median), pch=95, size=7) +
-  geom_point(data=final.stats, aes(x=Fraction, y=Mean), pch=126, size=7) +
+  geom_point(data=inv.simp, aes(x=Fraction, y=Median), pch=95, size=7) +
+  geom_point(data=inv.simp, aes(x=Fraction, y=Mean), pch=126, size=7) +
   facet_grid(~Lake_Type, scales = "free", space = "free_x") +
-  ylab("Mean") + 
+  ylab("Mean Inverse Simpson") + ylim(0,12.5) +
   theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(colour = "black", size=7),
-        axis.text.y = element_text(colour = "black", size=10),
+        axis.text.x = element_text(colour = "black", size=8),
+        axis.text.y = element_text(colour = "black", size=8),
         axis.title.y = element_text(face="bold", size=10),
         plot.title = element_text(face="bold", size = 10),
         strip.text.x = element_text(size=10, face="bold"),
         strip.text.y = element_text(size=10, face="bold"),
         #legend.title = element_text(size=8, face="bold"),
         #legend.text = element_text(size = 8),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         strip.background = element_blank(),
         legend.position="none")
 #dev.off()
 
+```
+
+### RelAbun + Inverse Simpson Plot
+```{r}
+tiff("boxplot.invsimp.tiff", width = 17.8, height = 15, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(seas.box, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(inv.simp.plot, vp=viewport(layout.pos.row=2, layout.pos.col=1:2))
+dev.off()
 
 ```
 
