@@ -738,13 +738,6 @@ Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
 Ver.box <- data.frame(sample_data(Ver))
 Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
 
-# sum.box <- Ver.box %>%
-#   group_by(Lake_Type, Fraction) %>%
-#   summarize(Mean = mean(Relative_Abundance),
-#             Median = median(Relative_Abundance),
-#             SD = sd(Relative_Abundance),
-#             SE = se(Relative_Abundance))
-
 
 
 ### Plotting Time!
@@ -785,18 +778,6 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
 ann_text <- data.frame(lab=c(" ", " ", "*"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"), levels = c("Laurentian", "Estuary", "Inland")), Season = factor(c("Spring", "Summer", "Fall")))
 
 
-
-  geom_text(data = ann_text,aes(label=lab), x=c(-0.21,-0.21,-0.21),
-            y=c(0.34,0.34,0.34), size=3) +
-  guides(color = F, shape = F, fill=F)
-  #guides(color = guide_legend(order=1, override.aes=list(size=2)),
-  #       shape = guide_legend(order=2, override.aes=list(size=2)))
-#dev.off()
-
-
-ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlation=0.797"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),levels = c("Laurentian","Estuary","Inland")))
-
-
 # tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
 # grid.newpage()
 # pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,2.15), heights=c(1)))))
@@ -804,6 +785,14 @@ ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlatio
 # legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
 # grid.draw(legend)
 # dev.off()
+
+### Stat Summaries ###
+frac.stats <- Ver.box %>%
+  group_by(Lake_Type, Fraction) %>%
+  summarize(Mean = mean(Relative_Abundance),
+            Median = median(Relative_Abundance))
+
+
 
 
 
@@ -1035,6 +1024,46 @@ inv.simp.plot <- ggplot(inv.simp, aes(x = Fraction, y = mean)) +
         strip.background = element_blank(),
         legend.position="none")
 #dev.off()
+
+
+### Kruskal-Wallis ###
+
+# Lake Type
+kruskal.test(formula = mean ~ Lake_Type, data = inv.simp)
+  # p-value = 0.1772
+
+# Source
+kruskal.test(formula = mean ~ Source, data = inv.simp)
+  # p-value = 0.0005339
+
+# Fraction
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Fraction != "Sediment")
+  # p-value = 0.6899
+
+# Laurentian
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Laurentian")
+  # p-value = 0.1208
+
+# Estuary
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary")
+  # p-value = 0.002485
+kruskal.test(formula = mean ~ Source, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Sed vs Water
+  # p-value = 0.0007338
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
+  # Free vs Part
+  # p-value = 0.002485
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Free")
+  # Part vs Sed
+  # p-value = 0.002353
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Particle")
+  # Free vs Sed
+  # p-value = 0.001522
+
+# Inland
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Inland")
+  # p-value = 0.7604
+
 
 ```
 
