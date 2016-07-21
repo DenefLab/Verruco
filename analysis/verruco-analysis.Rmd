@@ -201,7 +201,7 @@ ggplot(top300.sums,aes(x=row.names(top300.sums), y=taxa_sums.top300.OTUs.)) +
 
 
 
-### Let's take a look at the phyla in our normalized dataset
+### Examine Phyla
 ```{r}
 # Merge samples with the same taxonomic rank
 good_phylum <- tax_glom(scaled, taxrank = "Phylum")
@@ -231,7 +231,7 @@ top5phyla.barplot <-barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum
 
 ```
 
-### UNSTACKED BAR PLOT OF Lake_Type
+### Phyla-level bar plot
 ```{r}
 # Summarize data by Lake_Type
 phy.df <- psmelt(phylum.99)
@@ -327,6 +327,61 @@ ggplot(sums_Ver, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs))
 
 ```
 
+### Verruco Relative Abundance to test normality
+```{r}
+# Transforms each merged phylum count to rel abun
+Ver.rel <- transform_sample_counts(Ver, function(x){x/sum(x)})
+
+# If a phylum has <1% rel abun, change that to 0%
+otu_table(Ver.rel)[otu_table(Ver.rel)<.01] <- 0
+
+# Remove anything with 0% rel abun
+Ver.rel = prune_taxa(taxa_sums(Ver.rel)>0,Ver.rel)
+  # Remove taxa = 135
+  # Remain taxa = 208
+
+# Create rank abundance of OTUs
+barplot(sort(taxa_sums(Ver.rel),TRUE)[1:20]/nsamples(Ver.rel),las=2,cex.axis=.7)
+    ## 1 = OPB35_soil_group
+    ## 2 = OPB35_soil_group
+    ## 3 = Opitutae - vadinHA64
+    ## 4 = Spartobacteria - Chthoniobacterales - FukuN18_freshwater_Lake_Type
+    ## 5 = Verrucomicrobiae - Verrucomicrobiales - Verrucomicrobiaceae
+
+Ver.otu <- as.numeric(otu_table(Ver.rel))
+hist(Ver.otu)
+    ## So skewed that I can't even get a legit histogram from it
+qqnorm(Ver.otu)
+qqline(Ver.otu)
+    ## Looks exponentially distributed
+
+# Test for normality
+shapiro.test(Ver.otu)
+    ## Too many samples
+ks.test(Ver.otu, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
+    # p-value = 0
+    # Not normal
+ks.test(Ver.otu, "pexp")
+    ## p-value = 9
+    ## not exponentially distributed
+Ver.otu <- Ver.otu + 1
+
+#### Log Transformation ####
+Ver.log <- log(Ver.otu)
+hist(Ver.log)
+    ## Still not normal
+    ## Skewed to the right
+qqnorm(Ver.log)
+qqline(Ver.log)
+ks.test(Ver.log, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
+    ## p=value = 0
+    ## Not normal
+
+### Verruco Intra-Phylum Rel Abun is NOT NORMAL
+
+```
+
+
 ### Intra-Verruco Rel Abund
 ```{r}
 # Merge all Verruco OTUs by Class
@@ -357,141 +412,141 @@ Ver.colors <- c("OPB35_soil_group" = "#e41a1c", Opitutae = "#377eb8", "S-BQ2-57_
 
 ##### Group & Fraction facet #####
 
-# Pull out the factors that I'll use
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Lake_Type","Fraction"))
-
-# Calculate stat summaries
-lakefrac <- ddply(sub.classVer.df, c("Lake_Type","Fraction", "Class"), summarise,
-                   Mean = mean(Abundance),
-                   Median = median(Abundance),
-                   SD = sd(Abundance),
-                   SE = se(Abundance),
-                   iqr = IQR(Abundance))
-
-### GGPLOT IT!
-ggplot(lakefrac, aes(y=Mean, x = Class, fill = Class)) +
-  facet_grid(Fraction ~ Lake_Type) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none") 
-
-
-
-
-
-
-
-##### Season & Fraction facet #####
-
-# Pull out the factors that I'll be using to make my graph
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Fraction"))
-
-# Calculate stat summaries
-seasfrac <- ddply(sub.classVer.df, c("Season", "Class", "Fraction"), summarise,
-                   Mean= mean(Abundance),
-                   Median = median(Abundance),
-                   SD = sd(Abundance),
-                   SE = se(Abundance),
-                   iqr = IQR(Abundance))
-
-
-### GGPLOT IT!
-ggplot(seasfrac, aes(y=Mean, x = Class, fill = Class)) +
-  facet_grid(Fraction ~ Season) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
-
-
-
-
-##### Lake_Type & Season facet #####
-
-# Pull out the factors that I'll be using to make my graph
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Lake_Type"))
-
-# Calculate stat summaries
-lakeseas <- ddply(sub.classVer.df, c("Season", "Class", "Lake_Type"), summarise,
-                   Mean = mean(Abundance),
-                   Median = median(Abundance),
-                   SD = sd(Abundance),
-                   SE = se(Abundance),
-                   iqr = IQR(Abundance))
-
-
-
-### GGPLOT IT!
-ggplot(lakeseas, aes(y=Mean, x = Class, fill = Class)) +
-  facet_grid(Season ~ Lake_Type) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
-
-
-
-
-
-
-##### Fraction & Depth facet #####
-
-# Pull out the factors that I'll be using to make my graph
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
-
-# Calculate stat summaries
-depthfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
-                   Mean = mean(Abundance),
-                   Median = median(Abundance),
-                   SD = sd(Abundance),
-                   SE = se(Abundance),
-                   iqr = IQR(Abundance))
-
-
-### GGPLOT IT!
-ggplot(depthfrac, aes(y=Mean, x = Class, fill = Class)) +
-  facet_grid(Fraction ~ Depth) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
+# # Pull out the factors that I'll use
+# sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Lake_Type","Fraction"))
+# 
+# # Calculate stat summaries
+# lakefrac <- ddply(sub.classVer.df, c("Lake_Type","Fraction", "Class"), summarise,
+#                    Mean = mean(Abundance),
+#                    Median = median(Abundance),
+#                    SD = sd(Abundance),
+#                    SE = se(Abundance),
+#                    iqr = IQR(Abundance))
+# 
+# ### GGPLOT IT!
+# ggplot(lakefrac, aes(y=Mean, x = Class, fill = Class)) +
+#   facet_grid(Fraction ~ Lake_Type) +
+#   geom_bar(stat="identity", position=position_dodge()) +
+#   scale_fill_manual(values = Ver.colors, name = "Class") +
+#   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+#   geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
+#   xlab("Class") + ylab("Mean Relative Abundance (%)") +
+#   theme(axis.title.x = element_text(face="bold", size=16),
+#         axis.text.x = element_text(angle=0, colour="black", size=12),
+#         axis.text.y = element_text(colour="black", size=12),
+#         axis.title.y = element_text(face="bold", size=16),
+#         plot.title = element_text(face="bold", size=20),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size = 12),
+#         legend.position="none") 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# ##### Season & Fraction facet #####
+# 
+# # Pull out the factors that I'll be using to make my graph
+# sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Fraction"))
+# 
+# # Calculate stat summaries
+# seasfrac <- ddply(sub.classVer.df, c("Season", "Class", "Fraction"), summarise,
+#                    Mean= mean(Abundance),
+#                    Median = median(Abundance),
+#                    SD = sd(Abundance),
+#                    SE = se(Abundance),
+#                    iqr = IQR(Abundance))
+# 
+# 
+# ### GGPLOT IT!
+# ggplot(seasfrac, aes(y=Mean, x = Class, fill = Class)) +
+#   facet_grid(Fraction ~ Season) +
+#   geom_bar(stat="identity", position=position_dodge()) +
+#   scale_fill_manual(values = Ver.colors, name = "Class") +
+#   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+#   geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
+#   xlab("Class") + ylab("Mean Relative Abundance (%)") +
+#   theme(axis.title.x = element_text(face="bold", size=16),
+#         axis.text.x = element_text(angle=0, colour="black", size=12),
+#         axis.text.y = element_text(colour="black", size=12),
+#         axis.title.y = element_text(face="bold", size=16),
+#         plot.title = element_text(face="bold", size=20),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size = 12),
+#         legend.position="none")
+# 
+# 
+# 
+# 
+# ##### Lake_Type & Season facet #####
+# 
+# # Pull out the factors that I'll be using to make my graph
+# sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Lake_Type"))
+# 
+# # Calculate stat summaries
+# lakeseas <- ddply(sub.classVer.df, c("Season", "Class", "Lake_Type"), summarise,
+#                    Mean = mean(Abundance),
+#                    Median = median(Abundance),
+#                    SD = sd(Abundance),
+#                    SE = se(Abundance),
+#                    iqr = IQR(Abundance))
+# 
+# 
+# 
+# ### GGPLOT IT!
+# ggplot(lakeseas, aes(y=Mean, x = Class, fill = Class)) +
+#   facet_grid(Season ~ Lake_Type) +
+#   geom_bar(stat="identity", position=position_dodge()) +
+#   scale_fill_manual(values = Ver.colors, name = "Class") +
+#   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+#   geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
+#   xlab("Class") + ylab("Mean Relative Abundance (%)") +
+#   theme(axis.title.x = element_text(face="bold", size=16),
+#         axis.text.x = element_text(angle=0, colour="black", size=12),
+#         axis.text.y = element_text(colour="black", size=12),
+#         axis.title.y = element_text(face="bold", size=16),
+#         plot.title = element_text(face="bold", size=20),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size = 12),
+#         legend.position="none")
+# 
+# 
+# 
+# 
+# 
+# 
+# ##### Fraction & Depth facet #####
+# 
+# # Pull out the factors that I'll be using to make my graph
+# sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
+# 
+# # Calculate stat summaries
+# depthfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
+#                    Mean = mean(Abundance),
+#                    Median = median(Abundance),
+#                    SD = sd(Abundance),
+#                    SE = se(Abundance),
+#                    iqr = IQR(Abundance))
+# 
+# 
+# ### GGPLOT IT!
+# ggplot(depthfrac, aes(y=Mean, x = Class, fill = Class)) +
+#   facet_grid(Fraction ~ Depth) +
+#   geom_bar(stat="identity", position=position_dodge()) +
+#   scale_fill_manual(values = Ver.colors, name = "Class") +
+#   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+#   geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
+#   xlab("Class") + ylab("Mean Relative Abundance (%)") +
+#   theme(axis.title.x = element_text(face="bold", size=16),
+#         axis.text.x = element_text(angle=0, colour="black", size=12),
+#         axis.text.y = element_text(colour="black", size=12),
+#         axis.title.y = element_text(face="bold", size=16),
+#         plot.title = element_text(face="bold", size=20),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size = 12),
+#         legend.position="none")
 
 
 
@@ -552,12 +607,15 @@ ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
 
 
 
-
-
 ### Box-And-Whisker Plots
 ```{r}
+# From the phyloseq object of merged Phyla, subset out just Verrucos
 Ver.box.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
+
+# Create dataframe of sample data
 Ver.box <- data.frame(sample_data(Ver))
+
+# Add in rel abun of Verruco phylum
 Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
 
 
@@ -581,6 +639,14 @@ frac.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction
   annotate("text", x= 1, y=41, label = "*", size=6, colour="red")
 #dev.off()
 
+# This is the annotation text for the plot below (seas.box)
+# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+ann_text <- data.frame(lab=c(" ", " ", "*"),
+                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Season = factor(c("Spring", "Summer", "Fall")))
+
 seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
   #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
@@ -597,7 +663,7 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
   geom_text(data = ann_text, aes(label=lab), x=c(1,1,1), y=c(41,41,41), size=6, color="red")
 
-ann_text <- data.frame(lab=c(" ", " ", "*"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"), levels = c("Laurentian", "Estuary", "Inland")), Season = factor(c("Spring", "Summer", "Fall")))
+
 
 
 # tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
@@ -613,65 +679,76 @@ ann_text <- data.frame(lab=c(" ", " ", "*"), Lake_Type = factor(c("Laurentian", 
 
 ### Test between lake types ###
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Estuary")
+  # Laurentian vs Estuary
   # p-value = 4.219e-8
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Inland")
+  # Laurentian vs Inland
   # p-value = 1.206e-10
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Estuary" | Lake_Type=="Inland")
+  # Estuary vs Inland
   # p-value = 0.8792
 
 
-### Test Fraction within Lake Type ###
+### Test Fraction  ###
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box)
+  # All Fraction
   # p-value = 0.0003097
 kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box)
-  # Source
+  # All Source
   # p-value = 0.0001692
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Sediment")
-  # Free vs Part
+  # All Free vs Part
   # p-value = 0.1491
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Free")
-  # Part vs Sed
+  # All Part vs Sed
   # p-value = 0.0005459
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Particle")
-  # Free vs Sed
+  # All Free vs Sed
   # p-value = 0.0001081
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # Fraction
   # p-value = 0.01748
 
 # Estuary
 kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Source
   # p-value = 6.914e-06
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
-  # Estuary Free vs Part
+  # Free vs Part
   # p-value = 0.02291
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Free")
-  # Estuary Part vs Sed
+  # Part vs Sed
   # p-value = 3.859e-06
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Particle")
-  # Estuary Free vs Sed
+  # Free vs Sed
   # p-value = 0.000259
 
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Inland")
+  # Fraction
   # p-value = 3.624e-05
 
 
-### Test Season within Lake Type ###
+### Test Season ###
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box)
+  # All Season
   # p-value = 0.6103
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # Season
   # p-value = 0.241
 
 # Estuary
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Season
   # p-value = 0.2177
 
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland")
+  # Season
   # p-value = 0.0009751
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland" & Season != "Spring")
   # Summer vs Fall
@@ -683,19 +760,22 @@ kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_
   # Spring vs Summer
   # p-value = 0.3826
 
-### Test Depth within Lake Type ###
+### Test Depth ###
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box)
+  # All Depth
   # p-value = 0.004995
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset = Depth !="Sediment")
-  # Top vs Bot
+  # All Top vs Bot
   # p-value = 0.3348
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # Deptb
   # p-value = 0.07562
 
 # Estuary
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Depth
   # p-value = 1.348e-05
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Source == "Water")
   # Top vs Bot
@@ -709,6 +789,7 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
 
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Inland")
+  # Depth
   # p-value = 0.1201
 
 ```
@@ -717,6 +798,7 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
 
 ### Alpha Diversity
 ```{r}
+# Min # of reads
 min_lib <- min(sample_sums(Ver))
 
 # We will subsample to 35, the minimum number of reads. We will repeat this 100 times and average the diversity estimates from each trial.
@@ -758,7 +840,7 @@ sd <- apply(evenness, 1, sd)
 measure <- rep("Inverse Simpson", nsamp)
 even_stats <- data.frame(SampleID, mean, sd, measure)
 
-# Calculate Simpson's Evennes
+# Calculate Simpson's Evenness
 simps_stats<- data.frame(matrix(nrow = nrow(even_stats), ncol = 4))
 colnames(simps_stats) = c("SampleID", "mean", "sd", "measure")
 simps_stats$SampleID <- even_stats$SampleID
@@ -766,15 +848,14 @@ simps_stats$mean <- even_stats$mean/rich_stats$mean
 simps_stats$sd <- even_stats$sd/rich_stats$sd
 simps_stats$measure <- "Simpson's Evenness"
 
-
-# Combine the estimates for richness and evenness into one dataframe
+# Combine the estimates into one dataframe
 alpha <- rbind(rich_stats, even_stats, simps_stats)
 
 # Add the sample metadata into this dataframe using the merge() command
 s <- data.frame(sample_data(Ver))
 alphadiv <- merge(alpha, s, by = "SampleID") 
 
-# Group samples together by Lake_Type and Fraction
+# Group samples together by Lake_Type and Fraction & summarize stats
 sum.stats <- alphadiv %>%
   group_by(Lake_Type, Fraction, measure) %>%
   summarize(Mean = mean(mean), 
@@ -782,32 +863,33 @@ sum.stats <- alphadiv %>%
             SD = sd(mean), 
             Median = median(mean))
 
+# Combine stats summary & sample metadata
 final.stats <- left_join(alphadiv, sum.stats, by=c("Lake_Type", "Fraction", "measure"))
 final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
 
 
 ##### PLOT #####
-png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
-ggplot(final.stats, aes(x = Fraction, y = mean)) +
-  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-                position=position_dodge(1)) +
-  geom_point(data=final.stats, aes(x=Fraction, y=Median), pch=95, size=7) +
-  geom_point(data=final.stats, aes(x=Fraction, y=Mean), pch=126, size=7) +
-  facet_grid(measure ~ Lake_Type, scales = "free", space = "free_x") +
-  ylab("Mean") + 
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(colour = "black", size=7),
-        axis.text.y = element_text(colour = "black", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size = 10),
-        strip.text.x = element_text(size=10, face="bold"),
-        strip.text.y = element_text(size=10, face="bold"),
-        #legend.title = element_text(size=8, face="bold"),
-        #legend.text = element_text(size = 8),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        strip.background = element_blank(),
-        legend.position="none")
-dev.off()
+# png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
+# ggplot(final.stats, aes(x = Fraction, y = mean)) +
+#   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+#                 position=position_dodge(1)) +
+#   geom_point(data=final.stats, aes(x=Fraction, y=Median), pch=95, size=7) +
+#   geom_point(data=final.stats, aes(x=Fraction, y=Mean), pch=126, size=7) +
+#   facet_grid(measure ~ Lake_Type, scales = "free", space = "free_x") +
+#   ylab("Mean") + 
+#   theme(axis.title.x = element_text(face="bold", size=10),
+#         axis.text.x = element_text(colour = "black", size=7),
+#         axis.text.y = element_text(colour = "black", size=10),
+#         axis.title.y = element_text(face="bold", size=10),
+#         plot.title = element_text(face="bold", size = 10),
+#         strip.text.x = element_text(size=10, face="bold"),
+#         strip.text.y = element_text(size=10, face="bold"),
+#         #legend.title = element_text(size=8, face="bold"),
+#         #legend.text = element_text(size = 8),
+#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         strip.background = element_blank(),
+#         legend.position="none")
+# dev.off()
 
 
 ##### Isolate Inverse Simpson #####
@@ -840,6 +922,7 @@ inv.simp.plot <- ggplot(inv.simp, aes(x = Fraction, y = mean)) +
 
 
 ### Kruskal-Wallis ###
+# For Inverse Simpson values
 
 # Lake Type
 kruskal.test(formula = mean ~ Lake_Type, data = inv.simp)
@@ -849,16 +932,18 @@ kruskal.test(formula = mean ~ Lake_Type, data = inv.simp)
 kruskal.test(formula = mean ~ Source, data = inv.simp)
   # p-value = 0.0005339
 
-# Fraction
+# Free vs Part
 kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Fraction != "Sediment")
   # p-value = 0.6899
 
 # Laurentian
 kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Laurentian")
+  # Fraction
   # p-value = 0.1208
 
 # Estuary
 kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Fraction
   # p-value = 0.002485
 kruskal.test(formula = mean ~ Source, data = inv.simp, subset=Lake_Type=="Estuary")
   # Sed vs Water
@@ -875,6 +960,7 @@ kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estu
 
 # Inland
 kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Inland")
+  # Fraction
   # p-value = 0.7604
 
 
@@ -882,6 +968,8 @@ kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Inla
 
 ### RelAbun + Inverse Simpson Plot
 ```{r}
+# Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
+
 png("boxplot.invsimp.png", width = 17.8, height = 15, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
@@ -898,37 +986,58 @@ dev.off()
 ```{r}
 #http://picante.r-forge.r-project.org/picante-intro.pdf
 
-### Unweighted
+### Unweighted Calculations ###
+
+# Create objects that you'll use with the picante package
 ver.tree <- read.newick(file="ver.tre")
 pre.picante <- merge_phyloseq(Ver.rel, ver.tree)
 picante.phy <- phy_tree(pre.picante)
+  # Phylogenetic tree to be used
 picante.com <- data.frame(otu_table(pre.picante))
+  # Community data (otu table) to be used
 
 # Calculate Faith's Phylogenetic Diversity
 pd.result <- pd(picante.com, picante.phy, include.root=T)
 pd <- data.frame(pd.result)
 
+## Convert Verruco tree to a distance matrix
+# This distance matrix is used to calculate MDP & MNTD
 # phydist <- cophenetic(picante.phy)
+#
+## Calculate MDP (Mean Pairwise Distance)
 # ses.mpd.result <- ses.mpd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
+#
+## Calculate MNTD (Mean Nearest Taxon Distance)
 # ses.mntd.result <- ses.mntd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
 # 
+## Pull out MDP and MNTD results
 # mpd <- data.frame(ses.mpd.result)
 # mntd <- data.frame (ses.mntd.result)
 
 
-### Weighted
+### Weighted ###
 #ver.tree <- read.newick(file="ver.tre")
+
+# Create objects that you'll use with the picante package
 pre.picante <- merge_phyloseq(Ver, ver.tree)
 phy <- phy_tree(pre.picante)
+  # Phylogenetic tree to be used
 com <- data.frame(otu_table(pre.picante))
+  # Community data (otu table) to be used
 
 # Calculate Faith's Phylogenetic Diversity
 pd.result.weigh <- pd(com, phy, include.root=T)
 
+## Convert Verruco tree to a distance matrix
 # phydist.weigh <- cophenetic(phy)
+#
+## Calculate MDP (Mean Pairwise Distance)
 # ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
+#
+## Calculate MNTD (Mean Nearest Taxon Distance)
 # ses.mntd.result.weigh <- ses.mntd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
 # 
+## Pull out MDP and MNTD results
 # mpd.weigh <- data.frame(ses.mpd.result.weigh)
 # mntd.weigh <- data.frame (ses.mntd.result.weigh)
 
@@ -941,6 +1050,9 @@ pd$SampleID <- row.names(pd)
   # Make sure all SampleID's match!
 
 # Let's pull out the first Stat in each of the 3 tests I ran
+# PD test = PD
+# MPD test = SES (Standardized Effect Size)
+# MNTD test = SES (Standardized Effect Size)
 pd.stats <- data.frame(pd$SampleID, pd$PD)
 pd.stats$Measure <- rep("PD", 226)
 colnames(pd.stats) <- c("SampleID", "Stat", "Measure")
@@ -951,10 +1063,12 @@ colnames(pd.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.stats$Measure <- rep("MNTD SES", 226)
 # colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
 
-# Let's combine those initial stats into one big dataframe
+## Let's combine those initial stats into one big dataframe
 # unweigh.stats <- rbind(pd.stats, mpd.stats, mntd.stats)
 
-# Now let's pull out the second stat in the mpd and mntd stats test
+## Now let's pull out the second stat in the mpd and mntd stats test
+## MDP test = p-value
+## MNTD test = p-value
 # mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.p)
 # mpd.stats$Measure <- rep("MPD p-value",226)
 # colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
@@ -962,50 +1076,50 @@ colnames(pd.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.stats$Measure <- rep("MNTD p-value", 226)
 # colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
 
-# Making the final dataframe to use!
+## Making the final dataframe to use!
 # unweigh.stats <- rbind(unweigh.stats, mpd.stats, mntd.stats)
 
-# Pull out sample data
+## Pull out sample data
 s <- data.frame(sample_data(Ver))
-# Combine sample data with unweighted stats data
+## Combine sample data with unweighted stats data
 # unweigh.stats <- merge(unweigh.stats, s, by="SampleID")
 
 
-# Group samples together by Lake_Type and Fraction
-sum.unweigh <- unweigh.stats %>%
-  group_by(Lake_Type, Fraction, Measure) %>%
-  summarize(Mean = mean(Stat),
-            SE = se(Stat),
-            SD = sd(Stat),
-            Median = median(Stat))
+## Group samples together by Lake_Type and Fraction & calculate stats summaries
+# sum.unweigh <- unweigh.stats %>%
+#   group_by(Lake_Type, Fraction, Measure) %>%
+#   summarize(Mean = mean(Stat),
+#             SE = se(Stat),
+#             SD = sd(Stat),
+#             Median = median(Stat))
 
-# Combine the raw stats with the summarized stats
-final.unweigh <- left_join(unweigh.stats, sum.unweigh, by=c("Lake_Type", "Fraction", "Measure"))
-final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
+## Combine the raw stats with the summarized stats
+#final.unweigh <- left_join(unweigh.stats, sum.unweigh, by=c("Lake_Type", "Fraction", "Measure"))
+#final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
 
 
 
 ##### UNWEIGH: PLOT IT! #####
 #png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
-unweigh.plot <- ggplot(final.unweigh, aes(x = Fraction, y = Stat)) +
-  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-                position=position_dodge(1)) +
-  geom_point(data=final.unweigh, aes(x=Fraction, y=Median), pch=95, size=7) +
-  geom_point(data=final.unweigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
-  facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
-  ylab("Mean") + ggtitle("Unweighted") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(colour = "black", size=7),
-        axis.text.y = element_text(colour = "black", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size = 10),
-        strip.text.x = element_text(size=10, face="bold"),
-        strip.text.y = element_text(size=10, face="bold"),
-        #legend.title = element_text(size=8, face="bold"),
-        #legend.text = element_text(size = 8),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        strip.background = element_blank(),
-        legend.position="none")
+# unweigh.plot <- ggplot(final.unweigh, aes(x = Fraction, y = Stat)) +
+#   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+#                 position=position_dodge(1)) +
+#   geom_point(data=final.unweigh, aes(x=Fraction, y=Median), pch=95, size=7) +
+#   geom_point(data=final.unweigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
+#   facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
+#   ylab("Mean") + ggtitle("Unweighted") +
+#   theme(axis.title.x = element_text(face="bold", size=10),
+#         axis.text.x = element_text(colour = "black", size=7),
+#         axis.text.y = element_text(colour = "black", size=10),
+#         axis.title.y = element_text(face="bold", size=10),
+#         plot.title = element_text(face="bold", size = 10),
+#         strip.text.x = element_text(size=10, face="bold"),
+#         strip.text.y = element_text(size=10, face="bold"),
+#         #legend.title = element_text(size=8, face="bold"),
+#         #legend.text = element_text(size = 8),
+#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         strip.background = element_blank(),
+#         legend.position="none")
 #dev.off()
 
 
@@ -1020,6 +1134,9 @@ pd.result.weigh$SampleID <- row.names(pd.result.weigh)
   # Make sure all SampleID's match!
 
 # Let's pull out the first Stat in each of the 3 tests I ran
+# PD test = PD
+# MPD test = SES (Standardized Effect Size)
+# MNTD test = SES (Standardized Effect Size)
 pd.w.stats <- data.frame(pd.result.weigh$SampleID, pd.result.weigh$PD)
 pd.w.stats$Measure <- rep("PD", 226)
 colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
@@ -1030,10 +1147,12 @@ colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.w.stats$Measure <- rep("MNTD SES", 226)
 # colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
 
-# Let's combine those initial stats into one big dataframe
+## Let's combine those initial stats into one big dataframe
 # weigh.stats <- rbind(pd.w.stats, mpd.w.stats, mntd.w.stats)
 
-# Now let's pull out the second stat in the mpd and mntd stats test
+## Now let's pull out the second stat in the mpd and mntd stats test
+## MDP test = p-value
+## MNTD test = p-value
 # mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.p)
 # mpd.w.stats$Measure <- rep("MPD p-value",226)
 # colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
@@ -1041,51 +1160,51 @@ colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.w.stats$Measure <- rep("MNTD p-value", 226)
 # colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
 
-# Making the final dataframe to use!
+## Making the final dataframe to use!
 # weigh.stats <- rbind(weigh.stats, mpd.w.stats, mntd.w.stats)
 
-# Pull out sample data
+## Pull out sample data
 # s <- data.frame(sample_data(Ver))
-# Combine sample data with unweighted stats data
+## Combine sample data with unweighted stats data
 # weigh.stats <- merge(weigh.stats, s, by="SampleID")
 
 
 
-# Group samples together by Lake_Type and Fraction
-sum.weigh <- weigh.stats %>%
-  group_by(Lake_Type, Fraction, Measure) %>%
-  summarize(Mean = mean(Stat),
-            SE = se(Stat),
-            SD = sd(Stat),
-            Median = median(Stat))
+## Group samples together by Lake_Type and Fraction
+# sum.weigh <- weigh.stats %>%
+#   group_by(Lake_Type, Fraction, Measure) %>%
+#   summarize(Mean = mean(Stat),
+#             SE = se(Stat),
+#             SD = sd(Stat),
+#             Median = median(Stat))
 
-# Combine the raw stats with the summarized stats
-final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
-final.weigh$Measure <- factor(final.weigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
+## Combine the raw stats with the summarized stats
+#final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
+#final.weigh$Measure <- factor(final.weigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
 
 
 
 ##### WEIGH: PLOT IT! #####
 #png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
-weigh.plot <- ggplot(final.weigh, aes(x = Fraction, y = Stat)) +
-  geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-                position=position_dodge(1)) +
-  geom_point(data=final.weigh, aes(x=Fraction, y=Median), pch=95, size=7) +
-  geom_point(data=final.weigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
-  facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
-  ylab("Mean") + ggtitle("Weighted") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(colour = "black", size=7),
-        axis.text.y = element_text(colour = "black", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size = 10),
-        strip.text.x = element_text(size=10, face="bold"),
-        strip.text.y = element_text(size=10, face="bold"),
-        #legend.title = element_text(size=8, face="bold"),
-        #legend.text = element_text(size = 8),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        strip.background = element_blank(),
-        legend.position="none")
+# weigh.plot <- ggplot(final.weigh, aes(x = Fraction, y = Stat)) +
+#   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
+#                 position=position_dodge(1)) +
+#   geom_point(data=final.weigh, aes(x=Fraction, y=Median), pch=95, size=7) +
+#   geom_point(data=final.weigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
+#   facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
+#   ylab("Mean") + ggtitle("Weighted") +
+#   theme(axis.title.x = element_text(face="bold", size=10),
+#         axis.text.x = element_text(colour = "black", size=7),
+#         axis.text.y = element_text(colour = "black", size=10),
+#         axis.title.y = element_text(face="bold", size=10),
+#         plot.title = element_text(face="bold", size = 10),
+#         strip.text.x = element_text(size=10, face="bold"),
+#         strip.text.y = element_text(size=10, face="bold"),
+#         #legend.title = element_text(size=8, face="bold"),
+#         #legend.text = element_text(size = 8),
+#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         strip.background = element_blank(),
+#         legend.position="none")
 #dev.off()
 
 
@@ -1147,339 +1266,293 @@ dev.off()
 ```
 
 
-### Verruco Relative Abundaunce to test normality
-```{r}
-# Transforms each merged phylum count to rel abun
-Ver.rel <- transform_sample_counts(Ver, function(x){x/sum(x)})
-
-# If a phylum has <1% rel abun, change that to 0%
-otu_table(Ver.rel)[otu_table(Ver.rel)<.01] <- 0
-
-# Remove anything with 0% rel abun
-Ver.rel = prune_taxa(taxa_sums(Ver.rel)>0,Ver.rel)
-  # Remove taxa = 135
-  # Remain taxa = 208
-
-# Create rank abundance of OTUs
-barplot(sort(taxa_sums(Ver.rel),TRUE)[1:20]/nsamples(Ver.rel),las=2,cex.axis=.7)
-    ## 1 = OPB35_soil_group
-    ## 2 = OPB35_soil_group
-    ## 3 = Opitutae - vadinHA64
-    ## 4 = Spartobacteria - Chthoniobacterales - FukuN18_freshwater_Lake_Type
-    ## 5 = Verrucomicrobiae - Verrucomicrobiales - Verrucomicrobiaceae
-
-Ver.otu <- as.numeric(otu_table(Ver.rel))
-hist(Ver.otu)
-    ## So skewed that I can't even get a legit histogram from it
-qqnorm(Ver.otu)
-qqline(Ver.otu)
-    ## Looks exponentially distributed
-
-# Test for normality
-shapiro.test(Ver.otu)
-    ## Too many samples
-ks.test(Ver.otu, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
-    # p-value = 0
-    # Not normal
-ks.test(Ver.otu, "pexp")
-    ## p-value = 9
-    ## not exponentially distributed
-Ver.otu <- Ver.otu + 1
-
-#### Log Transformation ####
-Ver.log <- log(Ver.otu)
-hist(Ver.log)
-    ## Still not normal
-    ## Skewed to the right
-qqnorm(Ver.log)
-qqline(Ver.log)
-ks.test(Ver.log, "pnorm", mean=mean(Ver.otu), sd=sd(Ver.otu))
-    ## p=value = 0
-    ## Not normal
-
-#################### Verruco Intra-Phylum Rel Abun is NOT NORMAL ####################
-
-```
-
-
-
 ### NMDS (Bray-Curtis)
 ```{r}
-nmds.bray <- ordinate(
-  physeq = Ver.rel, 
-  method = "NMDS", 
-  distance = "bray"
-)
-    # Stress = 0.2112829
+# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
 
-### Color = Depth, Shape = Lake_Type
-plot_ordination(
-  physeq = Ver.rel,
-  ordination = nmds.bray,
-  color = "Depth",
-  shape = "Lake_Type") + 
-  scale_color_manual(values = c("indianred1","green3","mediumpurple2", "skyblue")) +
-  scale_shape_manual(values = c(15,17,16)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
+# # Create ordination from phyloseq object
+# nmds.bray <- ordinate(
+#   physeq = Ver.rel, 
+#   method = "NMDS", 
+#   distance = "bray"
+# )
+#     # Stress = 0.2112829
 
-
-
-### Color = Lake_Type, Shape = Depth
-bray.nmds.Lake_Type.depth <- plot_ordination(
-  physeq = Ver.rel,
-  ordination = nmds.bray,
-  color = "Lake_Type",
-  shape = "Depth") + 
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  ggtitle("Bray-Curtis Dissimilarity") +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
+### Plot
+## Color = Depth, Shape = Lake_Type
+# plot_ordination(
+#   physeq = Ver.rel,
+#   ordination = nmds.bray,
+#   color = "Depth",
+#   shape = "Lake_Type") + 
+#   scale_color_manual(values = c("indianred1","green3","mediumpurple2", "skyblue")) +
+#   scale_shape_manual(values = c(15,17,16)) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
 
 
-
-### Color = Fraction, Shape = Lake_Type
-plot_ordination(
-  physeq = Ver.rel,
-  ordination = nmds.bray,
-  color = "Fraction",
-  shape = "Depth") + 
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
-
-
-
-### Color = Season, Shape = Lake_Type
-plot_ordination(
-  physeq = Ver.rel,
-  ordination = nmds.bray,
-  color = "Season",
-  shape = "Lake_Type") + 
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  scale_shape_manual(values = c(15,17,16)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
+### Plot
+## Color = Lake_Type, Shape = Depth
+# bray.nmds.Lake_Type.depth <- plot_ordination(
+#   physeq = Ver.rel,
+#   ordination = nmds.bray,
+#   color = "Lake_Type",
+#   shape = "Depth") + 
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   ggtitle("Bray-Curtis Dissimilarity") +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
 
 
+### Plot
+## Color = Fraction, Shape = Lake_Type
+# plot_ordination(
+#   physeq = Ver.rel,
+#   ordination = nmds.bray,
+#   color = "Fraction",
+#   shape = "Depth") + 
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
 
-### Facet = Lake_Type, Color = Fraction, Shape = Season
-plot_ordination(
-  physeq = Ver.rel,
-  ordination = nmds.bray,
-  color = "Fraction",
-  shape = "Season") + 
-  scale_color_manual(values = c("blue3","gold","tan3")) +
-  facet_wrap(facets = ~Lake_Type) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+### Plot
+## Color = Season, Shape = Lake_Type
+# plot_ordination(
+#   physeq = Ver.rel,
+#   ordination = nmds.bray,
+#   color = "Season",
+#   shape = "Lake_Type") + 
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   scale_shape_manual(values = c(15,17,16)) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
+
+
+### Plot 
+## Facet = Lake_Type, Color = Fraction, Shape = Season
+# plot_ordination(
+#   physeq = Ver.rel,
+#   ordination = nmds.bray,
+#   color = "Fraction",
+#   shape = "Season") + 
+#   scale_color_manual(values = c("blue3","gold","tan3")) +
+#   facet_wrap(facets = ~Lake_Type) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
   
 
-
-### Facet = Lake_Type, Color = Season, Shape = Fraction
-bray.nmds.facet <- plot_ordination(
-  physeq = Ver.rel,
-  ordination = nmds.bray,
-  color = "Season",
-  shape = "Fraction") + 
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  facet_wrap(facets = ~Lake_Type) +
-  ggtitle("Bray-Curtis Dissimilarity") +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
+### Plot
+## Facet = Lake_Type, Color = Season, Shape = Fraction
+# bray.nmds.facet <- plot_ordination(
+#   physeq = Ver.rel,
+#   ordination = nmds.bray,
+#   color = "Season",
+#   shape = "Fraction") + 
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   facet_wrap(facets = ~Lake_Type) +
+#   ggtitle("Bray-Curtis Dissimilarity") +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
 
 ```
 
 
 
 ### NMDS (Sorensen)
-``` {r soren}
-###################################### SORENSEN NMDS ######################################
-nowinOTU.df <- data.frame(otu_table(Ver.rel))
-nmds.soren <- metaMDS(nowinOTU.df, distance="bray", binary=TRUE)
-  # stress = 0.1934691 
-nmds.soren <- data.frame(nmds.soren$points)
-nmds.soren$names <- row.names(nmds.soren)
-nowinSamp <- data.frame(sample_data(Ver.rel))
-nmds.soren$Lake_Type <- nowinSamp$Lake_Type
-nmds.soren$Lake <- nowinSamp$Lake
-nmds.soren$Date <- nowinSamp$Date
-nmds.soren$Site <- nowinSamp$Site
-nmds.soren$Depth <- nowinSamp$Depth
-nmds.soren$Fraction <- nowinSamp$Fraction
-nmds.soren$Season <- nowinSamp$Season
-
-
-
-### Color = Depth, Shape = Lake_Type
-ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Depth, shape = Lake_Type,)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
-  geom_point(size = 2, alpha = 1) + theme_bw() +
-  scale_color_manual(name = "Depth", breaks = c("Top", "DCM", "Bottom", "Sediment"),
-                     labels = c("Top", "DCM", "Bottom", "Sediment"),
-                     values = c("indianred1","green3","mediumpurple2", "skyblue")) +
-  scale_shape_manual(name = "Lake_Type", breaks = c("Laurentian","Estuary","Inland"),
-                     labels = c("Laurentian","Estuary","Inland"),
-                     values = c(15,17,16)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
-
-
-### Color = Lake_Type, Shape = Depth
-soren.nmds.Lake_Type.depth <- ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Lake_Type, shape = Depth,)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
-  geom_point(size = 2, alpha = 1) + theme_bw() +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
-
-
-
-
-### Color = Fraction, Shape = Depth
-ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Fraction, shape = Depth,)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
-  geom_point(size = 2, alpha = 1) + theme_bw() +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  scale_shape_manual(values = c(17, 5, 16, 4)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3))) 
-
-
-### Facet = Lake_Type, Color = Fraction, Shape = Season
-ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season,)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
-  geom_point(size = 2, alpha = 1) + theme_bw() +
-  facet_grid(.~Lake_Type) +
-  scale_color_manual(values = c("blue3","gold", "tan3")) +
-  scale_shape_manual(values = c(17, 16, 15)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-
-
-### Facet = Lake_Type, Color = Season, Shape = Fraction
-soren.nmds.facet <- ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Season, shape = Fraction,)) +
-  xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
-  geom_point(size = 2, alpha = 1) + theme_bw() +
-  facet_grid(.~Lake_Type) +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  scale_shape_manual(values = c(16, 17, 15)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
+``` {r}
+# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
+# nowinOTU.df <- data.frame(otu_table(Ver.rel))
+# 
+# # Create Sorensen ordination
+# nmds.soren <- metaMDS(nowinOTU.df, distance="bray", binary=TRUE)
+#   # stress = 0.1934691 
+# nmds.soren <- data.frame(nmds.soren$points)
+# nmds.soren$names <- row.names(nmds.soren)
+# 
+# # Add sample data to sorensen object
+# nowinSamp <- data.frame(sample_data(Ver.rel))
+# nmds.soren$Lake_Type <- nowinSamp$Lake_Type
+# nmds.soren$Lake <- nowinSamp$Lake
+# nmds.soren$Date <- nowinSamp$Date
+# nmds.soren$Site <- nowinSamp$Site
+# nmds.soren$Depth <- nowinSamp$Depth
+# nmds.soren$Fraction <- nowinSamp$Fraction
+# nmds.soren$Season <- nowinSamp$Season
+# 
+# 
+# ### Plot
+# ## Color = Depth, Shape = Lake_Type
+# ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Depth, shape = Lake_Type,)) +
+#   xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+#   geom_point(size = 2, alpha = 1) + theme_bw() +
+#   scale_color_manual(name = "Depth", breaks = c("Top", "DCM", "Bottom", "Sediment"),
+#                      labels = c("Top", "DCM", "Bottom", "Sediment"),
+#                      values = c("indianred1","green3","mediumpurple2", "skyblue")) +
+#   scale_shape_manual(name = "Lake_Type", breaks = c("Laurentian","Estuary","Inland"),
+#                      labels = c("Laurentian","Estuary","Inland"),
+#                      values = c(15,17,16)) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
+# 
+# 
+# ### Plot
+# ## Color = Lake_Type, Shape = Depth
+# soren.nmds.Lake_Type.depth <- ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Lake_Type, shape = Depth,)) +
+#   xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+#   geom_point(size = 2, alpha = 1) + theme_bw() +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
+# 
+# 
+# 
+# ### Plot
+# ## Color = Fraction, Shape = Depth
+# ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Fraction, shape = Depth,)) +
+#   xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+#   geom_point(size = 2, alpha = 1) + theme_bw() +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   scale_shape_manual(values = c(17, 5, 16, 4)) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3))) 
+# 
+# # Plot
+# ## Facet = Lake_Type, Color = Fraction, Shape = Season
+# ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Fraction, shape = Season,)) +
+#   xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+#   geom_point(size = 2, alpha = 1) + theme_bw() +
+#   facet_grid(.~Lake_Type) +
+#   scale_color_manual(values = c("blue3","gold", "tan3")) +
+#   scale_shape_manual(values = c(17, 16, 15)) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
+# 
+# 
+# ### Plot
+# ## Facet = Lake_Type, Color = Season, Shape = Fraction
+# soren.nmds.facet <- ggplot(nmds.soren, aes(MDS1*10, MDS2*10, color=Season, shape = Fraction,)) +
+#   xlab("NMDS1") + ylab("NMDS2") + ggtitle("Sorensen Dissimilarity") +
+#   geom_point(size = 2, alpha = 1) + theme_bw() +
+#   facet_grid(.~Lake_Type) +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   scale_shape_manual(values = c(16, 17, 15)) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
 
 ```
 
 
 
 ### Create NMDS comparison plots
-```{r compare.nmds}
+```{r}
+# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
 #tiff("nmds.compare.tiff", width = 14, height = 10, units = "in", res = 500)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-print(bray.nmds.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-print(bray.nmds.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-print(soren.nmds.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-print(soren.nmds.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+# grid.newpage()
+# pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+# print(bray.nmds.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+# print(bray.nmds.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+# print(soren.nmds.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+# print(soren.nmds.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
 #dev.off()
 
 ### Bray-Curtis seems to cluster a bit more clearly than Sorensen
@@ -1493,8 +1566,11 @@ print(soren.nmds.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
 
 
 ### PCoA (Bray-Curtis)
-```{r pcoa, echo=FALSE}
+```{r}
+# Calculate bray-curtis dissimilarity from phyloseq object
 Ver.bray <- phyloseq::distance(physeq = Ver.rel, method = "bray")
+
+# Performs ordination on phyloseq object
 Ver.pcoa <- ordinate(physeq = Ver.rel, method = "PCoA", distance = "bray")
 
 
@@ -1502,47 +1578,50 @@ Ver.pcoa <- ordinate(physeq = Ver.rel, method = "PCoA", distance = "bray")
 #Ver.pcoa$values
 #look for broken stick value
 
-### Depth
-plot_ordination(
-  physeq = Ver.rel, 
-  ordination = Ver.pcoa, 
-  color = "Depth",
-  axes = c(1, 2),
-  title = "Bray-Curtis Dissimilarity") +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
+### Plot
+## Depth
+# plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = Ver.pcoa, 
+#   color = "Depth",
+#   axes = c(1, 2),
+#   title = "Bray-Curtis Dissimilarity") +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
 
-### Lake_Type
-plot_ordination(
-  physeq = Ver.rel, 
-  ordination = Ver.pcoa, 
-  color = "Lake_Type",
-  axes = c(2,3),
-  title = "Bray-Curtis Dissimilarity") +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
+### Plot
+## Lake_Type
+# plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = Ver.pcoa, 
+#   color = "Lake_Type",
+#   axes = c(2,3),
+#   title = "Bray-Curtis Dissimilarity") +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
 
-### Color = Lake_Type, Shape = Depth
+### Plot
+## Color = Lake_Type, Shape = Depth
 bray.pcoa.Lake_Type.depth <- plot_ordination(
   physeq = Ver.rel, 
   ordination = Ver.pcoa, 
@@ -1564,25 +1643,25 @@ bray.pcoa.Lake_Type.depth <- plot_ordination(
          shape = guide_legend(order=2, override.aes=list(size=3)))
 
 # Fraction PCoA
-plot_ordination(
-  physeq = Ver.rel, 
-  ordination = Ver.pcoa, 
-  color = "Fraction",
-  shape = "Season",
-  axes = c(1, 3),
-  title = "Bray-Curtis Dissimilarity") +
-  facet_wrap(facets = ~Lake_Type) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
+# plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = Ver.pcoa, 
+#   color = "Fraction",
+#   shape = "Season",
+#   axes = c(1, 3),
+#   title = "Bray-Curtis Dissimilarity") +
+#   facet_wrap(facets = ~Lake_Type) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
 
 # Season PCoA
 bray.pcoa.facet <- plot_ordination(
@@ -1610,254 +1689,124 @@ bray.pcoa.facet <- plot_ordination(
 
 
 ### PCoA (Sorensen)
-``` {r pcoa.sorensen}
-test <- dsvdis(nowinOTU.df, index="sorensen")
-soren.pcoa<- ordinate(physeq = Ver.rel, method = "PCoA", distance = test)
+``` {r}
+# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
 
-### Depth
-plot_ordination(
-  physeq = Ver.rel, 
-  ordination = soren.pcoa, 
-  color = "Depth",
-  axes = c(1,2),
-  title = "Sorensen Dissimilarity") +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold"))
-
-
-### Lake_Type
-plot_ordination(
-  physeq = Ver.rel, 
-  ordination = soren.pcoa, 
-  color = "Lake_Type",
-  axes = c(2,3),
-  title = "Sorensen Dissimilarity") +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold"))
-
-
-### Color = Lake_Type, Shape = Depth
-soren.pcoa.Lake_Type.depth <- plot_ordination(
-  physeq = Ver.rel, 
-  ordination = soren.pcoa, 
-  color = "Lake_Type",
-  shape = "Depth",
-  axes = c(2,3),
-  title = "Sorensen Dissimilarity") +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-
-### Facet = Lake_Type, Color = Fraction, Shape = Season
-plot_ordination(
-  physeq = Ver.rel, 
-  ordination = soren.pcoa, 
-  color = "Fraction",
-  shape = "Season",
-  axes = c(1, 3),
-  title = "Sorensen Dissimilarity") +
-  facet_wrap(facets = ~Lake_Type) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-### Facet = Lake_Type, Color = Season, Shape = Fraction
-soren.pcoa.facet <- plot_ordination(
-  physeq = Ver.rel, 
-  ordination = Ver.pcoa, 
-  color = "Season",
-  shape = "Fraction",
-  axes = c(1,2),
-  title = "Sorensen Dissimilarity") +
-  facet_wrap(facets = ~Lake_Type) +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-```
-
-
-### Create PCoA comparison plots
-```{r compare.pcoa}
-tiff("pcoa.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-print(soren.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-print(soren.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-dev.off()
-
-### Bray-Curtis seems to cluster a bit more clearly than Sorensen
+# # Calculates sorensen dissimilarity matrix
+# test <- dsvdis(nowinOTU.df, index="sorensen")
+# # Performs ordination on phyloseq object
+# soren.pcoa<- ordinate(physeq = Ver.rel, method = "PCoA", distance = test)
+# 
+# ### Plot
+# ## Depth
+# plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = soren.pcoa, 
+#   color = "Depth",
+#   axes = c(1,2),
+#   title = "Sorensen Dissimilarity") +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold"))
+# 
+# ### Plot
+# ## Lake_Type
+# plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = soren.pcoa, 
+#   color = "Lake_Type",
+#   axes = c(2,3),
+#   title = "Sorensen Dissimilarity") +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold"))
+# 
+# 
+# ### Plot
+# ## Color = Lake_Type, Shape = Depth
+# soren.pcoa.Lake_Type.depth <- plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = soren.pcoa, 
+#   color = "Lake_Type",
+#   shape = "Depth",
+#   axes = c(2,3),
+#   title = "Sorensen Dissimilarity") +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
+# 
+# ### Plot
+# ## Facet = Lake_Type, Color = Fraction, Shape = Season
+# plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = soren.pcoa, 
+#   color = "Fraction",
+#   shape = "Season",
+#   axes = c(1, 3),
+#   title = "Sorensen Dissimilarity") +
+#   facet_wrap(facets = ~Lake_Type) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
+# 
+# 
+# ### Plot
+# ## Facet = Lake_Type, Color = Season, Shape = Fraction
+# soren.pcoa.facet <- plot_ordination(
+#   physeq = Ver.rel, 
+#   ordination = Ver.pcoa, 
+#   color = "Season",
+#   shape = "Fraction",
+#   axes = c(1,2),
+#   title = "Sorensen Dissimilarity") +
+#   facet_wrap(facets = ~Lake_Type) +
+#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.x = element_text(face="bold", size=14),
+#         axis.title.y = element_text(face="bold", size=14),
+#         legend.title = element_text(size=12, face="bold"),
+#         legend.text = element_text(size=12),
+#         axis.ticks = element_blank(),
+#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+#         plot.title = element_text(size = 16, face="bold")) +
+#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
+#          shape = guide_legend(order=2, override.aes=list(size=3)))
 
 ```
 
 
-
-### Ver Lake Type PCoA
-```{r ver.type.pcoa}
-### Laurentian
-Ver.lau <- subset_samples(Ver.rel, Lake_Type == "Laurentian")
-Ver.lau.bray <- phyloseq::distance(physeq = Ver.lau, method = "bray")
-Ver.lau.pcoa <- ordinate(physeq = Ver.lau, method = "PCoA", distance = "bray")
-
-
-Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes = c(1, 2),
-                title= "Bray-Curtis Dissimilarity") + 
-  geom_point(size=2, aes(color = Season, shape = Depth,
-                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
-                         alpha = Fraction)) +
-  scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
-  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.38, y=0.45, label = "A", fontface = "bold", size=6, colour="black") +
-  guides(colour=FALSE, shape=FALSE, alpha = FALSE)
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3))) 
-
-
-
-
-  
-# Particle = fill, Free = empty
-# Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25
-#        You also can't set colors manually
-
-
-
-Ver.est <- subset_samples(Ver.rel, Lake_Type == "Estuary")
-Ver.est.bray <- phyloseq::distance(physeq = Ver.est, method = "bray")
-Ver.est.pcoa <- ordinate(physeq = Ver.est, method = "PCoA", distance = "bray")
-  
-Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes = c(1, 2),
-                title= "Bray-Curtis Dissimilarity") + 
-  geom_point(size=2, aes(color = Season, shape = Depth,
-                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
-                         alpha = Fraction)) +
-  scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
-  scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.29, y=0.45, label = "B", fontface = "bold", size=6, colour="black") +
-  guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-
-
- ##### Let's steal the legend 
- # g_legend <- function(a.gplot){
- #   tmp <- ggplot_gtable(ggplot_build(a.gplot))
- #   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
- #   legend <- tmp$grobs[[leg]]
- #   return(legend)}
- # legend <- g_legend(Ver.est.ord)
-
-  
-  
-Ver.inl <- subset_samples(Ver.rel, Lake_Type == "Inland")
-Ver.inl.bray <- phyloseq::distance(physeq = Ver.inl, method = "bray")
-Ver.inl.pcoa <- ordinate(physeq = Ver.inl, method = "PCoA", distance = "bray")
-
-Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes = c(1, 2),
-                title= "Bray-Curtis Dissimilarity") + 
-  geom_point(size=2, aes(color = Season, shape = Depth,
-                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
-                         alpha = Fraction)) +
-  scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
-  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.46, y=0.69, label = "C", fontface = "bold", size=6, colour="black") +
-  guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-
-
-
-
-#tiff("ver.pcoa.tiff", width = 15, height = 10, units = "cm", res = 500)
-#grid.newpage()
-#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
-#print(Ver.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-#print(Ver.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-#print(Ver.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-#dev.off()
-
-
-
-```
-
-### PERMANOVA/Adonis
-```{r permanova, echo=FALSE}
+### Ver PERMANOVA
+```{r}
 sampledf <- data.frame(sample_data(Ver.rel))
 
 ##### Depth #####
@@ -2080,12 +2029,174 @@ adonis(Ver.bray ~ Lake_Type + Depth + Fraction + Season, data = sampledf)
 ```
 
 
+### Create PCoA comparison plots
+```{r}
+# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
+
+# tiff("pcoa.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
+# grid.newpage()
+# pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+# print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+# print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+# print(soren.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+# print(soren.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+# dev.off()
+
+### Bray-Curtis seems to cluster a bit more clearly than Sorensen
+
+```
+
+
+
+### Ver Lake Type PCoA
+```{r}
+##### Laurentian #####
+
+# Subset out Laurentian samples
+Ver.lau <- subset_samples(Ver.rel, Lake_Type == "Laurentian")
+
+# Calculate bray-curtis dissimilarity
+Ver.lau.bray <- phyloseq::distance(physeq = Ver.lau, method = "bray")
+
+# Perform PcoA ordination
+Ver.lau.pcoa <- ordinate(physeq = Ver.lau, method = "PCoA", distance = "bray")
+
+### Plot
+Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes = c(1, 2),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        legend.title = element_text(size=8, face="bold"),
+        legend.text = element_text(size=8),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 10, face="bold")) +
+  annotate("text", x= -0.38, y=0.45, label = "A", fontface = "bold", size=6, colour="black") +
+  guides(colour=FALSE, shape=FALSE, alpha = FALSE)
+  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+  
+# Particle = fill, Free = empty
+# Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25; You also can't set colors manually
+
+
+##### Estuary #####
+
+# Subset out estuary samples
+Ver.est <- subset_samples(Ver.rel, Lake_Type == "Estuary")
+
+# Calculate bray-curtis dissimilarity
+Ver.est.bray <- phyloseq::distance(physeq = Ver.est, method = "bray")
+
+# Perform PCoA ordination
+Ver.est.pcoa <- ordinate(physeq = Ver.est, method = "PCoA", distance = "bray")
+  
+
+### Plot
+Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes = c(1, 2),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        legend.title = element_text(size=8, face="bold"),
+        legend.text = element_text(size=8),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 10, face="bold")) +
+  annotate("text", x= -0.29, y=0.45, label = "B", fontface = "bold", size=6, colour="black") +
+  guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
+  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+
+
+# The function below is to save a legend from a plot, that can then later be called upon and printed
+# To use the function, first save a plot as an object
+# Then perform the g_legend(plot) function to steal the legend
+# Go back to your plot and now remove the legend (guide)
+ ##### Let's steal the legend 
+ # g_legend <- function(a.gplot){
+ #   tmp <- ggplot_gtable(ggplot_build(a.gplot))
+ #   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+ #   legend <- tmp$grobs[[leg]]
+ #   return(legend)}
+ # legend <- g_legend(Ver.est.ord)
+
+  
+##### Inland #####
+
+# Subset out inland samples
+Ver.inl <- subset_samples(Ver.rel, Lake_Type == "Inland")
+
+# Calculate bray-curtis dissimilarity
+Ver.inl.bray <- phyloseq::distance(physeq = Ver.inl, method = "bray")
+
+# Perform PCoA ordination
+Ver.inl.pcoa <- ordinate(physeq = Ver.inl, method = "PCoA", distance = "bray")
+
+### Plot
+Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes = c(1, 2),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", size=10),
+        axis.title.y = element_text(face="bold", size=10),
+        legend.title = element_text(size=8, face="bold"),
+        legend.text = element_text(size=8),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 10, face="bold")) +
+  annotate("text", x= -0.46, y=0.69, label = "C", fontface = "bold", size=6, colour="black") +
+  guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
+  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+
+
+
+
+#tiff("ver.pcoa.tiff", width = 15, height = 10, units = "cm", res = 500)
+#grid.newpage()
+#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
+#print(Ver.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+#print(Ver.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+#print(Ver.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+#dev.off()
+
+
+
+```
+
+
+
 
 
 ### Ver Lake PERMANOVA
-```{r v.lake.adonis}
+```{r}
 
-########## LAURENTIAN ##########
+########## Laurentian ##########
 sampledf <- data.frame(sample_data(Ver.lau))
 
 ### Depth
@@ -2445,13 +2556,16 @@ adonis(Ver.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
 
 
 
-### PCoA of Whole Bacterial Community
-```{r pcoa.bcc}
+### Whole Com PCoA
+```{r}
+# Calculate bray-curtis dissimilarity
 scaled.bray <- phyloseq::distance(physeq=scaled, method="bray")
 
+# Perform PCoA ordination
 scaled.pcoa <- ordinate(physeq = scaled, method = "PCoA", distance="bray")
 
-### Color = Depth, Shape = Lake_Type
+### Plot
+## Color = Depth, Shape = Lake_Type
 plot_ordination(
   physeq = scaled, 
   ordination = scaled.pcoa, 
@@ -2471,8 +2585,8 @@ plot_ordination(
   guides(color = guide_legend(order=1, override.aes=list(size=3)),
          shape = guide_legend(order=2, override.aes=list(size=3)))
 
-
-### Color = Lake_Type, Shape = Depth
+### Plot
+## Color = Lake_Type, Shape = Depth
 bcc.pcoa.Lake_Type.depth <- plot_ordination(
   physeq = scaled, 
   ordination = scaled.pcoa, 
@@ -2494,7 +2608,8 @@ bcc.pcoa.Lake_Type.depth <- plot_ordination(
   guides(color = guide_legend(order=1, override.aes=list(size=3)),
          shape = guide_legend(order=2, override.aes=list(size=3)))
 
-### Facet = Lake_Type, Color = Season, Shape = Fraction
+### Plot
+## Facet = Lake_Type, Color = Season, Shape = Fraction
 bcc.pcoa.facet <- plot_ordination(
   physeq = scaled, 
   ordination = scaled.pcoa, 
@@ -2523,14 +2638,20 @@ bcc.pcoa.facet <- plot_ordination(
 
 
 
-### BCC Lake PCoA
-```{r bcc.lake.pcoa}
-### Laurentian
+### Whole Com Lake PCoA
+```{r}
+### Laurentian ###
+
+# Pull out Laurentian samples
 scaled.lau <- subset_samples(scaled, Lake_Type == "Laurentian")
+
+# Calculate bray-curtis dissimilarity
 scaled.lau.bray <- phyloseq::distance(physeq = scaled.lau, method = "bray")
+
+# Perform PCoA ordination
 scaled.lau.pcoa <- ordinate(physeq = scaled.lau, method = "PCoA", distance = "bray")
 
-
+### Plot
 scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.pcoa, axes = c(1, 2),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
@@ -2560,11 +2681,18 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
 #        You also can't set colors manually
 
 
+### Estuary ###
 
+# Pull out Estuary samples
 scaled.est <- subset_samples(scaled, Lake_Type == "Estuary")
+
+# Calculate bray-curtis dissimilarity
 scaled.est.bray <- phyloseq::distance(physeq = scaled.est, method = "bray")
+
+# Perform PCoA ordination
 scaled.est.pcoa <- ordinate(physeq = scaled.est, method = "PCoA", distance = "bray")
   
+### Plot
 scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.pcoa, axes = c(1, 2),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
@@ -2592,11 +2720,18 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
 
 
   
-  
+### Inland ###
+
+# Pull out Inland samples
 scaled.inl <- subset_samples(scaled, Lake_Type == "Inland")
+
+# Calculate bray-curtis dissimilarity
 scaled.inl.bray <- phyloseq::distance(physeq = scaled.inl, method = "bray")
+
+# Perform PCoA ordination
 scaled.inl.pcoa <- ordinate(physeq = scaled.inl, method = "PCoA", distance = "bray")
 
+### Plot
 scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.pcoa, axes = c(1, 2),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
@@ -2634,7 +2769,7 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 
 ### Big PCoA Figure
-```{r big.pcoa}
+```{r}
 tiff("pcoa.tiff", width = 17.8, height = 17.8, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,7.5), heights=c(0.7,14,14)))))
@@ -2655,21 +2790,21 @@ dev.off()
 ```
 
 
-### Compare Whole Bacterial Community with Verruco Community
-```{r bcc.ver.pcoa}
-tiff("bcc.ver.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-print(bcc.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-print(bcc.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-dev.off()
+### (More PCoAs)
+```{r}
+# tiff("bcc.ver.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
+# grid.newpage()
+# pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
+# print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+# print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+# print(bcc.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+# print(bcc.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+# dev.off()
 
 ```
 
-### PERMANOVA for Whole Bacterial Community
-```{r adonis.bcc}
+### Whole Com PERMANOVA
+```{r}
 bcc.sampledf <- data.frame(sample_data(scaled))
 
 ##### Depth #####
@@ -2897,7 +3032,7 @@ adonis(scaled.bray ~ Lake_Type + Depth + Fraction + Season, data = bcc.sampledf)
 
 
 
-### BCC Lake PERMANOVA
+### Whole Lake PERMANOVA
 ```{r bcc.lake.permanova}
 ########## LAURENTIAN ##########
 sampledf <- data.frame(sample_data(scaled.lau))
@@ -3258,14 +3393,17 @@ adonis(scaled.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
 
 
 
-### Procrustes Analyses (Verruco vs. Whole Bacterial community)
-```{r procrustes}
-procrust <- procrustes(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+### Procrustes (Ver vs Whole Community)
+```{r}
+# Calculate procrustes based on specified axes of Bray-Curtis PCoA
+# The 2nd object is rotated to fit the 1st object
+# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
+procrust <- procrustes(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2],
+                       scale=FALSE, symmetric=FALSE)
   # Sum of squares = 9.923
 plot(procrust)
 plot(procrust,kind=2)
+# Test significance between your 2 configurations
 pro <- protest(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
   # p-value = 0.001
   # m12^2 (sum of squares) = 0.4007
@@ -3276,25 +3414,28 @@ plot(pro)
 
 ### Prepare to make a prettier Procrustes plot
 # http://stackoverflow.com/questions/30325739/ggplot2-for-procrustes-rotation-in-vegan
+# Create dataframe for plotting
 pro.df <- data.frame(rda1=procrust$Yrot[,1], rda2=procrust$Yrot[,2],
                          xrda1=procrust$X[,1], xrda2=procrust$X[,2])
+  # rda1 = Verruco x coordinate
+  # rda2 = Verruco y coordinate
+  # xrda1 = Whole Community x coordinate
+  # xrda2 = Whole community y coordinate
 pro.df$Depth <- sample_data(Ver)$Depth
 pro.df$Lake_Type <- sample_data(Ver)$Lake_Type
 pro.df$Fraction <- sample_data(Ver)$Fraction
 pro.df$Season <- sample_data(Ver)$Season
 
-### Make a prettier Procrustes plot
+### Plot!
 # Basic
-#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) + 
   #geom_point(aes(x=rda1,y=rda2)) + 
   geom_point(aes(x=xrda1, y=xrda2)) +
   geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
                color="burlywood", alpha=0.5) + facet_grid(~Lake_Type)
-#dev.off()
+
 
 ### Facet = Lake_Type, Color = Depth, Shape = Fraction
-#tiff("procrustes.facet1.tiff", width = 8, height = 5, units = "in", res = 500)
 ggplot(pro.df) +
   #geom_point(aes(x=rda1, y=rda2, color=Depth, shape=Fraction)) +
   geom_point(aes(x=xrda1, y=xrda2, color=Depth, shape=Fraction)) +
@@ -3313,10 +3454,14 @@ ggplot(pro.df) +
         plot.title = element_text(size = 12, face="bold")) +
   guides(color = guide_legend(order=1, override.aes=list(size=3)),
          shape = guide_legend(order=2, override.aes=list(size=3)))
-#dev.off()
+
 
 ### Facet = Lake_Type, Color = Fraction, Shape = Season
-#png("procrustes1.png", width = 17.8, height = 10, units = "cm", res = 600)
+
+# This is the annotation text for the plot below (plot)
+# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlation=0.797"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),levels = c("Laurentian","Estuary","Inland")))
+
 plot <- ggplot(pro.df) +
   #geom_point(aes(x=rda1, y=rda2, color=Fraction, shape=Season)) +
   geom_point(size=1, aes(x=xrda1, y=xrda2, fill=Fraction, shape=Season), color="black") +
@@ -3344,12 +3489,12 @@ plot <- ggplot(pro.df) +
   guides(color = F, shape = F, fill=F)
   #guides(color = guide_legend(order=1, override.aes=list(size=2)),
   #       shape = guide_legend(order=2, override.aes=list(size=2)))
-#dev.off()
 
 
-ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlation=0.797"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),levels = c("Laurentian","Estuary","Inland")))
-
-
+# The function below is to save a legend from a plot, that can then later be called upon and printed
+# To use the function, first save a plot as an object
+# Then perform the g_legend(plot) function to steal the legend
+# Go back to your plot and now remove the legend (guide)
  ##### Let's steal the legend 
   g_legend <- function(a.gplot){
     tmp <- ggplot_gtable(ggplot_build(a.gplot))
@@ -3371,12 +3516,14 @@ dev.off()
 
 
 
-### Lake Procrustes Analyses (Verruco vs. Whole Bacterial community)
-```{r lake.procrustes}
+### Lake Procrustes Analyses (Verruco vs. Whole Community)
+```{r}
 ##### Laurentian #####
-procrust.lau <- procrustes(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
+# Calculate procrustes based on specified axes of Bray-Curtis PCoA
+# The 2nd object is rotated to fit the 1st object
+# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
+procrust.lau <- procrustes(scaled.lau.pcoa$vectors[,1:2],
+                           Ver.lau.pcoa$vectors[,1:2], scale=FALSE, symmetric=FALSE)
   # Sum of squares = 1.901
 plot(procrust.lau)
 plot(procrust.lau,kind=2)
@@ -3386,29 +3533,35 @@ pro.lau <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
   # correlation = 0.8125
 plot(pro.lau)
 
-### Make a prettier Procrustes plot
-# Basic
+# Create dataframe for plotting
 pro.lau.df <- data.frame(rda1=procrust.lau$Yrot[,1], rda2=procrust.lau$Yrot[,2],
                          xrda1=procrust.lau$X[,1], xrda2=procrust.lau$X[,2])
+  # rda1 = Verruco x coordinate
+  # rda2 = Verruco y coordinate
+  # xrda1 = Whole Community x coordinate
+  # xrda2 = Whole community y coordinate
 pro.lau.df$Depth <- sample_data(Ver.lau)$Depth
 pro.lau.df$Lake_Type <- sample_data(Ver.lau)$Lake_Type
 pro.lau.df$Fraction <- sample_data(Ver.lau)$Fraction
 pro.lau.df$Season <- sample_data(Ver.lau)$Season
 
-#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
+### Plot!
+# Basic
 ggplot(pro.lau.df) + 
   #geom_point(aes(x=rda1,y=rda2)) + 
   geom_point(aes(x=xrda1, y=xrda2)) +
   geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
                color="burlywood", alpha=0.5)
-#dev.off()
+
 
 
 
 ##### Estuary #####
+# Calculate procrustes based on specified axes of Bray-Curtis PCoA
+# The 2nd object is rotated to fit the 1st object
+# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
 procrust.est <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
                        symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
   # Sum of squares = 1.05
 plot(procrust.est)
 plot(procrust.est,kind=2)
@@ -3418,28 +3571,35 @@ pro.est <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
   # correlation = 0.9528
 plot(pro.est)
 
-### Make a prettier Procrustes plot
-# Basic
+# Create dataframe for plotting
 pro.est.df <- data.frame(rda1=procrust.est$Yrot[,1], rda2=procrust.est$Yrot[,2],
                          xrda1=procrust.est$X[,1], xrda2=procrust.est$X[,2])
+  # rda1 = Verruco x coordinate
+  # rda2 = Verruco y coordinate
+  # xrda1 = Whole Community x coordinate
+  # xrda2 = Whole community y coordinate
 pro.est.df$Depth <- sample_data(Ver.est)$Depth
 pro.est.df$Lake_Type <- sample_data(Ver.est)$Lake_Type
 pro.est.df$Fraction <- sample_data(Ver.est)$Fraction
 pro.est.df$Season <- sample_data(Ver.est)$Season
 
-#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
+
+### Plot!
+# Basic
 ggplot(pro.est.df) + 
   #geom_point(aes(x=rda1,y=rda2)) + 
   geom_point(aes(x=xrda1, y=xrda2)) +
   geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
                color="burlywood", alpha=0.5)
-#dev.off()
+
 
 
 ##### Inland #####
+# Calculate procrustes based on specified axes of Bray-Curtis PCoA
+# The 2nd object is rotated to fit the 1st object
+# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
 procrust.inl <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
                        symmetric=FALSE)
-  # Calculates procrustes based upon coordinates on axes 1 & 2 of the Bray-Curtis PCoA
   # Sum of squares = 5.545
 plot(procrust.inl)
 plot(procrust.inl,kind=2)
@@ -3449,339 +3609,61 @@ pro.inl <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
   # correlation = 0.7969
 plot(pro.inl)
 
-### Make a prettier Procrustes plot
-# Basic
+# Create dataframe for plotting
 pro.inl.df <- data.frame(rda1=procrust.inl$Yrot[,1], rda2=procrust.inl$Yrot[,2],
                          xrda1=procrust.inl$X[,1], xrda2=procrust.inl$X[,2])
+  # rda1 = Verruco x coordinate
+  # rda2 = Verruco y coordinate
+  # xrda1 = Whole Community x coordinate
+  # xrda2 = Whole community y coordinate
 pro.inl.df$Depth <- sample_data(Ver.inl)$Depth
 pro.inl.df$Lake_Type <- sample_data(Ver.inl)$Lake_Type
 pro.inl.df$Fraction <- sample_data(Ver.inl)$Fraction
 pro.inl.df$Season <- sample_data(Ver.inl)$Season
 
-#tiff("procrustes.tiff", width = 8, height = 5, units = "in", res = 500)
+### Plot!
+# Basic
 ggplot(pro.inl.df) + 
   #geom_point(aes(x=rda1,y=rda2)) + 
   geom_point(aes(x=xrda1, y=xrda2)) +
   geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
                color="burlywood", alpha=0.5)
-#dev.off()
-
-
-
-```
-
-
-
-
-### RELATIVE ABUNDANCE UNSTACKED BAR PLOT
-```{r}
-classVer <- tax_glom(Ver, taxrank = "Class")
-
-# Calculate relative abundance
-classVer.rel = transform_sample_counts(classVer, function(x){x/sum(x)})
-
-# If a phylum has <1% rel abun, change that to 0%
-otu_table(classVer.rel)[otu_table(classVer.rel)<.01] <- 0
-
-# Remove anything with 0% rel abun
-classVer.rel = prune_taxa(taxa_sums(classVer.rel)>0,classVer.rel)
-
-# Create rank abundance of OTUs
-barplot(sort(taxa_sums(classVer.rel),TRUE)[1:20]/nsamples(classVer.rel),las=2,cex.axis=.7)
-
-# Create dataframe to use in ggplot
-classVer.df <- psmelt(classVer.rel)
-classVer.df$Abundance <- classVer.df$Abundance * 100
-#classVer.df$Class <- ordered(classVer.df$Class, levels = c("Opitutae","Verrucomicrobiae","OPB35_soil_Lake_Type", "Spartobacteria", "Verrucomicrobia_Incertae_Sedis", "unclassified", "S-BQ2-57_soil_Lake_Type"))
-classVer.df$Class <- ordered(classVer.df$Class, levels = c("S-BQ2-57_soil_Lake_Type", "unclassified", "Verrucomicrobia_Incertae_Sedis", "Spartobacteria", "OPB35_soil_Lake_Type", "Verrucomicrobiae", "Opitutae"))
-classVer.df$Lake_Type <- ordered(classVer.df$Lake_Type, levels = c("Laurentian","Estuary","Inland"))
-classVer.df$Fraction <- ordered(classVer.df$Fraction, levels = c("Particle","Free","Sediment"))
-classVer.df$Depth <- ordered(classVer.df$Depth, levels = c("Top","DCM", "Bottom","Sediment"))
-classVer.df$Season <- ordered(classVer.df$Season, levels = c("Spring","Summer","Fall"))
-
-Ver.colors <- c(Opitutae = "red2", Verrucomicrobiae = "darkorange", "OPB35_soil_Lake_Type" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "deepskyblue", unclassified = "mediumorchid3", "S-BQ2-57_soil_Lake_Type" = "purple4")
-
-#phylum.colors <- c(Proteobacteria = "deepskyblue", Actinobacteria = "royalblue", Cyanobacteria = "chartreuse3", Bacteroidetes = "darkorange", Planctomycetes = "mediumorchid3", Chloroflexi = "darkgreen", Verrucomicrobia = "purple4", Armatimonadetes = "red", "NPL-UPA2"="#652926", Chlorobi = "cyan2", Gemmatimonadetes = "black", Acidobacteria = "grey26", "Candidate_division_OP3" = "hotpink", Nitrospirae = "blue", "Candidate_division_OD1" = "brown", Spirochaetae = "gold3", "Candidate_division_OP8" = "goldenrod1", Chlamydiae = "violet", Lentisphaerae = "yellow1", "BD1-5" = "chartreuse", "TM6" = "olivedrab", unclassified = "grey", Firmicutes = "blue4", "Candidate_division_WS3"= "magenta", Fibrobacteres = "darkred", "Candidate_division_SR1" = "tan3" )
-
-
-
-
-
-
-########### Create dataframe for unstacked bar plots (facet by Lake_Type & Fraction) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Lake_Type","Fraction"))
-    ## These are the factors that you'll be using to make your graph
-Lake_Typefrac <- ddply(sub.classVer.df, c("Lake_Type","Fraction", "Class"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
-
-Lake_Typefrac$Class <- ordered(Lake_Typefrac$Class, levels = c("S-BQ2-57_soil_Lake_Type", "unclassified", "Verrucomicrobia_Incertae_Sedis", "Spartobacteria", "OPB35_soil_Lake_Type", "Verrucomicrobiae", "Opitutae"))
-Lake_Typefrac$Lake_Type <- ordered(Lake_Typefrac$Lake_Type, levels = c("Laurentian","Estuary","Inland"))
-Lake_Typefrac$Fraction <- ordered(Lake_Typefrac$Fraction, levels = c("Particle","Free","Sediment"))
-
-Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_Lake_Type" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_Lake_Type" = "purple4")
-
-
-###### GGPLOT IT! ######
-tiff("unstackbar.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(Lake_Typefrac, aes(y=relabun, x = Class, fill = Class)) +
-  facet_grid(Fraction ~ Lake_Type) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
-dev.off()
-
-
-
-
-
-
-
-########### Create dataframe for unstacked bar plots (facet by Season & Fraction) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Fraction"))
-    ## These are the factors that you'll be using to make your graph
-Lake_Typefrac <- ddply(sub.classVer.df, c("Season", "Class", "Fraction"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
-
-Lake_Typefrac$Season <- ordered(Lake_Typefrac$Season, levels = c("Spring","Summer","Fall"))
-Lake_Typefrac$Fraction <- ordered(Lake_Typefrac$Fraction, levels = c("Particle","Free","Sediment"))
-
-Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_Lake_Type" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_Lake_Type" = "purple4")
-
-
-###### GGPLOT IT! ######
-#tiff("unstackbar.seasonfrac.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(Lake_Typefrac, aes(y=relabun, x = Class, fill = Class)) +
-  facet_grid(Fraction ~ Season) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
-#dev.off()
-
-
-
-
-########### Create dataframe for unstacked bar plots (facet by Lake_Type & Season) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Lake_Type"))
-    ## These are the factors that you'll be using to make your graph
-Lake_Typefrac <- ddply(sub.classVer.df, c("Season", "Class", "Lake_Type"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
-
-Lake_Typefrac$Season <- ordered(Lake_Typefrac$Season, levels = c("Spring","Summer","Fall"))
-Lake_Typefrac$Lake_Type <- ordered(Lake_Typefrac$Lake_Type, levels = c("Laurentian","Estuary","Inland"))
-
-Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_Lake_Type" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_Lake_Type" = "purple4")
-
-
-###### GGPLOT IT! ######
-tiff("unstackbar.Lake_Typeseason.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(Lake_Typefrac, aes(y=relabun, x = Class, fill = Class)) +
-  facet_grid(Season ~ Lake_Type) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
-dev.off()
-
-
-
-
-
-########### Create dataframe for unstacked bar plots (facet by Fraction ~ Depth) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
-sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
-    ## These are the factors that you'll be using to make your graph
-Lake_Typefrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
-
-Lake_Typefrac$Depth <- ordered(Lake_Typefrac$Depth, levels = c("Top","DCM","Bottom","Sediment"))
-Lake_Typefrac$Fraction <- ordered(Lake_Typefrac$Fraction, levels = c("Particle","Free","Sediment"))
-
-
-Ver.colors <- c(Opitutae = "red3", Verrucomicrobiae = "darkorange", "OPB35_soil_Lake_Type" = "gold", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "steelblue1", unclassified = "mediumorchid3", "S-BQ2-57_soil_Lake_Type" = "purple4")
-
-
-###### GGPLOT IT! ######
-#tiff("unstackbar.depthfrac.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(Lake_Typefrac, aes(y=relabun, x = Class, fill = Class)) +
-  facet_grid(Fraction ~ Depth) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour="black", size=12),
-        axis.text.y = element_text(colour="black", size=12),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size=20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none")
-#dev.off()
-
-
-
-
-
-#good_phylum_proteo <-tax_glom(merged_final,taxrank = "Phylum")
-goodsamps_phylum <- tax_glom(good_phylum_proteo,taxrank = "Phylum")
-goodsamps_phy_melt <- psmelt(goodsamps_phylum)  ##  Melt it into a dataframe 
-sub_goodsamps_phy_melt <- subset(goodsamps_phy_melt, select = c("Sample", "ProdLevel", "quadrant", "Phylum","Abundance"))
-TOTALS <- ddply(sub_goodsamps_phy_melt, c("Sample"), summarise, ##  Let's get the McMurdie and Holmes Scaled  Total for each sample 
-                total   = sum(Abundance))   
-sub_phy_melt_totals <- merge(sub_goodsamps_phy_melt, TOTALS, by = "Sample")  ### Merge phylum sums and the total numbers -> so we can calculate the Relative Abundance
-sub_phy_melt_totals$RelAbundance <- sub_phy_melt_totals$Abundance/sub_phy_melt_totals$total  ## Calculate the relative abundance
-sub_phy_melt_totals$PercentAbund <- sub_phy_melt_totals$RelAbundance * 100  ##  Calculate the Percent Abundance
-
-####  Make a new dataframe with the percent abudance within the entire dataset!
-phy_stats <- ddply(sub_phy_melt_totals, c("Phylum"), summarise, 
-                   N = length(PercentAbund),
-                   PercentPhy = mean(PercentAbund),
-                   sd   = sd(PercentAbund),
-                   se   = sd / sqrt(N))
-abund <- subset(phy_stats,PercentPhy > 0.001)  # Only take the phyla that are more than 0.01% abundant
-
-abund_ordered <- arrange(abund, desc(PercentPhy))
-
-abund$Phylum <- factor(abund$Phylum,levels = c("Bacteroidetes", "Cyanobacteria", "Verrucomicrobia", "Betaproteobacteria", "Actinobacteria", "Planctomycetes",  "Alphaproteobacteria", "Deltaproteobacteria",
-                                               "Gammaproteobacteria", "Chloroflexi", "Lentisphaerae", "Chlorobi", "Armatimonadetes", "Firmicutes", "Acidobacteria", "Spirochaetae", "Candidate_division_OD1",
-                                               "NPL-UPA2", "Deinococcus-Thermus", "Candidate_division_OP3", "TM6", "Chlamydiae", "Epsilonproteobacteria", "TA18", "Fibrobacteres", "Candidate_division_SR1", 
-                                               "Candidate_division_BRC1", "BD1-5", "Gemmatimonadetes", "Fusobacteria", "Candidate_division_WS3", "Tenericutes", "Elusimicrobia", "WCHB1-60", "Deferribacteres", 
-                                               "Candidate_division_TM7", "Candidate_division_OP8", "SPOTSOCT00m83", "Thermotogae", "Candidate_division_OP11", "Dictyoglomi", "unclassified"))   
-
-abund$Phylum = with(abund, factor(Phylum, levels = rev(levels(Phylum)))) 
-
-#Relative abundance plot 
-abund_plot <- ggplot(abund, aes(y=PercentPhy , x=Phylum))  +
-  #geom_boxplot(fill = "magenta4", colour = "black") + 
-  geom_bar(stat="identity", position=position_dodge(),  fill = "magenta4", colour = "black") +
-  theme_bw() + ggtitle("Phyla Above 0.1% in All Samples") +
-  xlab("Phylum") + ylab("Mean Relative Abundance (%)") +
-  geom_errorbar(aes(ymin = PercentPhy -se, ymax = PercentPhy +se), width = 0.25) + coord_flip() +
-  theme(axis.title.x = element_text(face="bold", size=16),
-        axis.text.x = element_text(angle=0, colour = "black", size=14),
-        axis.text.y = element_text(colour = "black", size=14),
-        axis.title.y = element_text(face="bold", size=16),
-        plot.title = element_text(face="bold", size = 20),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size = 12),
-        legend.position="none"); abund_plot
 
 
 ```
+
+
+
 
 
 ### DESeq
-```{r deseq, echo=FALSE}
+```{r}
 # DESeq bible: https://www.bioconductor.org/packages/3.3/bioc/vignettes/DESeq/inst/doc/DESeq.pdf
 # Phyloseq to DESeq2: http://joey711.github.io/phyloseq-extensions/DESeq2.html
 # Phyloseq to DESeq: http://joey711.github.io/phyloseq-extensions/DESeq.html
 
 
 ### DESeq2 ###
-# Prepare phyloseq object
+
+# Subset out Verrucos from RAW COUNT phyloseq object
 Vdeseq <- subset_taxa(dupmerge.subset, Phylum == "Verrucomicrobia")
-  # We want to use the RAW COUNTS
+
+# Subset out the Verruco OTUs that we've been using so far
+# When we calculate Ver rel abund, we remove lots of low abundance OTUs
 pick.Ver<- colnames(otu_table(Ver.rel))
 Vdeseq.pick <- prune_taxa(names(taxa_sums(Vdeseq)) %in% pick.Ver, x=Vdeseq)
   # 208 OTUs
-  # Subset out the verruco taxa that we've been using so far
-  # When we calculate Verruco relative abundance, we remove a few hundred super low abundance OTUs
+
+# Add 1 to every OTU count because DESeq doesn't work with lots of 0's
 Ver1 <- otu_table(Vdeseq.pick) + 1
+
+# Make new phyloseq object with prepared OTU table
 Ver.samp <- sample_data(Vdeseq.pick)
 Ver.tax <- tax_table(Vdeseq.pick)
 Ver1 <- merge_phyloseq(Ver1, Ver.samp, Ver.tax)
 
 
-
-
-# Editing phyloseq object because there can be no 0's
-#Ver1 <- otu_table(Ver) + 1
-#Ver.samp <- sample_data(Ver)
-#Ver.tax <- tax_table(Ver)
-#Ver1 <- merge_phyloseq(Ver1, Ver.samp, Ver.tax)
-
-
-
-#test <- phyloseq_to_deseq2(Ver1, design= ~Lake_Type+Season+Source)
-#test.deseq <- DESeq(test, test="Wald", fitType="local")
-#test.res <- results(test.deseq, cooksCutoff = FALSE)
-#test.res.alpha <- results(test.deseq, cooksCutoff=F, alpha=0.05)
-
-#test.deseq.out <- DESeq(test, test="Wald", fitType="local", minReplicatesForReplace=Inf)
-#test.res.out <- results(test.deseq.out, cooksCutoff = FALSE)
-#test.res.out.alpha <- results(test.deseq.out, cooksCutoff=F, alpha=0.05)
-
-
-# Let's look at Source (water vs. sed)
+##### Source #####
 source <- deSEQ(data=Ver1, valuetest= ~Lake_Type+Season+Source)
   # I left out Depth & Fraction because those all take into account water vs. sediment
 
@@ -3791,16 +3673,16 @@ sed.otus <- rownames(source[sed,])
 water <- which(source$log2FoldChange > 0)
 water.otus <- rownames(source[water,])
 
+# Plot
 deseq.source <- ggplot(source, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Sediment (Top) vs. Water (Bottom)")
 
 
+##### Fraction #####
 
 # Now let's isolate Verrucos in water
 Ver.water <- subset_samples(Ver1, Depth != "Sediment")
-Ver.water <- subset_samples(Ver.water, Depth != "DCM")
-  # We want binary, so remove DCM too
 watercol <- deSEQ(data=Ver.water, valuetest= ~Lake_Type+Season+Depth, alpha=0.05)
 
 ### Separate sediment & water samples
@@ -3809,6 +3691,7 @@ water.bot.otus <- rownames(watercol[water.bot,])
 water.top <- which(watercol$log2FoldChange > 0)
 water.top.otus <- rownames(watercol[water.top,])
 
+# Plot
 deseq.watercol<- ggplot(watercol, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer (palette="Set1") +
   ggtitle("Top (Top) vs. Bottom (Bottom)")
@@ -3825,6 +3708,7 @@ bs.bot.otus <- rownames(Vbs[bs.bot,])
 bs.sed <- which(Vbs$log2FoldChange > 0)
 bs.sed.otus <- rownames(Vbs[bs.sed,])
 
+# Plot
 deseq.Vbs <- ggplot(Vbs, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Sediment (Top) vs. Bottom (Bottom)")
@@ -3842,24 +3726,24 @@ st.sed.otus <- rownames(Vst[st.sed,])
 st.top <- which(Vst$log2FoldChange > 0)
 st.top.otus <- rownames(Vst[st.top,])
 
+# Plot
 deseq.Vst <- ggplot(Vst, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
   ggtitle("Top (Top) vs. Sediment (Bottom)")
 
 
 sed.otus1 <- intersect(water.bot.otus, bs.sed.otus)
-  # Which OTUs that prefer bottom, also prefer sed
+  # OTUs that prefer bottom, also prefer sed more
 sed.otus2 <- intersect(water.top.otus, st.sed.otus)
-  # Which OTUs that prefer top, also prefer sed
+  # OTUs that prefer top, also prefer sed more
+
+### OTUs that prefer a fraction ###
 sed.otus <- c(sed.otus1, sed.otus2)
-  ## OTUs that are overrepresented in Sediment
 bot.otus <- intersect(water.bot.otus, bs.bot.otus)
-  ## OTUs that are overrepresented in Bottom
 top.otus <- intersect(water.top.otus, st.top.otus)
-  ## OTUs that are overrepresented in Top
 
 
-
+# Plot
 tiff("deseq.depth.tiff", width = 14, height = 10, units = "in", res = 500)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
@@ -3872,19 +3756,21 @@ dev.off()
 
 
 
-### Lake_Type
+##### Lake_Type #####
+
 # Now let's isolate Verrucos in Estuary & Laurentian
 V.el <- subset_samples(Ver1, Lake_Type != "Inland")
 Vel <- deSEQ(data=V.el, valuetest= ~Depth+Season+Lake_Type, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Estuary & Laurentian samples
 Vel.est <- which(Vel$log2FoldChange < 0)
 Vel.est.otus <- rownames(Vel[Vel.est,])
 Vel.lau <- which(Vel$log2FoldChange > 0)
 Vel.lau.otus <- rownames(Vel[Vel.lau,])
 
-deseq.Vel<- ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1") +
+# Plot
+deseq.Vel<- ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) +
+  geom_point() + scale_color_brewer(palette="Set1") +
   ggtitle("Laurentian (Top) vs. Estuary (Bottom)")
 
 
@@ -3893,14 +3779,15 @@ deseq.Vel<- ggplot(Vel, aes(x=Species, y=log2FoldChange, color=Class)) + geom_po
 V.ei <- subset_samples(Ver1, Lake_Type != "Laurentian")
 Vei <- deSEQ(data=V.ei, valuetest= ~Depth+Season+Lake_Type, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Estuary & Inland samples
 Vei.est <- which(Vei$log2FoldChange < 0)
 Vei.est.otus <- rownames(Vei[Vel.est,])
 Vei.inl <- which(Vei$log2FoldChange > 0)
 Vei.inl.otus <- rownames(Vei[Vei.inl,])
 
-deseq.Vei<- ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1") +
+# Plot
+deseq.Vei<- ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) +
+  geom_point() + scale_color_brewer(palette="Set1") +
   ggtitle("Inland (Top) vs. Estuary (Bottom)")
 
 
@@ -3910,22 +3797,24 @@ deseq.Vei<- ggplot(Vei, aes(x=Species, y=log2FoldChange, color=Class)) + geom_po
 V.li <- subset_samples(Ver1, Lake_Type != "Estuary")
 Vli <- deSEQ(data=V.li, valuetest= ~Depth+Season+Lake_Type, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Laurentian & Inland samples
 Vli.inl <- which(Vli$log2FoldChange < 0)
 Vli.inl.otus <- rownames(Vli[Vli.inl,])
 Vli.lau <- which(Vel$log2FoldChange > 0)
 Vli.lau.otus <- rownames(Vli[Vli.lau,])
 
-deseq.Vli<- ggplot(Vli, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1") +
+# Plot
+deseq.Vli<- ggplot(Vli, aes(x=Species, y=log2FoldChange, color=Class)) +
+  geom_point() +scale_color_brewer(palette="Set1") +
   ggtitle("Laurentian (Top) vs. Inland (Bottom)")
 
 
-### Lake_Type Otus ###
+### OTUs that prefer a Lake_Type ###
 est.otus <- intersect(Vel.est.otus, Vei.est.otus)
 inl.otus <- intersect(Vei.inl.otus, Vli.inl.otus)
 lau.otus <- intersect(Vel.lau.otus, Vli.lau.otus)
 
+# Plot
 tiff("deseq.Lake_Type.tiff", width = 20, height = 10, units = "in", res = 500)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1.25,1.25,1.25), heights=c(1.5,1.5)))))
@@ -3938,17 +3827,18 @@ dev.off()
 
 
 
-####### Fraction
-# Now let's isolate Verrucos in Free & Particle (fractions, so no sediment but DCM is included)
+##### Fraction #####
+# Now let's isolate Verrucos in Free & Particle
 V.frac <- subset_samples(Ver1, Fraction != "Sediment")
 Vfrac <- deSEQ(data=V.frac, valuetest= ~Depth+Lake_Type+Season+Fraction, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Free and Particle samples
 Vfrac.free <- which(Vfrac$log2FoldChange < 0)
 free.otus <- rownames(Vfrac[Vfrac.free,])
 Vfrac.part <- which(Vfrac$log2FoldChange > 0)
 part.otus <- rownames(Vfrac[Vfrac.part,])
 
+# Plot
 tiff("deseq.fraction.tiff", width = 7, height = 10, units = "in", res = 500)
 ggplot(Vfrac, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
   scale_color_brewer(palette="Set1") +
@@ -3960,24 +3850,20 @@ dev.off()
 
 
 
-
-
-####### Season
+##### Season #####
 # Now let's isolate Verrucos in Spring & Summer
 V.ss <- subset_samples(Ver1, Season != "Fall")
 Vss <- deSEQ(data=V.ss, valuetest= ~Depth+Lake_Type+Season, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Spring & Summer samples
 Vss.sp <- which(Vss$log2FoldChange < 0)
 Vss.sp.otus <- rownames(Vss[Vss.sp,])
 Vss.su <- which(Vss$log2FoldChange > 0)
 Vss.su.otus <- rownames(Vss[Vss.su,])
 
-deseq.Vss <- ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1") +
+# plot
+deseq.Vss <- ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() + scale_color_brewer(palette="Set1") +
   ggtitle("Season: Summer (Top) vs. Spring (Bottom)")
-
-
 
 
 
@@ -3986,18 +3872,15 @@ deseq.Vss <- ggplot(Vss, aes(x=Species, y=log2FoldChange, color=Class)) + geom_p
 V.spf <- subset_samples(Ver1, Season != "Summer")
 Vspf <- deSEQ(data=V.spf, valuetest= ~Depth+Lake_Type+Season, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Spring & Fall samples
 Vspf.fa <- which(Vspf$log2FoldChange < 0)
 Vspf.fa.otus <- rownames(Vspf[Vspf.fa,])
 Vspf.sp <- which(Vspf$log2FoldChange > 0)
 Vspf.sp.otus <- rownames(Vspf[Vspf.sp,])
 
-deseq.Vspf <- ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1") +
+# Plot
+deseq.Vspf <- ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() + scale_color_brewer(palette="Set1") +
   ggtitle("Season: Spring (Top) vs. Fall (Bottom)")
-
-
-
 
 
 
@@ -4007,24 +3890,24 @@ deseq.Vspf <- ggplot(Vspf, aes(x=Species, y=log2FoldChange, color=Class)) + geom
 V.suf <- subset_samples(Ver1, Season != "Spring")
 Vsuf <- deSEQ(data=V.suf, valuetest= ~Depth+Lake_Type+Season, alpha=0.05)
 
-### Separate sediment & water samples
+### Separate Summer & Fall samples
 Vsuf.fa <- which(Vsuf$log2FoldChange < 0)
 Vsuf.fa.otus <- rownames(Vsuf[Vsuf.fa,])
 Vsuf.su <- which(Vsuf$log2FoldChange > 0)
 Vsuf.su.otus <- rownames(Vsuf[Vsuf.su,])
 
-deseq.Vsuf <- ggplot(Vsuf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
-  scale_color_brewer(palette="Set1") +
+# Plot
+deseq.Vsuf <- ggplot(Vsuf, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() + scale_color_brewer(palette="Set1") +
   ggtitle("Season: Summer (Top) vs. Fall (Bottom)")
 
 
-
+### OTUs that prefer a season ###
 sp.otus <- intersect(Vss.sp.otus,Vspf.sp.otus)
 su.otus <- intersect(Vss.su.otus,Vsuf.su.otus)
 fa.otus <- intersect(Vspf.fa.otus,Vsuf.fa.otus)
 
 
-
+# Plot
 tiff("deseq.season.tiff", width = 20, height = 10, units = "in", res = 500)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1.25,1.25,1.25), heights=c(1.5,1.5)))))
@@ -4037,35 +3920,52 @@ dev.off()
 
 
 ### Create ecoIDs
-```{r ecoID}
+```{r}
 #http://stackoverflow.com/questions/10298662/find-elements-not-in-smaller-character-vector-list-but-in-big-list
+
+# These are the Ver OTUs with which we were working
 Ver.otus <- rownames(tax_table(Ver1))
 
+### Create Lake_Type label
 Lake_Type.label <- rownames(tax_table(Ver1))
+# OTUs that prefer Estuary get "E"
 Lake_Type.label[Lake_Type.label %in% est.otus] <- paste("E", Lake_Type.label[Lake_Type.label %in% est.otus])
+# OTUs that prefer Inland get "I"
 Lake_Type.label[Lake_Type.label %in% inl.otus] <- paste("I", Lake_Type.label[Lake_Type.label %in% inl.otus])
+# OTUs that prefer Laurentian get "L"
 Lake_Type.label[Lake_Type.label %in% lau.otus] <- paste("L", Lake_Type.label[Lake_Type.label %in% lau.otus])
-# 57 labels; 1265 OTUs have no preference
 
+
+### Create Depth label
 Depth.label <- rownames(tax_table(Ver1))
+# OTUs that prefer Bottom get "B"
 Depth.label[Depth.label %in% bot.otus] <- paste("B", Depth.label[Depth.label %in% bot.otus])
+# OTUs that prefer Sediment get "S"
 Depth.label[Depth.label %in% sed.otus] <- paste("S", Depth.label[Depth.label %in% sed.otus])
+# OTUs that prefer Top get "T"
 Depth.label[Depth.label %in% top.otus] <- paste("T", Depth.label[Depth.label %in% top.otus])
-# 107 labels; 1215 OTUs have no preference
 
+
+### Create Fraction label
 Fraction.label <- rownames(tax_table(Ver1))
-Fraction.label[Fraction.label %in% free.otus] <- paste("F", Fraction.label[Fraction.label %in%
-                                                                             free.otus])
-Fraction.label[Fraction.label %in% part.otus] <- paste("P", Fraction.label[Fraction.label %in%
-                                                                             part.otus])
-# 80 labels; 1242 OTUs have no preference
+# OTUs that prefer Free get "F"
+Fraction.label[Fraction.label %in% free.otus] <- paste("F", Fraction.label[Fraction.label %in% free.otus])
+# OTUs that prefer Particle get "P"
+Fraction.label[Fraction.label %in% part.otus] <- paste("P", Fraction.label[Fraction.label %in% part.otus])
 
+
+### Create Season label
 Season.label <- rownames(tax_table(Ver1))
+# OTUs that prefer Spring get "C_" (for chuntian (Chinese for Spring))
+# There's an underscore because Season is the last ecoID label
 Season.label[Season.label %in% sp.otus] <- paste("C_", Season.label[Season.label %in% sp.otus])
+# OTUs that prefer Summer get "V_" (for verano (Spanish for Summer))
 Season.label[Season.label %in% su.otus] <- paste("V_", Season.label[Season.label %in% su.otus])
+# OTUs that prefer Fall get "A_" (for autumn)
 Season.label[Season.label %in% fa.otus] <- paste("A_", Season.label[Season.label %in% fa.otus])
-# 56 labels; 1266 OTUs have no preference
 
+
+# Split ecoID characters to prepare to be put into a dataframe
 Lake_Type.split <- data.frame(strsplit(Lake_Type.label, " "), stringsAsFactors=FALSE)
 colnames(Lake_Type.split) <- Ver.otus
 depth.split <- data.frame(strsplit(Depth.label, " "), stringsAsFactors=FALSE)
@@ -4074,11 +3974,15 @@ fraction.split <- data.frame(strsplit(Fraction.label, " "), stringsAsFactors=FAL
 colnames(fraction.split) <- Ver.otus
 season.split <- data.frame(strsplit(Season.label, " "), stringsAsFactors=FALSE)
 colnames(season.split) <- Ver.otus
+
+# Combine all the ecoIDs into one dataframe
 Lake_Type.split[3,] <- depth.split[1,]
 Lake_Type.split[4,] <- fraction.split[1,]
 Lake_Type.split[5,] <- season.split[1,]
 Lake_Type.split <- Lake_Type.split[-2,]
-# Now to rename the OTUs with no preference in one of the ecological factors
+
+
+# Rename the OTUs with no preference in one of the ecological factors
 nopref <- which(substr(Lake_Type.split[1,],1,1) == "O")
 Lake_Type.split[1,nopref] <- 0
 nopref <- which(substr(Lake_Type.split[2,],1,1) == "O")
@@ -4087,37 +3991,51 @@ nopref <- which(substr(Lake_Type.split[3,],1,1) == "O")
 Lake_Type.split[3,nopref] <- 0
 nopref <- which(substr(Lake_Type.split[4,],1,1) == "O")
 Lake_Type.split[4,nopref] <- "0_"
+
+### Combine all of the ecoIDs into the final dataframe
 Lake_Type.split[5,] <- paste(Lake_Type.split[2,], Lake_Type.split[1,], Lake_Type.split[3,], Lake_Type.split[4,],
                          colnames(Lake_Type.split))
+
+### Save our file!
 write.csv(Lake_Type.split[5,], file="Ecology_Otu_sig", row.names=FALSE, quote=FALSE)
 ```
 
 ### Create updated phyloseq object with EcoID
-```{r ecoid.phyloseq}
-##### Create new phyloseq object with EcoIDs
+```{r}
+### Create new phyloseq object with EcoIDs
+
 eco.label<- read.csv("Ecology_Otu_sig", header=F)
 eco.label <- t(eco.label)
 otu <- otu_table(Ver1)
 samp <- sample_data(Ver1)
+
+# Add ecoIDs to tax_table
 tax <- data.frame(tax_table(Ver1))
 tax$EcoID <- eco.label
+
+# Split up ecoIDs to each separate preference
 Lake_Type.split <- t(Lake_Type.split)
 tax$Pref.Depth <- Lake_Type.split[,3]
 tax$Pref.Lake_Type <- Lake_Type.split[,1]
 tax$Pref.Fraction <- Lake_Type.split[,4]
 tax$Pref.Season <- Lake_Type.split[,5]
 tax <- as.matrix(tax)
-tax <- tax_table(tax)
+tax <- tax_table
+
+# Phyloseq object w/ ecoID info
 eco.ver <- merge_phyloseq(otu, samp, tax)
+
+# Add Verruco tree to phyloseq object
 newick <- read.newick(file="ver.tre")
 newick_phy <- phy_tree(newick)
-#test <- import_mothur(mothur_tree_file=newick)
+
+# Final phyloseq object!
 Ver.tree<-merge_phyloseq(eco.ver,newick_phy)
-#plot_tree(Ver.tree, color="Class")
+
 ```
 
 ### Create labels for IToL!
-```{r, itol}
+```{r}
 ### IToL Label Functions
 color.id <- function(x) {
   ifelse(grepl("OPB35_soil_group",x),"#e41a1c",
@@ -4192,71 +4110,18 @@ write.csv(ecoid.all$itol.label,"EcoID.IToL.label.sig", row.names=FALSE, quote=FA
 
 
 ### Subset only significant EcoID Verrucos
-```{r itol.sig}
+```{r}
+# Subset out Verruco OTUs that have no preference
 nosig <- which(substr(ecoid.all$EcoID,1,4)=="0000")
 nosig.otus <- as.character(ecoid.all$all.Species[nosig])
+
+# Subset out Verruco OTUs that have at least one preference
 sig.otus <- Ver.otus[!Ver.otus %in% nosig.otus]
 only.sig <- prune_taxa(sig.otus, Ver.tree)
+
+# Verruco tree of only OTUs that have a preference
 write.tree(phy_tree(only.sig), file="ver.sig.tre")
 
-```
-
-
-### Create dataset for ITOL for top 50 Verruco OTUS
-```{r ITOL.100}
-# Subset out top 100 most abundant Verruco OTUs
-top50ver = sort(taxa_sums(Ver), TRUE)[1:50]
-print(top50ver)
-top50ver.names<-names(top50ver)
-
-Ver.50 <- prune_taxa(mostabund.names, Ver)
-#write.tree(phy_tree(Ver.50), file="ver.50.tre")
-```
-
-
-### Create dataset for ITOL for top 100 Verruco OTUS
-```{r ITOL.100}
-# Subset out top 100 most abundant Verruco OTUs
-top100ver = sort(taxa_sums(Ver), TRUE)[1:100]
-print(top100ver)
-top100ver.names<-names(top100ver)
-
-Ver.100 <- prune_taxa(mostabund.names, Ver)
-#write.tree(phy_tree(Ver.100), file="ver.100.tre")
-```
-
-
-### Check Sig Verruco Abundance
-```{r sig.itol.abund}
-remain.tree <- read.newick(file="ver.sig.tre")
-remain.otus <- remain.tree$tip.label
-
-#remove.tree <- read.newick(file="ver.remove.sig.01.tre")
-#remove.otus <- remove.tree$tip.label
-
-#remain.unique <- setdiff(remain.otus, remove.otus)
-  # remain.otus that are not in remove.otus
-#remove.unique <- setdiff(remove.otus, remain.otus)
-  # remove.otus that are not in remain.otus
-
-remain.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.otus, x=Vdeseq.pick)
-remain.phy <- merge_phyloseq(remain.phy, remain.tree)
-#write.tree(phy_tree(refit.phy), file="refit.tre")
-remain.rel <- transform_sample_counts(remain.phy, function(x){x/sum(x)})
-summary(taxa_sums(remain.rel))
-# Create rank abundance of OTUs
-barplot(sort(taxa_sums(remain.rel),TRUE)/nsamples(remain.rel),las=2,cex.axis=.7)
-# Create rank abundance of OTUs
-barplot(sort(taxa_sums(remain.rel),TRUE)[1:60]/nsamples(remain.rel),las=2,cex.axis=.7)
-
-
-
-remain.relabund <- prune_taxa(names(taxa_sums(Ver.rel)) %in% remain.otus, x=Ver.rel)
-
-#remain.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remain.unique, x=Vdeseq.pick)
-
-#remove.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.otus, x=Vdeseq.pick)
-#remove.unique.phy <- prune_taxa(names(taxa_sums(Vdeseq.pick)) %in% remove.unique, x=Vdeseq.pick)
 ```
 
 
@@ -4267,8 +4132,10 @@ remain.relabund <- prune_taxa(names(taxa_sums(Ver.rel)) %in% remain.otus, x=Ver.
 ```{r geiger}
 # https://github.com/mwpennell/geiger-v2
 
+# Read in tree of only Verrucos with a habitat preference
 ver.sig.tre <- read.newick(file="ver.sig.tre")
 
+# Create dataframe with ecoID data
 eco.label <- read.csv("Ecology_Otu_sig", header=F)
 eco.label <- t(eco.label)
 eco.label <- data.frame(eco.label)
@@ -4284,7 +4151,7 @@ nosig.loc <- pmatch(nosig, eco.label$OTU)
 eco.label <- eco.label[-nosig.loc,]
 
 
-# Pull out only significant depth preferences
+# Pull only OTUs with a Depth preference
 eco.depth <- data.frame(eco.label$Depth, row.names=eco.label$OTU)
 pref <- which(eco.depth != "0")
 sig.depth <- data.frame(eco.depth[pref,1], row.names=row.names(eco.depth)[pref])
@@ -4292,7 +4159,7 @@ nopref <- which(eco.depth == "0")
 nopref<- row.names(eco.depth)[nopref]
 depth.tre <- drop.tip(ver.sig.tre, nopref)
 
-# Test for phylogenetic signal in depth affinity
+# Test for phylogenetic signal in Depth affinity
 optimal <- fitDiscrete(depth.tre, sig.depth, treeTransform="lambda")
 phy.Lambda0 <- rescale(depth.tre, "lambda", 0)
 zero <- fitDiscrete(phy.Lambda0, sig.depth)
@@ -4303,7 +4170,7 @@ p.lambda
 
 
 
-# Pull out only significant lake type preferences
+# Pull only OTUs with a Lake Type preference
 eco.lake <- data.frame(eco.label$Lake_Type, row.names=eco.label$OTU)
 pref <- which(eco.lake != "0")
 sig.lake <- data.frame(eco.lake[pref,1], row.names=row.names(eco.lake)[pref])
@@ -4311,7 +4178,7 @@ nopref <- which(eco.lake == "0")
 nopref<- row.names(eco.lake)[nopref]
 lake.tre <- drop.tip(ver.sig.tre, nopref)
 
-# Test for phylogenetic signal in lake affinity
+# Test for phylogenetic signal in Lake Type affinity
 optimal <- fitDiscrete(lake.tre, sig.lake, treeTransform="lambda")
 phy.Lambda0 <- rescale(lake.tre, "lambda", 0)
 zero <- fitDiscrete(phy.Lambda0, sig.lake)
@@ -4321,7 +4188,7 @@ p.lambda
   # p-value = 0.0286439
 
 
-# Pull out only significant fraction preferences
+# Pull out only OTUs with a Fraction preference
 eco.frac <- data.frame(eco.label$Fraction, row.names=eco.label$OTU)
 pref <- which(eco.frac != "0")
 sig.frac <- data.frame(eco.frac[pref,1], row.names=row.names(eco.frac)[pref])
@@ -4329,7 +4196,7 @@ nopref <- which(eco.frac == "0")
 nopref<- row.names(eco.frac)[nopref]
 frac.tre <- drop.tip(ver.sig.tre, nopref)
 
-# Test for phylogenetic signal in fraction affinity
+# Test for phylogenetic signal in Fraction affinity
 optimal <- fitDiscrete(frac.tre, sig.frac, treeTransform="lambda")
 phy.Lambda0 <- rescale(frac.tre, "lambda", 0)
 zero <- fitDiscrete(phy.Lambda0, sig.frac)
@@ -4340,7 +4207,7 @@ p.lambda
 
 
 
-# Pull out only significant season preferences
+# Pull out only OTUs with a Season preference
 eco.season <- data.frame(eco.label$Season, row.names=eco.label$OTU)
 pref <- which(eco.season != "0")
 sig.season <- data.frame(eco.season[pref,1], row.names=row.names(eco.season)[pref])
@@ -4348,7 +4215,7 @@ nopref <- which(eco.season == "0")
 nopref<- row.names(eco.season)[nopref]
 season.tre <- drop.tip(ver.sig.tre, nopref)
 
-# Test for phylogenetic signal in season affinity
+# Test for phylogenetic signal in Season affinity
 optimal <- fitDiscrete(season.tre, sig.season, treeTransform="lambda")
 phy.Lambda0 <- rescale(season.tre, "lambda", 0)
 zero <- fitDiscrete(phy.Lambda0, sig.season)
@@ -4641,34 +4508,6 @@ nacols <- function(df) {
   colnames(df)[unlist(lapply(df, function(x) any(is.na(x))))]
 }
 
-deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.01){
-  data_pruned <- prune_taxa(taxa_sums(data) > cutoff, data)
-  de_data <- phyloseq_to_deseq2(data_pruned, valuetest)
-  de_data2 <- DESeq(de_data, test="Wald", fitType="local")
-  res_data <- results(de_data2, cooksCutoff = FALSE)
-  sig_data <- res_data[which(res_data$padj < alpha), ]
-  sigtab_sherm <- cbind(as(sig_data, "data.frame"), as(tax_table(data_pruned)[rownames(sig_data), ], "matrix"))
-} 
-
-plot_deSEQ <- function(deSEQdata, title){
-  y = tapply(deSEQdata$log2FoldChange, deSEQdata$Genus, function(x) max(x))
-  y = sort(y, TRUE)
-  deSEQdata$Genus = factor(as.character(deSEQdata$Genus), levels=names(y))
-  ggplot(deSEQdata, aes(x=Genus, y=log2FoldChange, color=Phylum)) + 
-    geom_point(size=6) +  ggtitle(title) +  
-    scale_color_manual(values = phylum.colors,name="Phylum") +
-    scale_y_continuous(breaks=seq(-15,15,1)) + 
-    theme(axis.title.x = element_text(face="bold", size=16),
-          axis.text.x = element_text(angle=30, colour = "black", vjust=1, hjust = 1, size=12),
-          axis.text.y = element_text(colour = "black", size=16),
-          axis.title.y = element_text(face="bold", size=16),
-          plot.title = element_text(face="bold", size = 20),
-          legend.title = element_text(size=12, face="bold"),
-          legend.text = element_text(size = 12),
-          strip.background = element_rect(colour="black"),
-          legend.position="right")
-}
-
 
 
 # http://menugget.blogspot.com/2011/06/clarke-and-ainsworths-bioenv-and-bvstep.html#more
@@ -4733,164 +4572,6 @@ var.max=ncol(var.mat)
  )
  out
 }
-
-
-
-
-# http://menugget.blogspot.com/2011/06/clarke-and-ainsworths-bioenv-and-bvstep.html#more
-bv.step <- function(fix.mat, var.mat, 
-fix.dist.method="bray", var.dist.method="euclidean",
-scale.fix=FALSE, scale.var=TRUE,
-max.rho=0.95,
-min.delta.rho=0.001,
-random.selection=TRUE,
-prop.selected.var=0.2,
-num.restarts=10,
-var.always.include=NULL,
-var.exclude=NULL,
-output.best=10
-){
- 
- if(dim(fix.mat)[1] != dim(var.mat)[1]){stop("fixed and variable matrices must have the same number of rows")}
- if(sum(var.always.include %in% var.exclude) > 0){stop("var.always.include and var.exclude share a variable")}
- require(vegan)
- 
- if(scale.fix){fix.mat<-scale(fix.mat)}else{fix.mat<-fix.mat}
- if(scale.var){var.mat<-scale(var.mat)}else{var.mat<-var.mat}
- 
- fix.dist <- vegdist(as.matrix(fix.mat), method=fix.dist.method)
- 
- #an initial removal phase
- var.dist.full <- vegdist(as.matrix(var.mat), method=var.dist.method)
- full.cor <- suppressWarnings(cor.test(fix.dist, var.dist.full, method="spearman"))$estimate
- var.comb <- combn(1:ncol(var.mat), ncol(var.mat)-1)
- RES <- data.frame(var.excl=rep(NA,ncol(var.comb)), n.var=ncol(var.mat)-1, rho=NA)
- for(i in 1:dim(var.comb)[2]){
-  var.dist <- vegdist(as.matrix(var.mat[,var.comb[,i]]), method=var.dist.method)
-  temp <- suppressWarnings(cor.test(fix.dist, var.dist, method="spearman"))
-  RES$var.excl[i] <- c(1:ncol(var.mat))[-var.comb[,i]]
-  RES$rho[i] <- temp$estimate
- }
- delta.rho <- RES$rho - full.cor
- exclude <- sort(unique(c(RES$var.excl[which(abs(delta.rho) < min.delta.rho)], var.exclude)))
- 
- if(random.selection){
-  num.restarts=num.restarts
-  prop.selected.var=prop.selected.var
-  prob<-rep(1,ncol(var.mat))
-  if(prop.selected.var< 1){
-   prob[exclude]<-0
-  }
-  n.selected.var <- min(sum(prob),prop.selected.var*dim(var.mat)[2])
- } else {
-  num.restarts=1
-  prop.selected.var=1  
-  prob<-rep(1,ncol(var.mat))
-  n.selected.var <- min(sum(prob),prop.selected.var*dim(var.mat)[2])
- }
- 
- RES_TOT <- c()
- for(i in 1:num.restarts){
-  step=1
-  RES <- data.frame(step=step, step.dir="F", var.incl=NA, n.var=0, rho=0)
-  attr(RES$step.dir, "levels") <- c("F","B")
-  best.comb <- which.max(RES$rho)
-  best.rho <- RES$rho[best.comb]
-  delta.rho <- Inf
-  selected.var <- sort(unique(c(sample(1:dim(var.mat)[2], n.selected.var, prob=prob), var.always.include)))
-  while(best.rho < max.rho & delta.rho > min.delta.rho & RES$n.var[best.comb] < length(selected.var)){
-   #forward step
-   step.dir="F"
-   step=step+1
-   var.comb <- combn(selected.var, RES$n.var[best.comb]+1, simplify=FALSE)
-   if(RES$n.var[best.comb] == 0){
-    var.comb.incl<-1:length(var.comb)
-   } else {
-    var.keep <- as.numeric(unlist(strsplit(RES$var.incl[best.comb], ",")))
-    temp <- NA*1:length(var.comb)
-    for(j in 1:length(temp)){
-     temp[j] <- all(var.keep %in% var.comb[[j]]) 
-    }
-    var.comb.incl <- which(temp==1)
-   }
- 
-   RES.f <- data.frame(step=rep(step, length(var.comb.incl)), step.dir=step.dir, var.incl=NA, n.var=RES$n.var[best.comb]+1, rho=NA)
-   for(f in 1:length(var.comb.incl)){
-    var.incl <- var.comb[[var.comb.incl[f]]]
-    var.incl <- var.incl[order(var.incl)]
-    var.dist <- vegdist(as.matrix(var.mat[,var.incl]), method=var.dist.method)
-    temp <- suppressWarnings(cor.test(fix.dist, var.dist, method="spearman"))
-    RES.f$var.incl[f] <- paste(var.incl, collapse=",")
-    RES.f$rho[f] <- temp$estimate
-   }
- 
-   last.F <- max(which(RES$step.dir=="F"))
-   RES <- rbind(RES, RES.f[which.max(RES.f$rho),])
-   best.comb <- which.max(RES$rho)
-   delta.rho <- RES$rho[best.comb] - best.rho 
-   best.rho <- RES$rho[best.comb]
- 
-   if(best.comb == step){
-    while(best.comb == step & RES$n.var[best.comb] > 1){
-     #backward step
-     step.dir="B"
-     step <- step+1
-     var.keep <- as.numeric(unlist(strsplit(RES$var.incl[best.comb], ",")))
-     var.comb <- combn(var.keep, RES$n.var[best.comb]-1, simplify=FALSE)
-     RES.b <- data.frame(step=rep(step, length(var.comb)), step.dir=step.dir, var.incl=NA, n.var=RES$n.var[best.comb]-1, rho=NA)
-     for(b in 1:length(var.comb)){
-      var.incl <- var.comb[[b]]
-      var.incl <- var.incl[order(var.incl)]
-      var.dist <- vegdist(as.matrix(var.mat[,var.incl]), method=var.dist.method)
-      temp <- suppressWarnings(cor.test(fix.dist, var.dist, method="spearman"))
-      RES.b$var.incl[b] <- paste(var.incl, collapse=",")
-      RES.b$rho[b] <- temp$estimate
-     }
-     RES <- rbind(RES, RES.b[which.max(RES.b$rho),])
-     best.comb <- which.max(RES$rho)
-     best.rho<- RES$rho[best.comb]
-    }
-   } else {
-    break()
-   }
- 
-  }
- 
-  RES_TOT <- rbind(RES_TOT, RES[2:dim(RES)[1],])
-  print(paste(round((i/num.restarts)*100,3), "% finished"))
- }
- 
- RES_TOT <- unique(RES_TOT[,3:5])
- 
- 
- if(dim(RES_TOT)[1] > output.best){
-  order.by.best <- RES_TOT[order(RES_TOT$rho, decreasing=TRUE)[1:output.best],]
- } else {
-  order.by.best <-  RES_TOT[order(RES_TOT$rho, decreasing=TRUE), ]
- }
- rownames(order.by.best)<-NULL
- 
- order.by.i.comb <- c()
- for(i in 1:length(selected.var)){
-  f1 <- which(RES_TOT$n.var==i)
-  f2 <- which.max(RES_TOT$rho[f1])
-  order.by.i.comb <- rbind(order.by.i.comb, RES_TOT[f1[f2],])
- }
- rownames(order.by.i.comb)<-NULL
- 
- if(length(exclude)<1){var.exclude=NULL} else {var.exclude=exclude}
- out <- list(
-  order.by.best=order.by.best,
-  order.by.i.comb=order.by.i.comb,
-  best.model.vars=paste(colnames(var.mat)[as.numeric(unlist(strsplit(order.by.best$var.incl[1], ",")))], collapse=","),
-  best.model.rho=order.by.best$rho[1],
-  var.always.include=var.always.include,
-  var.exclude=var.exclude
-  )
- out
- 
-}
-
 
 ```
 
