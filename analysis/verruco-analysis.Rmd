@@ -232,7 +232,14 @@ phy.sum <- phy.df %>%
   summarize(Mean = mean(Abundance),
             Median = median(Abundance),
             SD = sd(Abundance),
-            SE = se(Abundance))
+            SE = se(Abundance),
+            iqr = IQR(Abundance))
+
+# Calculate IQR limits
+phy.sum$iqr.min <- phy.sum$Median - 0.5*phy.sum$iqr
+phy.sum[which(phy.sum$iqr.min < 0),8] <- 0
+  # Any IQR min < 0, change to 0 (otherwise error bar won't plot)
+phy.sum$iqr.max <- phy.sum$Median + 0.5*phy.sum$iqr
 
 
 # Remove phyla that are <1% rel abun (median) in all 3 Lake Types
@@ -259,6 +266,7 @@ phy.lau.sum <- phy.trim[1:8,]
 phy.est.sum <- phy.trim[9:16,]
 phy.inl.sum <- phy.trim[17:24,]
 
+
 # Set phylum plotting colors for 8 taxa
 phylum.colors <- c(Actinobacteria="firebrick3",
                    Armatimonadetes="lightsalmon",
@@ -273,15 +281,15 @@ phylum.colors <- c(Actinobacteria="firebrick3",
 
 
 ##### PLOT #####
-tiff("phy.relabund.tiff", width = 10, height = 10, units = "cm", res = 600)
+png("phy.relabund.png", width = 10, height = 10, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
-          geom_bar(stat="identity", position="dodge", color="black") +
+          geom_bar(stat="identity", color="black") +
           #scale_y_continuous(labels = percent_format()) +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
-  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
+  geom_errorbar(aes(ymax=iqr.max, ymin=iqr.min), width=0.3) + 
   xlab("Phyla") + ylab("Median Relative Abundance (Taxa > 1%)") +
   facet_grid(Lake_Type~., space="free", scales = "free_x") +
-  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
+  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,50)) +
           theme(axis.title.x = element_text(size=10, face="bold"),
                 axis.text.x = element_text(size=8, angle = 90),
                 axis.text.y = element_text(size=8),
@@ -431,10 +439,7 @@ barplot(sort(taxa_sums(classVer.rel),TRUE)[1:20]/nsamples(classVer.rel),las=2,ce
 classVer.df <- psmelt(classVer.rel)
 classVer.df$Abundance <- classVer.df$Abundance * 100
 classVer.df$Class <- ordered(classVer.df$Class, levels=c("unclassified","Verrucomicrobiae","Verrucomicrobia_Incertae_Sedis","Spartobacteria","S-BQ2-57_soil_group","Opitutae","OPB35_soil_group"))
-classVer.df$Group <- ordered(classVer.df$Lake_Type, levels = c("Laurentian","Estuary","Inland"))
-classVer.df$Fraction <- ordered(classVer.df$Fraction, levels = c("Particle","Free","Sediment"))
-classVer.df$Depth <- ordered(classVer.df$Depth, levels = c("Top", "Bottom","Sediment"))
-classVer.df$Season <- ordered(classVer.df$Season, levels = c("Spring","Summer","Fall"))
+
 
 
 #Ver.colors <- c("OPB35_soil_group" = "gold", Opitutae = "red2", "S-BQ2-57_soil_group" = "mediumorchid3", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "darkorange", Verrucomicrobiae = "deepskyblue", unclassified="purple4")
@@ -614,26 +619,29 @@ classVer.rel.df <- psmelt(classVer.rel)
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Lake_Type", "Class", "Abundance","Fraction", "Season"))
     ## These are the factors that you'll be using to make your graph
 lakefracseas <- ddply(sub.classVer.df, c("Lake_Type", "Class", "Fraction", "Season"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
+                   Mean = mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
+
+# Calculate IQR limits
+lakefracseas$iqr.min <- lakefracseas$Median - 0.5*lakefracseas$iqr
+lakefracseas[which(lakefracseas$iqr.min < 0), 10] <- 0
+  # Any IQR min < 0, change to 0 (otherwise error bar won't plot)
+lakefracseas$iqr.max <- lakefracseas$Median + 0.5*lakefracseas$iqr
+
 
 
 ###### THIS ONE! ######
 tiff("intraver.tiff", width = 17.8, height = 18, units = "cm", res = 600)
-ggplot(lakefracseas, aes(y=relabun, x = Class, fill = Class)) +
+ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
-  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  geom_errorbar(aes(ymin = iqr.min, ymax = iqr.max), width = 0.25) + 
+  xlab("Class") + ylab("Median Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(colour = "black", size=8),
         axis.text.y = element_blank(),
