@@ -28,9 +28,6 @@ library(labdsv)
 library(geiger)
 library(sciplot)
 library(picante)
-#library(shiny)
-#library(shinyFiles)
-#library(samr)
 theme_set(theme_bw())
 set.seed(1)
 ```
@@ -42,7 +39,7 @@ load("VerrucoData.RData")
 
 
 ### Visualize overall phyloseq object
-```{r verruco.visualize}
+```{r}
 # Check the sequencing depth of each sample 
 sums_verruco <- data.frame(colSums(otu_table(verruco)))
 colnames(sums_verruco) <- "Sample_TotalSeqs"
@@ -50,11 +47,14 @@ sums_verruco$sample <- row.names(sums_verruco)
 sums_verruco <- arrange(sums_verruco, Sample_TotalSeqs)
 
 # Create a plot of the number of sequences per sample
-ggplot(sums_verruco, aes(x=reorder(sample,Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+ggplot(sums_verruco, aes(x=reorder(sample,Sample_TotalSeqs),
+                         y = Sample_TotalSeqs)) + 
   ylab("Number of Sequences per Sample") +
-  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue") +
+  xlab("Sample Name") + 
   ggtitle("Total Number of Sequences per Sample") + 
-  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1,
+                                   vjust = 1))
 
 # Look at # of reads
 ggplot(data.frame(sum = sample_sums(verruco)), aes(sum)) + 
@@ -70,7 +70,7 @@ max(sample_sums(verruco))
 
 
 ### Merge Duplicates & create new phyloseq object
-```{r merge.dups}
+```{r}
 # Merges duplicates
 verr.dupmerge <- merge_samples(verruco, "Duplicates")
 
@@ -89,7 +89,7 @@ sample_data(verr.dupmerge) <- duplicate.metadata
 ```
 
 ### Visualize merged dataset
-```{r visualize.verr.dupmerge}
+```{r}
 # Check the sequencing depth of each sample 
 sums_dupmerge <- data.frame(rowSums(otu_table(verr.dupmerge)))
 colnames(sums_dupmerge) <- "Sample_TotalSeqs"
@@ -97,11 +97,14 @@ sums_dupmerge$sample <- row.names(sums_dupmerge)
 sums_dupmerge <- arrange(sums_dupmerge, Sample_TotalSeqs)
 
 # Create a plot of the number of sequences per sample
-ggplot(sums_dupmerge, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+ggplot(sums_dupmerge, aes(x=reorder(sample, Sample_TotalSeqs),
+                          y = Sample_TotalSeqs)) + 
   ylab("Number of Sequences per Sample") +
-  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue") +
+  xlab("Sample Name") + 
   ggtitle("Total Number of Sequences per Sample") + 
-  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1,
+                                   vjust = 1))
 
 # Look at # of reads
 ggplot(data.frame(sum = sample_sums(verr.dupmerge)), aes(sum)) + 
@@ -117,7 +120,7 @@ max(sample_sums(verr.dupmerge))
 
 
 ### Trim & normalize data based on # of reads/sequence depth
-```{r scale.data}
+```{r}
 # Function to normalize data
 scale_reads <- function(physeq,n){
   physeq.scale <- transform_sample_counts(physeq, function(x) {round((n*x/sum(x)))})
@@ -126,9 +129,11 @@ scale_reads <- function(physeq,n){
   return(physeq.scale)
 }
 
-# Remove North Hypo samples because their reads are seriously too low (8 & 18)
+# Remove North Hypo samples because their reads are seriously too low (8 & 18, respectively)
 dupmerge.subset <- subset_samples(physeq = verr.dupmerge, SampleID != "Z14.051.P")
 dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.051.F")
+
+# The samples below are roughly <10k reads; however, removing or keeping them makes no significant difference in my downstream analyses so I chose to keep them
 #dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.016.P")
 #dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "MINE.P.514")
 #dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.047.P")
@@ -137,13 +142,14 @@ dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.051
 #dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SN")
 #dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SD")
 
-### Removing or leaving in that last 10k sample doesn't make a difference in PERMANOVA/betadisper
 
 # Normalize our dataset!
 scaled <- scale_reads(dupmerge.subset,min(sample_sums(dupmerge.subset)))
   ### Scaled to 2,072 (min sample)
     # 5593 taxa
     # 226 samples
+
+# Order the factors
 sample_data(scaled)$Lake_Type <- ordered(sample_data(scaled)$Lake_Type,
                                      levels=c("Laurentian","Estuary","Inland"))
 sample_data(scaled)$Fraction <- ordered(sample_data(scaled)$Fraction,
@@ -162,9 +168,11 @@ sums_scaled <- arrange(sums_scaled, Sample_TotalSeqs)
 # Create a plot of the number of sequences per sample
 ggplot(sums_scaled, aes(x=SampleID, y = Sample_TotalSeqs)) + 
   ylab("Number of Sequences per Sample") +
-  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue") +
+  xlab("Sample Name") + 
   ggtitle("Total Number of Sequences per Sample") + 
-  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(colour = "black", size=6, angle=45, hjust = 1,
+                                   vjust = 1))
 
 # Let's visualized our normalized dataset
 ggplot(data.frame(sum = sample_sums(scaled)), aes(sum)) + 
@@ -175,8 +183,8 @@ ggplot(data.frame(sum = sample_sums(scaled)), aes(sum)) +
 
 
 ### Rank abundance curve of top 300 OTUs
-```{r rankabund}
-### Get top 500 most abundant OTUs
+```{r}
+### Get top 300 most abundant OTUs
 top300.taxa <- sort(taxa_sums(scaled), TRUE)[1:300]
 top300.OTUs <- prune_taxa(names(top300.taxa), scaled)
 top300.sums <- data.frame(taxa_sums(top300.OTUs))
@@ -184,7 +192,8 @@ top300.sums <- data.frame(taxa_sums(top300.OTUs))
 ggplot(top300.sums,aes(x=row.names(top300.sums), y=taxa_sums.top300.OTUs.)) + 
   ylab("Number of Sequences per OTU") + scale_x_discrete(expand = c(0,0)) + 
   scale_y_continuous(expand = c(0,0)) + theme_classic() +
-  geom_bar(stat="identity",colour="black",fill="darkturquoise")  + xlab("OTU Rank") + 
+  geom_bar(stat="identity",colour="black",fill="darkturquoise") +
+  xlab("OTU Rank") +
   ggtitle("Rank Abundance Curve of the Top 300 OTUs") + 
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
@@ -193,12 +202,11 @@ ggplot(top300.sums,aes(x=row.names(top300.sums), y=taxa_sums.top300.OTUs.)) +
 
 
 ### Let's take a look at the phyla in our normalized dataset
-```{r phyla.level, fig.height = 5, fig.width = 8.5}
-
-# Merges things that have the same taxanomic rank
+```{r}
+# Merge samples with the same taxonomic rank
 good_phylum <- tax_glom(scaled, taxrank = "Phylum")
 
-# Transforms each merged phylum count to rel abun
+# Transform each merged phylum count to rel abun
 phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
 
 # If a phylum has <1% rel abun, change that to 0%
@@ -208,7 +216,7 @@ otu_table(phylum.99)[otu_table(phylum.99) < 1] <- 0
 phylum.99 = prune_taxa(taxa_sums(phylum.99) > 0, phylum.99)
 
 # Create rank abundance of OTUs
-top5phyla.barplot <- barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
+top5phyla.barplot <-barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum.99),
   las = 2,
   cex.axis = 0.7, 
   space = F, 
@@ -261,12 +269,6 @@ phy.trim <- phy.trim[-which(phy.trim$Phylum== "unclassified"),]
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Acidobacteria"),]
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Chloroflexi"),]
 
-# Break up summaries by Lake_Type
-phy.lau.sum <- phy.trim[1:8,]
-phy.est.sum <- phy.trim[9:16,]
-phy.inl.sum <- phy.trim[17:24,]
-
-
 # Set phylum plotting colors for 8 taxa
 phylum.colors <- c(Actinobacteria="firebrick3",
                    Armatimonadetes="lightsalmon",
@@ -277,8 +279,6 @@ phylum.colors <- c(Actinobacteria="firebrick3",
                    Planctomycetes="tomato4",
                    Proteobacteria="khaki1",
                    Verrucomicrobia="lightslateblue")
-
-
 
 ##### PLOT #####
 png("phy.relabund.png", width = 10, height = 10, units = "cm", res = 600)
@@ -303,101 +303,11 @@ ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
   guides(fill = guide_legend(keywidth = 0.5, keyheight = 0.5))
 dev.off()
 
-
-
-##### Laurentian #####
-#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-phy.lau.plot<- ggplot(phy.lau.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
-          geom_bar(stat="identity", position="dodge", color="black") +
-          #scale_y_continuous(labels = percent_format()) +
-          scale_fill_manual(values = phylum.colors, name="Phylum") +
-  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
-  scale_x_discrete(breaks=NULL) +
-  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
-          theme(axis.title.x = element_blank(),
-                axis.text.x = element_blank(),
-                axis.text.y = element_text(size=8),
-                axis.title.y = element_text(size=8, face="bold"),
-                plot.title = element_text(size = 12, face="bold"),
-                legend.title = element_text(size=10, face="bold"),
-                legend.text = element_text(size =8),
-                legend.position="right") +
-  guides(fill=F) + xlab("Phyla") + ylab("Laurentian")
-  #        guides(fill = guide_legend(keywidth = 1, keyheight = 1))
-#dev.off()
-
- ##### Let's steal the legend 
-  g_legend <- function(a.gplot){
-    tmp <- ggplot_gtable(ggplot_build(a.gplot))
-    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-    legend <- tmp$grobs[[leg]]
-    return(legend)}
-  legend <- g_legend(phy.lau.plot)
-
-
-##### Estuary #####
-#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-phy.est.plot <- ggplot(phy.est.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
-          geom_bar(stat="identity", position="dodge", color="black") +
-          #scale_y_continuous(labels = percent_format()) +
-          scale_fill_manual(values = phylum.colors, name="Phylum") +
-  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
-  scale_x_discrete(breaks=NULL) +
-  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
-          theme(axis.title.x = element_blank(),
-                axis.text.x = element_blank(),
-                axis.text.y = element_text(size=8),
-                axis.title.y = element_text(size=8, face="bold"),
-                plot.title = element_text(size = 12, face="bold"),
-                legend.title = element_text(size=10, face="bold"),
-                legend.text = element_text(size = 8),
-                legend.position="right") +
-          #guides(fill = guide_legend(keywidth = 1, keyheight = 1)) +
-          guides(fill=F) + xlab("Phyla") + ylab("Estuary")
-#dev.off()
-
-
-##### Inland #####
-#tiff("stackbar.Lake_Type.tiff", width = 7, height = 8, units = "in", res = 500)
-phy.inl.plot <- ggplot(phy.inl.sum, aes(x=Phylum, y=Median, fill=Phylum)) +
-          geom_bar(stat="identity", position="dodge", color="black") +
-          #scale_y_continuous(labels = percent_format()) +
-          scale_fill_manual(values = phylum.colors, name="Phylum") +
-  geom_errorbar(aes(ymax=Median+SE, ymin=Median-SE), width=0.3) + 
-  scale_x_discrete(breaks=NULL) +
-  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,40)) +
-          theme(axis.title.x = element_text(size=10, face = "bold"),
-                axis.text.x = element_blank(),
-                axis.text.y = element_text(size=8),
-                axis.title.y = element_text(size=8, face="bold"),
-                plot.title = element_text(size = 12, face="bold"),
-                legend.title = element_text(size=10, face="bold"),
-                legend.text = element_text(size = 8),
-                legend.position="right") +
-          #guides(fill = guide_legend(keywidth = 1, keyheight = 1)) +
-          guides(fill=F) + xlab("Phyla") + ylab("Inland")
-#dev.off()
-
-
-##### Make big plot #####
-tiff("phy.relabund.tiff", width = 8.7, height = 10, units = "cm", res = 600)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,3, widths=c(0.4,7,3.5), heights=c(1,1,1.13)))))
-grid.text("Relative Abundance (Taxa > 1%)", rot=90,
-          vp=viewport(layout.pos.row=c(1,3), layout.pos.col = 1),
-                      gp=gpar(fontsize=10, fontface="bold"))
-print(phy.lau.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-print(phy.est.plot, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-print(phy.inl.plot, vp=viewport(layout.pos.row=3, layout.pos.col=2))
-legend$vp <- viewport(layout.pos.row = 2, layout.pos.col = 3)
-grid.draw(legend)
-dev.off()
-
 ```
 
 ### Separate out Verrucos
 ```{r}
-# Phyloseq object of ALL Verruco OTUs
+# Pull out all verruco OTUs
 Ver <- subset_taxa(scaled, Phylum == "Verrucomicrobia")
   # taxa = 329
 
@@ -418,7 +328,8 @@ ggplot(sums_Ver, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs))
 ```
 
 ### Intra-Verruco Rel Abund
-```{r Intra.Ver}
+```{r}
+# Merge all Verruco OTUs by Class
 classVer <- tax_glom(Ver, taxrank = "Class")
 
 # Calculate relative abundance
@@ -440,38 +351,30 @@ classVer.df <- psmelt(classVer.rel)
 classVer.df$Abundance <- classVer.df$Abundance * 100
 classVer.df$Class <- ordered(classVer.df$Class, levels=c("unclassified","Verrucomicrobiae","Verrucomicrobia_Incertae_Sedis","Spartobacteria","S-BQ2-57_soil_group","Opitutae","OPB35_soil_group"))
 
-
-
-#Ver.colors <- c("OPB35_soil_group" = "gold", Opitutae = "red2", "S-BQ2-57_soil_group" = "mediumorchid3", Spartobacteria = "chartreuse3", "Verrucomicrobia_Incertae_Sedis" = "darkorange", Verrucomicrobiae = "deepskyblue", unclassified="purple4")
-
+# Colors that will be used in ggplot
 Ver.colors <- c("OPB35_soil_group" = "#e41a1c", Opitutae = "#377eb8", "S-BQ2-57_soil_group" = "#984ea3", Spartobacteria = "#4daf4a", "Verrucomicrobia_Incertae_Sedis" = "#ff7f00", Verrucomicrobiae = "#ffd92f", unclassified="#f1a3a9")
 
 
+##### Group & Fraction facet #####
 
-########### Create dataframe for unstacked bar plots (facet by Group & Fraction) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+# Pull out the factors that I'll use
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Lake_Type","Fraction"))
-    ## These are the factors that you'll be using to make your graph
-lakefrac <- ddply(sub.classVer.df, c("Lake_Type","Fraction", "Class"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
 
-###### GGPLOT IT! ######
-#tiff("intra.remain.lakefrac.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(lakefrac, aes(y=relabun, x = Class, fill = Class)) +
+# Calculate stat summaries
+lakefrac <- ddply(sub.classVer.df, c("Lake_Type","Fraction", "Class"), summarise,
+                   Mean = mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
+
+### GGPLOT IT!
+ggplot(lakefrac, aes(y=Mean, x = Class, fill = Class)) +
   facet_grid(Fraction ~ Lake_Type) +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
   xlab("Class") + ylab("Mean Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=16),
         axis.text.x = element_text(angle=0, colour="black", size=12),
@@ -488,32 +391,27 @@ ggplot(lakefrac, aes(y=relabun, x = Class, fill = Class)) +
 
 
 
+##### Season & Fraction facet #####
 
-########### Create dataframe for unstacked bar plots (facet by Season & Fraction) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+# Pull out the factors that I'll be using to make my graph
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Fraction"))
-    ## These are the factors that you'll be using to make your graph
+
+# Calculate stat summaries
 seasfrac <- ddply(sub.classVer.df, c("Season", "Class", "Fraction"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
+                   Mean= mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
 
 
-###### GGPLOT IT! ######
-#tiff("intra.remain.seasonfrac.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(seasfrac, aes(y=relabun, x = Class, fill = Class)) +
+### GGPLOT IT!
+ggplot(seasfrac, aes(y=Mean, x = Class, fill = Class)) +
   facet_grid(Fraction ~ Season) +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
   xlab("Class") + ylab("Mean Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=16),
         axis.text.x = element_text(angle=0, colour="black", size=12),
@@ -523,42 +421,32 @@ ggplot(seasfrac, aes(y=relabun, x = Class, fill = Class)) +
         legend.title = element_text(size=12, face="bold"),
         legend.text = element_text(size = 12),
         legend.position="none")
-#dev.off()
 
 
 
 
+##### Lake_Type & Season facet #####
 
-
-
-
-
-########### Create dataframe for unstacked bar plots (facet by Lake_Type & Season) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+# Pull out the factors that I'll be using to make my graph
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Season", "Lake_Type"))
-    ## These are the factors that you'll be using to make your graph
+
+# Calculate stat summaries
 lakeseas <- ddply(sub.classVer.df, c("Season", "Class", "Lake_Type"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
+                   Mean = mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
 
 
 
-###### GGPLOT IT! ######
-#tiff("intra.remain.groupseason.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(lakeseas, aes(y=relabun, x = Class, fill = Class)) +
+### GGPLOT IT!
+ggplot(lakeseas, aes(y=Mean, x = Class, fill = Class)) +
   facet_grid(Season ~ Lake_Type) +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
   xlab("Class") + ylab("Mean Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=16),
         axis.text.x = element_text(angle=0, colour="black", size=12),
@@ -568,37 +456,33 @@ ggplot(lakeseas, aes(y=relabun, x = Class, fill = Class)) +
         legend.title = element_text(size=12, face="bold"),
         legend.text = element_text(size = 12),
         legend.position="none")
-#dev.off()
 
 
 
 
 
-########### Create dataframe for unstacked bar plots (facet by Fraction ~ Depth) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+
+##### Fraction & Depth facet #####
+
+# Pull out the factors that I'll be using to make my graph
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
-    ## These are the factors that you'll be using to make your graph
+
+# Calculate stat summaries
 depthfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
-                   n =  length(Abundance),
-                   relabun = mean(Abundance),
-                   sd = sd(Abundance),
-                   se = sd/sqrt(n) )
-    ## This takes one dataframe, applies a bunch of functions to it, and spits out the results
-    ## into a new dataframe
-    ## ddply ( dataframe.you.wanna.work.with, c("the factors you want to use"),
-    ##         summarise (no clue what this adds to the output),
-    ##         now all the functions/commands you want to apply
+                   Mean = mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
 
 
-###### GGPLOT IT! ######
-#tiff("intra.remain.depthfrac.tiff", width = 8, height = 5, units = "in", res = 500)
-ggplot(depthfrac, aes(y=relabun, x = Class, fill = Class)) +
+### GGPLOT IT!
+ggplot(depthfrac, aes(y=Mean, x = Class, fill = Class)) +
   facet_grid(Fraction ~ Depth) +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-  geom_errorbar(aes(ymin = relabun - se, ymax = relabun + se), width = 0.25) + 
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
   xlab("Class") + ylab("Mean Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=16),
         axis.text.x = element_text(angle=0, colour="black", size=12),
@@ -608,16 +492,16 @@ ggplot(depthfrac, aes(y=relabun, x = Class, fill = Class)) +
         legend.title = element_text(size=12, face="bold"),
         legend.text = element_text(size = 12),
         legend.position="none")
-#dev.off()
 
 
 
 
-########### Create dataframe for unstacked bar plots (facet by Fraction + Season ~ Lake_Type) ###########
-classVer.rel.df <- psmelt(classVer.rel)
-    ## This takes your entire phyloseq object & combines its constituents into one dataframe
+##### Fraction + Season & Lake_Type facet #####
+
+# Pull out the factors that I'll be using to make my graph
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Lake_Type", "Class", "Abundance","Fraction", "Season"))
-    ## These are the factors that you'll be using to make your graph
+
+# Calculate stat summaries
 lakefracseas <- ddply(sub.classVer.df, c("Lake_Type", "Class", "Fraction", "Season"), summarise,
                    Mean = mean(Abundance),
                    Median = median(Abundance),
@@ -632,9 +516,14 @@ lakefracseas[which(lakefracseas$iqr.min < 0), 10] <- 0
 lakefracseas$iqr.max <- lakefracseas$Median + 0.5*lakefracseas$iqr
 
 
-
 ###### THIS ONE! ######
-tiff("intraver.tiff", width = 17.8, height = 18, units = "cm", res = 600)
+
+# This command is used to rearrange the vertical facet labels so that Fraction is on the outside & Season is on the inside
+label_rev <- function(labels) {
+  label_value(rev(labels))
+}
+
+#tiff("intraver.tiff", width = 17.8, height = 18, units = "cm", res = 600)
 ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -656,19 +545,7 @@ ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
         strip.background = element_blank(),
         legend.position="right") +
   guides(fill = guide_legend(reverse=TRUE))
-dev.off()
-
-label_rev <- function(labels) {
-  label_value(rev(labels))
-}
-
- ##### Let's steal the legend 
-  g_legend <- function(a.gplot){
-    tmp <- ggplot_gtable(ggplot_build(a.gplot))
-    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-    legend <- tmp$grobs[[leg]]
-    return(legend)}
-  legend <- g_legend(plot)
+#dev.off()
 
 
 ```
