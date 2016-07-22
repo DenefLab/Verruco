@@ -921,9 +921,8 @@ inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) 
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.frac, aes(label=lab), x=c(1,3,1), y=c(15,15.6,15),
-            size=6, color="red")
-
+  geom_text(data = ann.frac, aes(x = c(1,1.34,1), y=c(15.6, 15.6, 15.6), label = lab), size = 6, color="red")
+ 
 
 
 # This is the annotation text for the plot below (seas.box)
@@ -948,7 +947,7 @@ inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.seas, aes(label=lab), x=c(1,2,1), y=c(14,13.5,14), size=6, color="red")
+  geom_text( data = ann.seas, aes(x=c(1,1,1), y=c(14,13.5,14), label=lab), size=6, color="red")
 
 
 
@@ -1086,7 +1085,6 @@ kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Inl
 ### RelAbun + Inverse Simpson Plot
 ```{r}
 # Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-
 tiff("boxplot.invsimp.tiff", width = 17.8, height = 15, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
