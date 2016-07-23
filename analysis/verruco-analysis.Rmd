@@ -210,7 +210,7 @@ good_phylum <- tax_glom(scaled, taxrank = "Phylum")
 phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
 
 # If a phylum has <1% rel abun, change that to 0%
-otu_table(phylum.99)[otu_table(phylum.99) < .1] <- 0
+otu_table(phylum.99)[otu_table(phylum.99) < 1] <- 0
 
 # Remove anything with 0% rel abun
 phylum.99 = prune_taxa(taxa_sums(phylum.99) > 0, phylum.99)
@@ -236,7 +236,7 @@ top5phyla.barplot <-barplot(sort(taxa_sums(phylum.99),TRUE)[1:5]/nsamples(phylum
 # Summarize data by Lake_Type
 phy.df <- psmelt(phylum.99)
 phy.sum <- phy.df %>%
-  group_by(Lake_Type, Phylum) %>%
+  group_by(Lake_Type, Phylum, Fraction, Season) %>%
   summarize(Mean = mean(Abundance),
             Median = median(Abundance),
             SD = sd(Abundance),
@@ -245,63 +245,82 @@ phy.sum <- phy.df %>%
 
 # Calculate IQR limits
 phy.sum$iqr.min <- phy.sum$Median - 0.5*phy.sum$iqr
-phy.sum[which(phy.sum$iqr.min < 0),8] <- 0
+phy.sum[which(phy.sum$iqr.min < 0),10] <- 0
   # Any IQR min < 0, change to 0 (otherwise error bar won't plot)
 phy.sum$iqr.max <- phy.sum$Median + 0.5*phy.sum$iqr
 
 
-# Remove phyla that are <0.1% rel abun (median) in all 3 Lake Types
+# Remove phyla that are <1% rel abun (median) in all 3 Lake Types
 phy.trim <- phy.sum[-which(phy.sum$Phylum== "BD1-5"),]
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OD1"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP3"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP8"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP3"),] 
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP8"),] 
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_SR1"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_WS3"),]
+#phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_WS3"),]
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Fibrobacteres"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Firmicutes"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Gemmatimonadetes"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Lentisphaerae"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "NPL-UPA2"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Spirochaetae"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "TM6"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Nitrospirae"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "unclassified"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Acidobacteria"),]
-phy.trim <- phy.trim[-which(phy.trim$Phylum== "Chloroflexi"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Firmicutes"),] 
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Gemmatimonadetes"),] 
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "Lentisphaerae"),] 
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "NPL-UPA2"),] 
+#phy.trim <- phy.trim[-which(phy.trim$Phylum== "Spirochaetae"),]
+phy.trim <- phy.trim[-which(phy.trim$Phylum== "TM6"),] 
+#phy.trim <- phy.trim[-which(phy.trim$Phylum== "Nitrospirae"),]
+#phy.trim <- phy.trim[-which(phy.trim$Phylum== "unclassified"),]
+#phy.trim <- phy.trim[-which(phy.trim$Phylum== "Acidobacteria"),]
+#phy.trim <- phy.trim[-which(phy.trim$Phylum== "Chloroflexi"),]
+phy.trim$Phylum <- ordered(phy.trim$Phylum, levels=c("Acidobacteria", "Actinobacteria", "Armatimonadetes", "Bacteroidetes", "Candidate_division_WS3", "Chlorobi", "Chloroflexi", "Cyanobacteria", "Nitrospirae", "Planctomycetes", "Proteobacteria", "Spirochaetae", "unclassified", "Verrucomicrobia"))
 
-# Set phylum plotting colors for 8 taxa
-phylum.colors <- c(Actinobacteria="firebrick3",
+phy.trim$Phylum <- ordered(phy.trim$Phylum, levels=c("Verrucomicrobia", "unclassified", "Spirochaetae", "Proteobacteria", "Planctomycetes", "Nitrospirae", "Cyanobacteria", "Chloroflexi", "Chlorobi", "Candidate_division_WS3", "Bacteroidetes", "Armatimonadetes", "Actinobacteria", "Acidobacteria"))
+
+# Set phylum plotting colors for 14 taxa
+phylum.colors <- c(Acidobacteria = "cornsilk3",
+                   Actinobacteria="firebrick3",
                    Armatimonadetes="lightsalmon",
                    Bacteroidetes="lightblue1",
+                   Candidate_division_WS3 = "lightgreen",
                    Chlorobi="goldenrod1",
-                   Chloroflexi="#ff7f00",
+                   Chloroflexi="mediumvioletred",
                    Cyanobacteria="#33a02c",
+                   Nitrospirae = "royalblue1",
                    Planctomycetes="tomato4",
                    Proteobacteria="khaki1",
+                   Spirochaetae = "indianred3",
+                   unclassified = "dimgray",
                    Verrucomicrobia="lightslateblue")
 
 ##### PLOT #####
-tiff("phy.relabund.tiff", width = 10, height = 15, units = "cm", res = 600)
+
+label_rev <- function(labels) {
+  label_value(rev(labels))
+}
+
+
+png("phy.relabund.png", width = 17.8, height = 23, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
-          #scale_y_continuous(labels = percent_format()) +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
-  geom_errorbar(aes(ymax=iqr.max, ymin=iqr.min), width=0.3) + 
-  xlab("Phyla") + ylab("Median Relative Abundance (Taxa > 0.1%)") +
-  facet_grid(Lake_Type~., space="free", scales = "free_x") +
-  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,50)) +
+  geom_errorbar(aes(ymax=iqr.max, ymin=iqr.min), width=0.25) + 
+  xlab("Phyla") + ylab("Median Relative Abundance (Taxa > 1%)") +
+  facet_grid(Fraction + Season ~ Lake_Type, space="free", scales = "free_x",
+             labeller = label_rev) +
+  coord_flip() +
+  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,51)) +
           theme(axis.title.x = element_text(size=10, face="bold"),
-                axis.text.x = element_text(size=8, angle = 90),
-                axis.text.y = element_text(size=8),
+                axis.text.x = element_text(size=8),
+                axis.text.y = element_blank(),
+                axis.ticks.y = element_blank(),
                 axis.title.y = element_text(size=10, face="bold"),
                 plot.title = element_text(size = 12, face="bold"),
                 legend.title = element_text(size=10, face="bold"),
                 legend.text = element_text(size =8),
-                strip.text = element_text(size=10),
+                strip.text.x = element_text(size=10, face="bold"),
+                strip.text.y = element_text(size=10, face="bold"),
+                plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
                 strip.background = element_blank(),
                 legend.position="right") +
-  guides(fill = guide_legend(keywidth = 1, keyheight = 1))
+  guides(fill = guide_legend(reverse=TRUE, keywidth = 0.75, keyheight = 0.75))
 dev.off()
+
 
 ```
 
@@ -578,12 +597,12 @@ label_rev <- function(labels) {
   label_value(rev(labels))
 }
 
-#tiff("intraver.tiff", width = 17.8, height = 18, units = "cm", res = 600)
+#png("intraver.png", width = 17.8, height = 18, units = "cm", res = 600)
 ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 1%") + coord_flip() +
   geom_errorbar(aes(ymin = iqr.min, ymax = iqr.max), width = 0.25) + 
   xlab("Class") + ylab("Median Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=10),
@@ -636,7 +655,7 @@ ggplot(lakefracseasdepth, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type + Depth, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values = Ver.colors, name = "Class") +
-  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 1%") + coord_flip() +
   geom_errorbar(aes(ymin = iqr.min, ymax = iqr.max), width = 0.25) + 
   xlab("Class") + ylab("Median Relative Abundance (%)") +
   theme(axis.title.x = element_text(face="bold", size=10),
@@ -1150,7 +1169,7 @@ kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Inl
 ### RelAbun + Inverse Simpson Plot
 ```{r}
 # Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-tiff("boxplot.invsimp.tiff", width = 17.8, height = 15, units = "cm", res = 600)
+png("boxplot.invsimp.png", width = 17.8, height = 15, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
 print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
