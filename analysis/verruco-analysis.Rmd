@@ -210,7 +210,7 @@ good_phylum <- tax_glom(scaled, taxrank = "Phylum")
 phylum.99 = transform_sample_counts(good_phylum, function(x){(x/sum(x))*100})
 
 # If a phylum has <1% rel abun, change that to 0%
-otu_table(phylum.99)[otu_table(phylum.99) < 1] <- 0
+otu_table(phylum.99)[otu_table(phylum.99) < .1] <- 0
 
 # Remove anything with 0% rel abun
 phylum.99 = prune_taxa(taxa_sums(phylum.99) > 0, phylum.99)
@@ -250,7 +250,7 @@ phy.sum[which(phy.sum$iqr.min < 0),8] <- 0
 phy.sum$iqr.max <- phy.sum$Median + 0.5*phy.sum$iqr
 
 
-# Remove phyla that are <1% rel abun (median) in all 3 Lake Types
+# Remove phyla that are <0.1% rel abun (median) in all 3 Lake Types
 phy.trim <- phy.sum[-which(phy.sum$Phylum== "BD1-5"),]
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OD1"),]
 phy.trim <- phy.trim[-which(phy.trim$Phylum== "Candidate_division_OP3"),]
@@ -281,13 +281,13 @@ phylum.colors <- c(Actinobacteria="firebrick3",
                    Verrucomicrobia="lightslateblue")
 
 ##### PLOT #####
-png("phy.relabund.png", width = 10, height = 15, units = "cm", res = 600)
+tiff("phy.relabund.tiff", width = 10, height = 15, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           #scale_y_continuous(labels = percent_format()) +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
   geom_errorbar(aes(ymax=iqr.max, ymin=iqr.min), width=0.3) + 
-  xlab("Phyla") + ylab("Median Relative Abundance (Taxa > 1%)") +
+  xlab("Phyla") + ylab("Median Relative Abundance (Taxa > 0.1%)") +
   facet_grid(Lake_Type~., space="free", scales = "free_x") +
   scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,50)) +
           theme(axis.title.x = element_text(size=10, face="bold"),
@@ -410,7 +410,7 @@ classVer.df$Class <- ordered(classVer.df$Class, levels=c("unclassified","Verruco
 Ver.colors <- c("OPB35_soil_group" = "#e41a1c", Opitutae = "#377eb8", "S-BQ2-57_soil_group" = "#984ea3", Spartobacteria = "#4daf4a", "Verrucomicrobia_Incertae_Sedis" = "#ff7f00", Verrucomicrobiae = "#ffd92f", unclassified="#f1a3a9")
 
 
-##### Group & Fraction facet #####
+##### Lake Type & Fraction facet #####
 
 # # Pull out the factors that I'll use
 # sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Lake_Type","Fraction"))
@@ -517,36 +517,36 @@ Ver.colors <- c("OPB35_soil_group" = "#e41a1c", Opitutae = "#377eb8", "S-BQ2-57_
 # 
 # 
 # 
-# ##### Fraction & Depth facet #####
-# 
-# # Pull out the factors that I'll be using to make my graph
-# sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
-# 
-# # Calculate stat summaries
-# depthfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
-#                    Mean = mean(Abundance),
-#                    Median = median(Abundance),
-#                    SD = sd(Abundance),
-#                    SE = se(Abundance),
-#                    iqr = IQR(Abundance))
-# 
-# 
-# ### GGPLOT IT!
-# ggplot(depthfrac, aes(y=Mean, x = Class, fill = Class)) +
-#   facet_grid(Fraction ~ Depth) +
-#   geom_bar(stat="identity", position=position_dodge()) +
-#   scale_fill_manual(values = Ver.colors, name = "Class") +
-#   theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
-#   geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) + 
-#   xlab("Class") + ylab("Mean Relative Abundance (%)") +
-#   theme(axis.title.x = element_text(face="bold", size=16),
-#         axis.text.x = element_text(angle=0, colour="black", size=12),
-#         axis.text.y = element_text(colour="black", size=12),
-#         axis.title.y = element_text(face="bold", size=16),
-#         plot.title = element_text(face="bold", size=20),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size = 12),
-#         legend.position="none")
+##### Fraction & Depth facet #####
+
+# Pull out the factors that I'll be using to make my graph
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Class", "Abundance","Depth", "Fraction"))
+
+# Calculate stat summaries
+depthfrac <- ddply(sub.classVer.df, c("Depth", "Class", "Fraction"), summarise,
+                   Mean = mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
+
+
+### GGPLOT IT!
+ggplot(depthfrac, aes(y=Mean, x = Class, fill = Class)) +
+  facet_grid(Fraction ~ Depth) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.25) +
+  xlab("Class") + ylab("Mean Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=16),
+        axis.text.x = element_text(angle=0, colour="black", size=12),
+        axis.text.y = element_text(colour="black", size=12),
+        axis.title.y = element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=20),
+        legend.title = element_text(size=12, face="bold"),
+        legend.text = element_text(size = 12),
+        legend.position="none")
 
 
 
@@ -601,6 +601,59 @@ ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
         legend.position="right") +
   guides(fill = guide_legend(reverse=TRUE))
 #dev.off()
+
+
+
+
+
+##### ERRYTHING #####
+
+# Pull out the factors that I'll be using to make my graph
+sub.classVer.df <- subset(classVer.df, select = c("Sample","Lake_Type", "Class", "Abundance","Fraction", "Season", "Depth"))
+
+# Calculate stat summaries
+lakefracseasdepth <- ddply(sub.classVer.df, c("Lake_Type", "Class", "Fraction", "Season", "Depth"), summarise,
+                   Mean = mean(Abundance),
+                   Median = median(Abundance),
+                   SD = sd(Abundance),
+                   SE = se(Abundance),
+                   iqr = IQR(Abundance))
+
+# Calculate IQR limits
+lakefracseasdepth$iqr.min <- lakefracseasdepth$Median - 0.5*lakefracseasdepth$iqr
+lakefracseasdepth[which(lakefracseasdepth$iqr.min < 0), 10] <- 0
+  # Any IQR min < 0, change to 0 (otherwise error bar won't plot)
+lakefracseasdepth$iqr.max <- lakefracseasdepth$Median + 0.5*lakefracseasdepth$iqr
+
+
+# This command is used to rearrange the vertical facet labels so that Fraction is on the outside & Season is on the inside
+label_rev <- function(labels) {
+  label_value(rev(labels))
+}
+
+png("intraver.all.png", width = 17.8, height = 18, units = "cm", res = 600)
+ggplot(lakefracseasdepth, aes(y=Median, x = Class, fill = Class)) +
+  facet_grid(Fraction + Season ~ Lake_Type + Depth, labeller= label_rev)   +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values = Ver.colors, name = "Class") +
+  theme_bw() + ggtitle("Verrucomicrobia Classes Above 0.1%") + coord_flip() +
+  geom_errorbar(aes(ymin = iqr.min, ymax = iqr.max), width = 0.25) + 
+  xlab("Class") + ylab("Median Relative Abundance (%)") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(colour = "black", size=8),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size = 12),
+        strip.text.x = element_text(size=10, face="bold"),
+        strip.text.y = element_text(size=10, face="bold"),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size=8),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        strip.background = element_blank(),
+        legend.position="right") +
+  guides(fill = guide_legend(reverse=TRUE))
+dev.off()
 
 
 ```
@@ -783,6 +836,9 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary")
   # Depth
   # p-value = 1.348e-05
+kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Water vs Sediment
+  # p-value = 6.914e-06
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Source == "Water")
   # Top vs Bot
   # p-value = 0.1037
@@ -984,7 +1040,7 @@ inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
 #dev.off()
 
 
-### Kruskal-Wallis ###
+##### Kruskal-Wallis #####
 # For Inverse Simpson values
 
 # Lake Type
