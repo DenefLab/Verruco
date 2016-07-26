@@ -279,7 +279,7 @@ phylum.colors <- c(Acidobacteria = "cornsilk3",
                    Bacteroidetes="lightblue1",
                    Candidate_division_WS3 = "lightgreen",
                    Chlorobi="goldenrod1",
-                   Chloroflexi="mediumvioletred",
+                   Chloroflexi="plum1",
                    Cyanobacteria="#33a02c",
                    Nitrospirae = "royalblue1",
                    Planctomycetes="tomato4",
@@ -295,7 +295,7 @@ label_rev <- function(labels) {
 }
 
 
-png("phy.relabund.png", width = 17.8, height = 23, units = "cm", res = 600)
+tiff("phy.relabund.tiff", width = 17.8, height = 23, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
@@ -4517,7 +4517,7 @@ write.tree(phy_tree(only.sig), file="ver.sig.tre")
 
 
 ### Geiger
-```{r geiger}
+```{r}
 # https://github.com/mwpennell/geiger-v2
 
 # Read in tree of only Verrucos with a habitat preference
@@ -4619,16 +4619,45 @@ p.lambda
 
 
 ### Bootstrap Values
-```{r bootstrap}
-library("Biostrings")
+```{r}
 #https://cran.r-project.org/web/packages/phangorn/vignettes/Trees.pdf
 
+# Read in fasta file
+# This file is all verrucos + 1 outgroup (planctomycetes)
+# Any nonsignificant verruco sequences will be trimmed out once we combine the fasta file with the tree file
+seqs <- read.phyDat("combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.outgroup.fasta", format = "fasta", type = "DNA")
 
-#seqs <- readDNAStringSet("combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.fasta")
+# Read in tree file
+ver.sig.tre <- read.newick(file="ver.sig.tre")
 
-seqs <- read.phyDat("combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.fasta", format="fasta", type="DNA")
+# Calculates maximum likelihood for tree
+fit <- pml(ver.sig.tre, seqs)
 
-pml(ver.sig.tre, seqs)
+### Time to choose the best model
+# Test a bunch of different models
+mt <- modelTest(seqs, tree=ver.sig.tre, multicore=TRUE)
+mt[order(mt$AICc),]
+# Choose the best model based on AICc
+bestmodel <- mt$Model[which.min(mt$AICc)]
+env <- attr(mt, "env")
+# Below is the best model that you'll use
+# GTR+G+I
+fitStart <- eval(get(bestmodel, env), env)
+
+# Optimize model parameters
+fit <- optim.pml(fitStart, rearrangement = "stochastic", optGamma=TRUE, optInv=TRUE, model="GTR")
+
+# Apply bootstrap test
+bs <- bootstrap.pml(fit, bs=100, optNni=TRUE)
+
+# Unrooted tree (midpoint rooted) with bootstrap support values above 50
+bs.tre <- plotBS(midpoint(fit$tree), bs, p = 50, type="p")
+
+# Consensus tree from bootstrap test
+cnet <- consensusNet(bs)
+
+
+
 ```
 
 
