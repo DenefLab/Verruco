@@ -4656,7 +4656,12 @@ bs.tre <- plotBS(midpoint(fit$tree), bs, p = 50, type="p")
 # Consensus tree from bootstrap test
 cnet <- consensusNet(bs)
 
+### Which nodes have a bootstrap value of < 50
+which(bs.tre$node.label < 50)
+  # 11 nodes
 
+### Export tree with bootstrap values as node labels
+write.tree(bs.tre, "treeBS")
 
 ```
 
