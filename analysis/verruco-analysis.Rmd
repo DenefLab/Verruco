@@ -4845,8 +4845,8 @@ plot(inl.env$NH4.ug.L)
 
 
 # Run Bioenv
-bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + SpCond...S.cm. +
-                       DO.Probe..mg.L. + Chl.Probe...g.L. + Chl.Lab..ug.L. +
+bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Probe...g.L. + Chl.Lab..ug.L. +
                        TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
                        PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
                        Fluorescence.mg.m3. + PAR, lau.env, method = "spearman",
@@ -4854,7 +4854,7 @@ bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + SpCond...S.cm. +
 bioenv.est <- bioenv(est.otus ~ Temperature..C. + SpCond...S.cm. + TDS..mg.L. +
                        pH + ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL + Cl.mg.L +
                        SO4.mg.L + NO3.mg.L + NH3.mg.L + TKN.mg.L + SRP.ug.L +
-                       TP.ug.L + Alk.mg.L + DO.Lab.mg.L + DO.. + Turb.NTU, est.env,
+                       TP.ug.L + Alk.mg.L + DO.Lab.mg.L + DO.Lab.mg.L + Turb.NTU, est.env,
                      method = "spearman", index = "bray", trace =TRUE, partial=NULL)
 bioenv.inl <- bioenv(inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L + TP.ug.L +
                        TDP.ug.L + NH4.ug.L, inl.env, method = "spearman",
@@ -4876,6 +4876,91 @@ bio.env.inl <- bio.env(inl.otus, inl.env, fix.dist.method="bray",
   # Best = SRP.ug.L & NH4.ug.L; rho = 0.4503223
 
 
+
+
+
+
+
+### Bioenv
+### Calculate p-value for Laurentian correlation
+# Perform random permutations of row names
+# Laurentian
+x <- 0
+result.lau <- vector(mode="numeric", length = 100)
+while (x < 100){
+  lau.otus.rand <- lau.otus[sample(1:nrow(lau.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(lau.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Probe...g.L. + Chl.Lab..ug.L. +
+                       TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
+                       PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
+                       Fluorescence.mg.m3. + PAR, lau.env, method = "spearman",
+                     index = "bray", trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.lau[x] = max(tmp)
+  print(x)
+}
+hist(result.lau)
+print(mean(result.lau))
+print(max(result.lau))
+print(quantile(result.lau,0.95))
+print(quantile(result.lau,0.99)) 
+print(quantile(result.lau,1))
+  ## Yay, p-value < 0.01!
+
+# Estuary
+x <- 0
+result.est <- vector(mode="numeric", length = 100)
+while (x < 100){
+  est.otus.rand <- est.otus[sample(1:nrow(est.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(est.otus.rand ~ Temperature..C. + SpCond...S.cm. + TDS..mg.L. +
+                       pH + ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL + Cl.mg.L +
+                       SO4.mg.L + NO3.mg.L + NH3.mg.L + TKN.mg.L + SRP.ug.L +
+                       TP.ug.L + Alk.mg.L + DO.Lab.mg.L + DO.Lab.mg.L + Turb.NTU, est.env,
+                     method = "spearman", index = "bray", trace =TRUE, partial=NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.est[x] = max(tmp)
+  print(x)
+}
+hist(result.est)
+print(mean(result.est))
+print(max(result.est))
+print(quantile(result.est,0.95))
+print(quantile(result.est,0.99)) 
+print(quantile(result.est,1))
+  ### Estuary correlation is NOT significant
+
+
+# Inland
+x <- 0
+result.inl <- vector(mode="numeric", length = 100)
+while (x < 100){
+  inl.otus.rand <- inl.otus[sample(1:nrow(inl.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(inl.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L + TP.ug.L +
+                       TDP.ug.L + NH4.ug.L, inl.env, method = "spearman",
+                     index = "bray", trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.inl[x] = max(tmp)
+  print(x)
+}
+hist(result.inl)
+print(mean(result.inl))
+print(max(result.inl))
+print(quantile(result.inl,0.95))
+print(quantile(result.inl,0.99))
+print(quantile(result.inl,1))
+  ###Yay, p-value < 0.01!
+
+
+
+
+
+
+
+
+##### Bio.env
 ### Calculate p-value for Laurentian correlation
 # Perform random permutations of row names
 # Laurentian
