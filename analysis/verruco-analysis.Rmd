@@ -4686,8 +4686,6 @@ meta.otus <- subset_samples(meta.otus, SampleID != "Z14.060.P")
 meta.otus <- subset_samples(meta.otus, SampleID != "Z14.060.F")
 
 
-
-
 # I'll be examining Laurentian, Estuary, and Inland Lake samples separately
 # First separate the samples based on Lake Type
 lau.otus <- data.frame(otu_table(subset_samples(meta.otus,Lake_Type=="Laurentian")))
@@ -4844,45 +4842,34 @@ plot(inl.env$NH4.ug.L)
   # Looks like a straight line
 
 
-# Run Bioenv
+##### Run Bioenv #####
 bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + DO.Probe..mg.L. +
                        Chl.Probe...g.L. + Chl.Lab..ug.L. +
                        TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
                        PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
-                       Fluorescence.mg.m3. + PAR, lau.env, method = "spearman",
-                     index = "bray", trace = TRUE, partial = NULL)
-bioenv.est <- bioenv(est.otus ~ Temperature..C. + SpCond...S.cm. + TDS..mg.L. +
-                       pH + ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL + Cl.mg.L +
-                       SO4.mg.L + NO3.mg.L + NH3.mg.L + TKN.mg.L + SRP.ug.L +
-                       TP.ug.L + Alk.mg.L + DO.Lab.mg.L + DO.Lab.mg.L + Turb.NTU, est.env,
-                     method = "spearman", index = "bray", trace =TRUE, partial=NULL)
-bioenv.inl <- bioenv(inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L + TP.ug.L +
-                       TDP.ug.L + NH4.ug.L, inl.env, method = "spearman",
-                     index = "bray", trace = TRUE, partial = NULL)
-
-### Bio.env Function
-# Offers flexibility to the original bioenv function by finding the best correlations
-# http://menugget.blogspot.com/2011/06/clarke-and-ainsworths-bioenv-and-bvstep.html#more
-bio.env.lau <- bio.env(lau.otus, lau.env, fix.dist.method="bray",
-                       var.dist.method="euclidean", scale.fix=F, scale.var=T)
-  # Best = DO.Probe..mg.L.; rho = 0.4831769
-
-bio.env.est <- bio.env(est.otus, est.env, fix.dist.method="bray",
-                       var.dist.method="euclidean", scale.fix=F, scale.var=T)
-  # Best = NH3.mg.L & DO.Lab.mg.L; rho = 0.1079576
-
-bio.env.inl <- bio.env(inl.otus, inl.env, fix.dist.method="bray",
-                       var.dist.method="euclidean", scale.fix=F, scale.var=T)
-  # Best = SRP.ug.L & NH4.ug.L; rho = 0.4503223
+                       Fluorescence.mg.m3. + PAR, lau.env,
+                     method = "spearman", index = "bray", trace = TRUE,
+                     partial = NULL)
+  # Best parameter = DO.probe..mg.L
+  # correlation = 0.4831769
+bioenv.est <- bioenv(est.otus ~ Temperature..C. + SpCond...S.cm. +
+                       TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                       BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                       NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                       Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                     est.env, method = "spearman", index = "bray",
+                     trace =TRUE, partial=NULL)
+  # Best parameters = NH3.mg.L & DO.probe.mg.L
+  # correlation = 0.1079576
+bioenv.inl <- bioenv(inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, inl.env,
+                     method = "spearman", index = "bray", trace = TRUE,
+                     partial = NULL)
+  # Best parameters = SRP.ug.L & NH4.ug.L
+  # correlation = 0.4503223
 
 
-
-
-
-
-
-### Bioenv
-### Calculate p-value for Laurentian correlation
+##### P-value Calculations #####
 # Perform random permutations of row names
 # Laurentian
 x <- 0
@@ -4894,8 +4881,9 @@ while (x < 100){
                        Chl.Probe...g.L. + Chl.Lab..ug.L. +
                        TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
                        PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
-                       Fluorescence.mg.m3. + PAR, lau.env, method = "spearman",
-                     index = "bray", trace = TRUE, partial = NULL)
+                       Fluorescence.mg.m3. + PAR, lau.env,
+                       method = "spearman",index = "bray", trace = TRUE,
+                       partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
   result.lau[x] = max(tmp)
   print(x)
@@ -4914,11 +4902,13 @@ result.est <- vector(mode="numeric", length = 100)
 while (x < 100){
   est.otus.rand <- est.otus[sample(1:nrow(est.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(est.otus.rand ~ Temperature..C. + SpCond...S.cm. + TDS..mg.L. +
-                       pH + ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL + Cl.mg.L +
-                       SO4.mg.L + NO3.mg.L + NH3.mg.L + TKN.mg.L + SRP.ug.L +
-                       TP.ug.L + Alk.mg.L + DO.Lab.mg.L + DO.Lab.mg.L + Turb.NTU, est.env,
-                     method = "spearman", index = "bray", trace =TRUE, partial=NULL)
+  bioenv.rand <- bioenv(est.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+                          TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                          BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                          NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                          Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                        est.env, method = "spearman", index = "bray", 
+                        trace =TRUE, partial=NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
   result.est[x] = max(tmp)
   print(x)
@@ -4938,9 +4928,10 @@ result.inl <- vector(mode="numeric", length = 100)
 while (x < 100){
   inl.otus.rand <- inl.otus[sample(1:nrow(inl.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(inl.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L + TP.ug.L +
-                       TDP.ug.L + NH4.ug.L, inl.env, method = "spearman",
-                     index = "bray", trace = TRUE, partial = NULL)
+  bioenv.rand <- bioenv(inl.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+                          SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                        inl.env, method = "spearman", index = "bray",
+                        trace = TRUE, partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
   result.inl[x] = max(tmp)
   print(x)
@@ -4960,47 +4951,168 @@ print(quantile(result.inl,1))
 
 
 
-##### Bio.env
-### Calculate p-value for Laurentian correlation
+
+########## WHOLE COM BIOENV ##########
+# Trim otu_table so that samples match metadata samples
+scaled.meta.otus <- subset_samples(scaled, SampleID != "Su13.ED.MM15.DN")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Su13.BD.MM15.DN")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.ED.MM15.SN")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.ED.MM15.DD")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.ED.MM110.DD")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.BD.MM15.DD")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.BD.MM110.DD")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.BD.MM110.SD")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.BD.MM110.SN")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.BD.MM15.DN")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.ED.MM15.DN")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, Station != "Buoy")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, Source != "Sediment")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Z14.060.P")
+scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Z14.060.F")
+
+
+# I'll be examining Laurentian, Estuary, and Inland Lake samples separately
+# First separate the samples based on Lake Type
+scaled.lau.otus <- data.frame(otu_table(subset_samples(scaled.meta.otus,Lake_Type=="Laurentian")))
+scaled.est.otus <- data.frame(otu_table(subset_samples(scaled.meta.otus,Lake_Type=="Estuary")))
+scaled.inl.otus <- data.frame(otu_table(subset_samples(scaled.meta.otus,Lake_Type=="Inland")))
+
+# Now prune taxa that have 0 counts
+scaled.lau.0 <- which(colSums(scaled.lau.otus) == 0)
+scaled.lau.otus <- scaled.lau.otus[,-scaled.lau.0]
+scaled.est.0 <- which(colSums(scaled.est.otus) == 0)
+scaled.est.otus <- scaled.est.otus[,-scaled.est.0]
+scaled.inl.0 <- which(colSums(scaled.inl.otus) == 0)
+scaled.inl.otus <- scaled.inl.otus[,-scaled.inl.0]
+
+# Read in metadata files
+lau.env <- read.table("metadata_laurentian.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+est.env <- read.table("metadata_estuary.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+est.env <- est.env[,-27]
+  # Remove DO %
+inl.env <- read.table("metadata_inland.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+
+# Trim any metadata that isn't numeric
+lau.env <- lau.env[,-1:-10]
+est.env <- est.env[,-1:-10]
+inl.env <- inl.env[,-1:-10]
+
+##### Run Whole Com Bioenv #####
+scaled.bioenv.lau <- bioenv(scaled.lau.otus ~ Temperature..C. +
+                              DO.Probe..mg.L. + Chl.Probe...g.L. +
+                              Chl.Lab..ug.L. + TP.ug.L + PP.ug.L +
+                              TDP.ug.L + TDP.SRP + POC.mg.L + PON.mg.L +
+                              DOC.mg.L + SiO2.mg.L + TSS.mg.L +
+                              Fluorescence.mg.m3. + PAR, lau.env,
+                            method = "spearman", index = "bray",
+                            trace = TRUE, partial = NULL)
+  # Best parameters: Chl.Probe...g.L.
+  #                  PP.ug.L
+  #                  TDP.SRP
+  #                  PAR
+  # correlation = 0.3751753
+scaled.bioenv.est <- bioenv(scaled.est.otus ~ Temperature..C. + 
+                              SpCond...S.cm. + TDS..mg.L. + pH +
+                              ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL +
+                              Cl.mg.L + SO4.mg.L + NO3.mg.L + NH3.mg.L +
+                              TKN.mg.L + SRP.ug.L + TP.ug.L + Alk.mg.L +
+                              DO.probe.mg.L + Turb.NTU,
+                            est.env, method = "spearman", index = "bray",
+                            trace =TRUE, partial=NULL)
+  # Best parameters = NH3.mg.L
+  #                   SRP.ug.L
+  #                   DO.probe.mg.L
+  # correlation = 0.1786684
+scaled.bioenv.inl <- bioenv(scaled.inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L +
+                              SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                            inl.env, method = "spearman", index = "bray",
+                            trace = TRUE, partial = NULL)
+  # Best parameters = NO3.mg.L
+  #                   TP.ug.L
+  #                   TDP.ug.L
+  #                   NH4.ug.L
+  # correlation = 0.5508089
+
+
+
+##### WC P-value Calculations #####
 # Perform random permutations of row names
 # Laurentian
 x <- 0
-result.lau <- vector(mode="numeric", length = 100)
+result.scaled.lau <- vector(mode="numeric", length = 100)
 while (x < 100){
-  lau.otus.rand <- lau.otus[sample(1:nrow(lau.otus)),]
+  lau.otus.rand <- scaled.lau.otus[sample(1:nrow(scaled.lau.otus)),]
   x <- x + 1
-  bioenv.rand <- bio.env.lau <- bio.env(lau.otus, lau.env, fix.dist.method="bray",
-                       var.dist.method="euclidean", scale.fix=F, scale.var=T)
-  tmp <- data.frame(bioenv.rand$order.by.i.comb[3])
+  bioenv.rand <- bioenv(lau.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Probe...g.L. + Chl.Lab..ug.L. +
+                       TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
+                       PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
+                       Fluorescence.mg.m3. + PAR, lau.env,
+                       method = "spearman",index = "bray", trace = TRUE,
+                       partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
   result.lau[x] = max(tmp)
   print(x)
 }
+hist(result.scaled.lau)
+print(mean(result.scaled.lau))
+print(max(result.scaled.lau))
+print(quantile(result.scaled.lau,0.95))
+print(quantile(result.scaled.lau,0.99)) 
+print(quantile(result.scaled.lau,1))
+  ## Yay, p-value < 0.01!
 
 # Estuary
 x <- 0
-result.est <- vector(mode="numeric", length = 100)
+result.scaled.est <- vector(mode="numeric", length = 100)
 while (x < 100){
-  est.otus.rand <- est.otus[sample(1:nrow(est.otus)),]
+  est.otus.rand <- scaled.est.otus[sample(1:nrow(scaled.est.otus)),]
   x <- x + 1
-  bioenv.rand <- bio.env.est <- bio.env(est.otus, est.env, fix.dist.method="bray",
-                       var.dist.method="euclidean", scale.fix=F, scale.var=T)
-  tmp <- data.frame(bioenv.rand$order.by.i.comb[3])
+  bioenv.rand <- bioenv(est.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+                          TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                          BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                          NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                          Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                        est.env, method = "spearman", index = "bray", 
+                        trace =TRUE, partial=NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
   result.est[x] = max(tmp)
   print(x)
 }
+hist(result.scaled.est)
+print(mean(result.scaled.est))
+print(max(result.scaled.est))
+print(quantile(result.scaled.est,0.95))
+print(quantile(result.scaled.est,0.99)) 
+print(quantile(result.scaled.est,1))
+  ### Estuary correlation is NOT significant
+
 
 # Inland
 x <- 0
-result.inl <- vector(mode="numeric", length = 100)
+result.scaled.inl <- vector(mode="numeric", length = 100)
 while (x < 100){
-  inl.otus.rand <- inl.otus[sample(1:nrow(inl.otus)),]
+  inl.otus.rand <- scaled.inl.otus[sample(1:nrow(scaled.inl.otus)),]
   x <- x + 1
-  bioenv.rand <- bio.env.inl <- bio.env(inl.otus, inl.env, fix.dist.method="bray",
-                       var.dist.method="euclidean", scale.fix=F, scale.var=T)
-  tmp <- data.frame(bioenv.rand$order.by.i.comb[3])
+  bioenv.rand <- bioenv(inl.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+                          SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                        inl.env, method = "spearman", index = "bray",
+                        trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
   result.inl[x] = max(tmp)
   print(x)
 }
+hist(result.scaled.inl)
+print(mean(result.scaled.inl))
+print(max(result.scaled.inl))
+print(quantile(result.scaled.inl,0.95))
+print(quantile(result.scaled.inl,0.99))
+print(quantile(result.scaled.inl,1))
+  ###Yay, p-value < 0.01!
+
 
 ```
 
