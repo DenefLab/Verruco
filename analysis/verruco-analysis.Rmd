@@ -5063,7 +5063,8 @@ print(max(result.scaled.lau))
 print(quantile(result.scaled.lau,0.95))
 print(quantile(result.scaled.lau,0.99)) 
 print(quantile(result.scaled.lau,1))
-  ## Yay, p-value < 0.01!
+  # All results are 0 o.O
+  ### Yay, p-value < 0.01!
 
 # Estuary
 x <- 0
@@ -5088,7 +5089,8 @@ print(max(result.scaled.est))
 print(quantile(result.scaled.est,0.95))
 print(quantile(result.scaled.est,0.99)) 
 print(quantile(result.scaled.est,1))
-  ### Estuary correlation is NOT significant
+  # All results are 0 o.O
+  ###Yay, p-value < 0.01!
 
 
 # Inland
@@ -5111,7 +5113,12 @@ print(max(result.scaled.inl))
 print(quantile(result.scaled.inl,0.95))
 print(quantile(result.scaled.inl,0.99))
 print(quantile(result.scaled.inl,1))
+  # All results are 0 o.O
   ###Yay, p-value < 0.01!
+
+
+
+                        
 
 
 ```
