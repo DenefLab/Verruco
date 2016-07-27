@@ -1182,7 +1182,7 @@ dev.off()
 
 
 
-### Picante
+### Phylogenetic Diversity
 ```{r}
 #http://picante.r-forge.r-project.org/picante-intro.pdf
 
@@ -4669,7 +4669,7 @@ write.tree(bs.tre, "treeBS")
 ### Bioenv
 ```{r}
 # Trim otu_table so that samples match metadata samples
-meta.otus <- subset_samples(Ver, SampleID != "Su13.ED.MM15.DN")
+meta.otus <- subset_samples(Ver.rel, SampleID != "Su13.ED.MM15.DN")
 meta.otus <- subset_samples(meta.otus, SampleID != "Su13.BD.MM15.DN")
 meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.ED.MM15.SN")
 meta.otus <- subset_samples(meta.otus, SampleID != "Sp13.ED.MM15.DD")
@@ -4851,7 +4851,7 @@ bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + DO.Probe..mg.L. +
                      method = "spearman", index = "bray", trace = TRUE,
                      partial = NULL)
   # Best parameter = DO.probe..mg.L
-  # correlation = 0.4831769
+  # correlation = 0.4545795
 bioenv.est <- bioenv(est.otus ~ Temperature..C. + SpCond...S.cm. +
                        TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
                        BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
@@ -4859,14 +4859,19 @@ bioenv.est <- bioenv(est.otus ~ Temperature..C. + SpCond...S.cm. +
                        Alk.mg.L + DO.probe.mg.L + Turb.NTU,
                      est.env, method = "spearman", index = "bray",
                      trace =TRUE, partial=NULL)
-  # Best parameters = NH3.mg.L & DO.probe.mg.L
-  # correlation = 0.1079576
+  # Best parameters = NH3.mg.L
+  #                   SRP.ug.L
+  #                   DO.probe.mg.L
+  # correlation = 0.1246583
 bioenv.inl <- bioenv(inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
                        TP.ug.L + TDP.ug.L + NH4.ug.L, inl.env,
                      method = "spearman", index = "bray", trace = TRUE,
                      partial = NULL)
-  # Best parameters = SRP.ug.L & NH4.ug.L
-  # correlation = 0.4503223
+  # Best parameters = NO3.mg.L
+  #                   SRP.ug.L
+  #                   TP.ug.L
+  #                   NH4.ug.L
+  # correlation = 0.4449871
 
 
 ##### P-value Calculations #####
