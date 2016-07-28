@@ -4841,24 +4841,25 @@ fit <- pml(ver.sig.tre, seqs)
 
 ### Time to choose the best model
 # Test a bunch of different models
-mt <- modelTest(seqs, tree=ver.sig.tre, multicore=TRUE)
-mt[order(mt$AICc),]
+#mt <- modelTest(seqs, tree=ver.sig.tre, multicore=TRUE)
+#mt[order(mt$AICc),]
 # Choose the best model based on AICc
-bestmodel <- mt$Model[which.min(mt$AICc)]
-env <- attr(mt, "env")
+#bestmodel <- mt$Model[which.min(mt$AICc)]
+#env <- attr(mt, "env")
 # Below is the best model that you'll use
 # GTR+G+I
-fitStart <- eval(get(bestmodel, env), env)
+#fitStart <- eval(get(bestmodel, env), env)
 
 # Optimize model parameters
-fit.optim <- optim.pml(fitStart, rearrangement = "stochastic", optGamma=TRUE, optInv=TRUE, model="GTR")
+#fit.optim <- optim.pml(fitStart, rearrangement = "stochastic", optGamma=TRUE, optInv=TRUE, model="GTR")
 
 # Apply bootstrap test
-bs.optim <- bootstrap.pml(fit.optim, bs=100, optNni=TRUE)
+#bs.optim <- bootstrap.pml(fit.optim, bs=100, optNni=TRUE)
 bs <- bootstrap.pml(fit, bs=100, optNni=TRUE)
 
 # Unrooted tree (midpoint rooted) with bootstrap support values above 50
-bs.tre <- plotBS(midpoint(fit.optim$tree), bs, p = 50, type="p")
+#bs.optim.tre <- plotBS(midpoint(fit.optim$tree), bs, p = 50, type="p")
+bs.tre <- plotBS(midpoint(fit$tree), bs, p = 50, type="p")
 
 # Consensus tree from bootstrap test
 cnet <- consensusNet(bs)
