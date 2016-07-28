@@ -71,7 +71,7 @@ max(sample_sums(verruco))
 
 ### Merge Duplicates & create new phyloseq object
 ```{r}
-# Merges duplicates
+# Merges duplicates & calculates mean
 verr.dupmerge <- merge_samples(verruco, "Duplicates")
 
 ## Fix metadata of merged duplicates 
@@ -874,6 +874,212 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
   # p-value = 0.1201
 
 ```
+
+
+### Linear Model
+```{r}
+# Read in metadata files
+lau.env <- read.table("metadata_laurentian.csv", header=T, sep=",",
+                      row.names=1, as.is=T)
+est.env <- read.table("metadata_estuary.csv", header=T, sep=",",
+                      row.names=1, as.is=T)
+est.env <- est.env[,-27]
+  # Remove DO %
+inl.env <- read.table("metadata_inland.csv", header=T, sep=",",
+                      row.names=1, as.is=T)
+
+# Subset out Verrucos
+Ver.phy <- subset_taxa(phylum.99, Phylum == "Verrucomicrobia")
+
+# Remove samples that have NAs in the metadata
+trim.otus <- subset_samples(Ver.phy, SampleID != "Su13.ED.MM15.DN")
+trim.otus <- subset_samples(trim.otus, SampleID != "Su13.BD.MM15.DN")
+trim.otus <- subset_samples(trim.otus, SampleID != "Sp13.ED.MM15.SN")
+trim.otus <- subset_samples(trim.otus, SampleID != "Sp13.ED.MM15.DD")
+trim.otus <- subset_samples(trim.otus, SampleID != "Sp13.ED.MM110.DD")
+trim.otus <- subset_samples(trim.otus, SampleID != "Sp13.BD.MM15.DD")
+trim.otus <- subset_samples(trim.otus, SampleID != "Sp13.BD.MM110.DD")
+trim.otus <- subset_samples(trim.otus, SampleID != "Fa13.BD.MM110.SD")
+trim.otus <- subset_samples(trim.otus, SampleID != "Fa13.BD.MM110.SN")
+trim.otus <- subset_samples(trim.otus, SampleID != "Fa13.BD.MM15.DN")
+trim.otus <- subset_samples(trim.otus, SampleID != "Fa13.ED.MM15.DN")
+trim.otus <- subset_samples(trim.otus, Station != "Buoy")
+trim.otus <- subset_samples(trim.otus, Source != "Sediment")
+trim.otus <- subset_samples(trim.otus, SampleID != "Z14.060.P")
+trim.otus <- subset_samples(trim.otus, SampleID != "Z14.060.F")
+
+# Categorize samples by lake
+Ver.lau <- subset_samples(trim.otus, Lake_Type == "Laurentian")
+Ver.est <- subset_samples(trim.otus, Lake_Type == "Estuary")
+Ver.inl <- subset_samples(trim.otus, Lake_Type == "Inland")
+
+# Prepare metadata
+lau.samp <- sample_data(lau.env)
+est.samp <- sample_data(est.env)
+inl.samp <- sample_data(inl.env)
+
+# Make new phyloseq object with metadata
+lau.phy <- merge_phyloseq(Ver.lau, lau.samp)
+est.phy <- merge_phyloseq(Ver.est, est.samp)
+inl.phy <- merge_phyloseq(Ver.inl, inl.samp)
+
+# Convert pyloseq to dataframe
+lau.df <- psmelt(lau.phy)
+est.df <- psmelt(est.phy)
+inl.df <- psmelt(inl.phy)
+
+# Look for correlations between environmental factors
+pairs(lau.df[21:35])
+  # Only use DO, TP, PON, DOC, & PAR
+pairs(est.df[21:37])
+  # Only use ORP, Chl, BGA, SO4, NH3, TKN, TP, & DO
+pairs(inl.df[21:26])
+  # Only use NO3, TP, & NH4
+
+# Trim dataframes so that only uncorrelated factors are left
+## Laurentian
+lau.trim <- lau.df[,-23]
+lau.trim <- lau.trim[,-25]
+lau.trim <- lau.trim[,-25]
+lau.trim <- lau.trim[,-25]
+lau.trim <- lau.trim[,-21]
+lau.trim <- lau.trim[,-22]
+lau.trim <- lau.trim[,-23]
+lau.trim <- lau.trim[,-25]
+lau.trim <- lau.trim[,-25]
+lau.trim <- lau.trim[,-25]
+
+## Estuary
+est.trim <- est.df[,-22]
+est.trim <- est.trim[,-27]
+est.trim <- est.trim[,-28]
+est.trim <- est.trim[,-30]
+est.trim <- est.trim[,-31]
+est.trim <- est.trim[,-32]
+est.trim <- est.trim[,-22]
+est.trim <- est.trim[,-22]
+est.trim <- est.trim[,-21]
+
+## Inland
+inl.trim <- inl.df[,-21]
+inl.trim <- inl.trim[,-22]
+inl.trim <- inl.trim[,-23]
+
+
+##### Fit data to linear model #####
+# http://www.r-bloggers.com/simple-linear-regression-2/
+
+## Laurentian
+xyplot(Abundance ~ DO.Probe..mg.L., lau.trim)
+lau.DO <- lm(DO.Probe..mg.L.~Abundance, lau.trim)
+summary(lau.DO)
+confint(lau.DO, level=0.95)
+  # Linear
+
+xyplot(Abundance ~ TP.ug.L, lau.trim)
+lau.TP <- lm(TP.ug.L~Abundance, lau.trim)
+summary(lau.TP)
+confint(lau.TP, level=0.95)
+  # Not linear, but R2 is relatively high-ish (.1019)
+
+xyplot(Abundance ~ PON.mg.L, lau.trim)
+lau.PON <- lm(PON.mg.L~Abundance, lau.trim)
+summary(lau.PON)
+confint(lau.PON, level=0.95)
+  # Not linear
+
+xyplot(Abundance ~ DOC.mg.L, lau.trim)
+lau.DOC <- lm(DOC.mg.L~Abundance, lau.trim)
+summary(lau.DOC)
+confint(lau.DOC, level=0.95)
+  # Linear
+
+xyplot(Abundance ~ PAR, lau.trim)
+lau.PAR <- lm(PAR~Abundance, lau.trim)
+summary(lau.PAR)
+confint(lau.PAR, level=0.95)
+  # Not linear
+  # How the hell does one get a negative R2?
+
+
+## Estuary
+xyplot(Abundance ~ ORP..mV., est.trim)
+est.ORP <- lm(ORP..mV.~Abundance, est.trim)
+summary(est.ORP)
+confint(est.ORP, level=0.95)
+  # Linear
+
+xyplot(Abundance ~ Chl.Lab..ug.L., est.trim)
+est.Chl <- lm(Chl.Lab..ug.L.~Abundance, est.trim)
+summary(est.Chl)
+confint(est.Chl, level=0.95)
+  # Linear
+
+xyplot(Abundance ~ BGA.cells.mL, est.trim)
+est.BGA <- lm(BGA.cells.mL~Abundance, est.trim)
+summary(est.BGA)
+confint(est.BGA, level=0.95)
+  # Not linear
+
+xyplot(Abundance ~ SO4.mg.L, est.trim)
+est.SO4 <- lm(SO4.mg.L~Abundance, est.trim)
+summary(est.SO4)
+confint(est.SO4, level=0.95)
+  # Linear
+
+xyplot(Abundance ~ NH3.mg.L, est.trim)
+est.NH3 <- lm(NH3.mg.L~Abundance, est.trim)
+summary(est.NH3)
+confint(est.NH3, level=0.95)
+  # Linear?
+
+xyplot(Abundance ~ TKN.mg.L, est.trim)
+est.TKN <- lm(TKN.mg.L~Abundance, est.trim)
+summary(est.TKN)
+confint(est.TKN, level=0.95)
+  # asdfasdf
+  # Again with the negative R2
+
+xyplot(Abundance ~ TP.ug.L, est.trim)
+est.TP <- lm(TP.ug.L~Abundance, est.trim)
+summary(est.TP)
+confint(est.TP, level=0.95)
+  # asdfash
+  # Again with the negative R2
+
+xyplot(Abundance ~ DO.probe.mg.L, est.trim)
+est.DO <- lm(DO.probe.mg.L~Abundance, est.trim)
+summary(est.DO)
+confint(est.DO, level=0.95)
+  # Whyyy negative R2
+
+
+## Inland
+xyplot(Abundance ~ NO3.mg.L, inl.trim)
+inl.NO3 <- lm(NO3.mg.L~Abundance, inl.trim)
+summary(inl.NO3)
+confint(inl.NO3, level=0.95)
+  # Linear
+
+xyplot(Abundance ~ TP.ug.L, inl.trim)
+inl.TP <- lm(TP.ug.L~Abundance, inl.trim)
+summary(inl.TP)
+confint(inl.TP, level=0.95)
+  # Linear?
+
+xyplot(Abundance ~ NH4.ug.L, inl.trim)
+inl.NH4 <- lm(NH4.ug.L~Abundance, inl.trim)
+summary(inl.NH4)
+confint(inl.NH4, level=0.95)
+  # Linear?
+
+
+
+
+
+```
+
+
 
 
 
@@ -4645,13 +4851,14 @@ env <- attr(mt, "env")
 fitStart <- eval(get(bestmodel, env), env)
 
 # Optimize model parameters
-fit <- optim.pml(fitStart, rearrangement = "stochastic", optGamma=TRUE, optInv=TRUE, model="GTR")
+fit.optim <- optim.pml(fitStart, rearrangement = "stochastic", optGamma=TRUE, optInv=TRUE, model="GTR")
 
 # Apply bootstrap test
+bs.optim <- bootstrap.pml(fit.optim, bs=100, optNni=TRUE)
 bs <- bootstrap.pml(fit, bs=100, optNni=TRUE)
 
 # Unrooted tree (midpoint rooted) with bootstrap support values above 50
-bs.tre <- plotBS(midpoint(fit$tree), bs, p = 50, type="p")
+bs.tre <- plotBS(midpoint(fit.optim$tree), bs, p = 50, type="p")
 
 # Consensus tree from bootstrap test
 cnet <- consensusNet(bs)
@@ -4661,7 +4868,12 @@ which(bs.tre$node.label < 50)
   # 11 nodes
 
 ### Export tree with bootstrap values as node labels
-write.tree(bs.tre, "treeBS")
+#write.tree(bs.tre, "treeBS")
+
+# Compare IToL tree with bootstrap tree
+bs.tre <- read.newick(file="treeBS")
+length(intersect(ver.sig.tre$tip.label,bs.tre$tip.label))
+  # Same tip labels on ver.sig.tre & treeBS
 
 ```
 
