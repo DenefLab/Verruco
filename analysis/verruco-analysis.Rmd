@@ -691,6 +691,39 @@ Ver.box <- data.frame(sample_data(Ver))
 Ver.box$Relative_Abundance <- otu_table(Ver.box.phy)
 
 
+##### Test for Normality #####
+# Visualize
+hist(Ver.box$Relative_Abundance)
+    ## So skewed that I can't even get a legit histogram from it
+qqnorm(Ver.box$Relative_Abundance)
+qqline(Ver.box$Relative_Abundance)
+
+# Test for normality
+shapiro.test(Ver.box$Relative_Abundance)
+    # Not Normal
+ks.test(Ver.box$Relative_Abundance, "pnorm",
+        mean=mean(Ver.box$Relative_Abundance),
+        sd=sd(Ver.box$Relative_Abundance))
+    # p-value = 0.015
+    # Not normal
+
+# Visualize Log
+hist(log(Ver.box$Relative_Abundance))
+    # Yay! Looks so pretty!
+qqnorm(log(Ver.box$Relative_Abundance))
+qqline(log(Ver.box$Relative_Abundance))
+
+
+# Test for normality
+shapiro.test(log(Ver.box$Relative_Abundance))
+    # p-value = 0.04068
+    # Not Normal
+ks.test(log(Ver.box$Relative_Abundance), "pnorm",
+        mean=mean(log(Ver.box$Relative_Abundance)),
+        sd=sd(log(Ver.box$Relative_Abundance)))
+    # p-value = 0.4067
+    # Not exponentially distributed
+
 
 ### Plotting Time!
 
@@ -931,9 +964,13 @@ inl.df <- psmelt(inl.phy)
 # Look for correlations between environmental factors
 pairs(lau.df[21:35])
   # Only use DO, TP, PON, DOC, & PAR
+
 pairs(est.df[21:37])
+
   # Only use ORP, Chl, BGA, SO4, NH3, TKN, TP, & DO
+png("test.png", width = 80, height = 40, units = "cm", res = 600)
 pairs(inl.df[21:26])
+dev.off()
   # Only use NO3, TP, & NH4
 
 # Trim dataframes so that only uncorrelated factors are left
@@ -969,112 +1006,256 @@ inl.trim <- inl.trim[,-23]
 ##### Fit data to linear model #####
 # http://www.r-bloggers.com/simple-linear-regression-2/
 
-## Laurentian
-xyplot(Abundance ~ DO.Probe..mg.L., lau.trim)
-lau.DO <- lm(DO.Probe..mg.L.~Abundance, lau.trim)
+### Laurentian
+xyplot(log(Abundance) ~ DO.Probe..mg.L., lau.trim)
+lau.DO <- lm(DO.Probe..mg.L.~ log(Abundance), lau.trim)
 summary(lau.DO)
 confint(lau.DO, level=0.95)
   # Linear
 
-xyplot(Abundance ~ TP.ug.L, lau.trim)
-lau.TP <- lm(TP.ug.L~Abundance, lau.trim)
+xyplot(log(Abundance) ~ Temperature..C., lau.df)
+lau.temp <- lm(Temperature..C.~log(Abundance), lau.df)
+summary(lau.temp)
+confint(lau.temp, level=0.95)
+  # Says linear, but R2 is essentially 0
+
+xyplot(log(Abundance) ~ SiO2.mg.L, lau.df)
+lau.Si <- lm(SiO2.mg.L~log(Abundance), lau.df)
+summary(lau.Si)
+confint(lau.Si, level=0.95)
+  # Linear
+
+
+
+
+
+## Now let's test the environmental factors that I had trimmed
+xyplot(log(Abundance) ~ DOC.mg.L, lau.trim)
+lau.DOC <- lm(DOC.mg.L~log(Abundance), lau.trim)
+summary(lau.DOC)
+confint(lau.DOC, level=0.95)
+  # Negative R2
+
+xyplot(log(Abundance) ~ TP.ug.L, lau.trim)
+lau.TP <- lm(TP.ug.L~log(Abundance), lau.trim)
 summary(lau.TP)
 confint(lau.TP, level=0.95)
-  # Not linear, but R2 is relatively high-ish (.1019)
+  # Not linear
 
-xyplot(Abundance ~ PON.mg.L, lau.trim)
-lau.PON <- lm(PON.mg.L~Abundance, lau.trim)
+xyplot(log(Abundance) ~ PON.mg.L, lau.trim)
+lau.PON <- lm(PON.mg.L~log(Abundance), lau.trim)
 summary(lau.PON)
 confint(lau.PON, level=0.95)
   # Not linear
 
-xyplot(Abundance ~ DOC.mg.L, lau.trim)
-lau.DOC <- lm(DOC.mg.L~Abundance, lau.trim)
-summary(lau.DOC)
-confint(lau.DOC, level=0.95)
-  # Linear
-
-xyplot(Abundance ~ PAR, lau.trim)
-lau.PAR <- lm(PAR~Abundance, lau.trim)
+xyplot(log(Abundance) ~ PAR, lau.trim)
+lau.PAR <- lm(PAR~log(Abundance), lau.trim)
 summary(lau.PAR)
 confint(lau.PAR, level=0.95)
+  # Negative R2
+
+xyplot(log(Abundance) ~ Chl.Probe...g.L., lau.df)
+lau.Chl.p <- lm(Chl.Probe...g.L.~log(Abundance), lau.df)
+summary(lau.Chl.p)
+confint(lau.Chl.p, level=0.95)
   # Not linear
-  # How the hell does one get a negative R2?
+
+xyplot(log(Abundance) ~ Chl.Lab..ug.L., lau.df)
+lau.Chl.l <- lm(Chl.Lab..ug.L.~log(Abundance), lau.df)
+summary(lau.Chl.l)
+confint(lau.Chl.l, level=0.95)
+  # Not linear
+
+xyplot(log(Abundance) ~ PP.ug.L, lau.df)
+lau.PP <- lm(PP.ug.L~log(Abundance), lau.df)
+summary(lau.PP)
+confint(lau.PP, level=0.95)
+  # Not linear
+
+xyplot(log(Abundance) ~ TDP.ug.L, lau.df)
+lau.TDP <- lm(TDP.ug.L~log(Abundance), lau.df)
+summary(lau.TDP)
+confint(lau.TDP, level=0.95)
+  # Not linear
+
+xyplot(log(Abundance) ~ TDP.SRP, lau.df)
+lau.TDP.SRP <- lm(TDP.SRP~log(Abundance), lau.df)
+summary(lau.TDP.SRP)
+confint(lau.TDP.SRP, level=0.95)
+  # Negative R2
+
+xyplot(log(Abundance) ~ POC.mg.L, lau.df)
+lau.POC <- lm(POC.mg.L~log(Abundance), lau.df)
+summary(lau.POC)
+confint(lau.POC, level=0.95)
+  # Not linear
+
+xyplot(log(Abundance) ~ TSS.mg.L, lau.df)
+lau.TSS <- lm(TSS.mg.L~log(Abundance), lau.df)
+summary(lau.TSS)
+confint(lau.TSS, level=0.95)
+  # Not linear
+
+xyplot(log(Abundance) ~ Fluorescence.mg.m3., lau.df)
+lau.fluor <- lm(Fluorescence.mg.m3.~log(Abundance), lau.df)
+summary(lau.fluor)
+confint(lau.fluor, level=0.95)
+  # Not linear
 
 
-## Estuary
-xyplot(Abundance ~ ORP..mV., est.trim)
-est.ORP <- lm(ORP..mV.~Abundance, est.trim)
+    
+
+
+
+### Estuary
+xyplot(log(Abundance) ~ ORP..mV., est.trim)
+est.ORP <- lm(ORP..mV.~log(Abundance), est.trim)
 summary(est.ORP)
 confint(est.ORP, level=0.95)
   # Linear
 
-xyplot(Abundance ~ Chl.Lab..ug.L., est.trim)
-est.Chl <- lm(Chl.Lab..ug.L.~Abundance, est.trim)
+xyplot(log(Abundance) ~ Temperature..C., est.df)
+est.temp <- lm(Temperature..C.~log(Abundance), est.df)
+summary(est.temp)
+confint(est.temp, level=0.95)
+  # LINEARRRRR
+
+xyplot(log(Abundance) ~ TDS..mg.L., est.df)
+est.TDS <- lm(TDS..mg.L.~log(Abundance), est.df)
+summary(est.TDS)
+confint(est.TDS, level=0.95)
+  # LINEARRRRRR
+
+xyplot(log(Abundance) ~ NO3.mg.L, est.df)
+est.NO3 <- lm(NO3.mg.L~log(Abundance), est.df)
+summary(est.NO3)
+confint(est.NO3, level=0.95)
+  # LINEARRRRRR
+
+
+## Now let's test the environmental factors that I had trimmed
+xyplot(log(Abundance) ~ pH, est.df)
+est.pH <- lm(pH~log(Abundance), est.df)
+summary(est.pH)
+confint(est.pH, level=0.95)
+  # LINEARRRRRR
+
+xyplot(log(Abundance) ~ Cl.mg.L, est.df)
+est.Cl <- lm(Cl.mg.L~log(Abundance), est.df)
+summary(est.Cl)
+confint(est.Cl, level=0.95)
+  # LINEARRRRRR
+
+xyplot(log(Abundance) ~ SRP.ug.L, est.df)
+est.SRP <- lm(SRP.ug.L~log(Abundance), est.df)
+summary(est.SRP)
+confint(est.SRP, level=0.95)
+  # Not linear
+
+xyplot(log(Abundance) ~ Alk.mg.L, est.df)
+est.Alk <- lm(Alk.mg.L~log(Abundance), est.df)
+summary(est.Alk)
+confint(est.Alk, level=0.95)
+  # LINEARRRRR
+
+xyplot(log(Abundance) ~ Turb.NTU, est.df)
+est.Turb <- lm(Turb.NTU~log(Abundance), est.df)
+summary(est.Turb)
+confint(est.Turb, level=0.95)
+  # Negative R2
+
+xyplot(log(Abundance) ~ SpCond...S.cm., est.df)
+est.SpCond <- lm(SpCond...S.cm.~log(Abundance), est.df)
+summary(est.SpCond)
+confint(est.SpCond, level=0.95)
+  # LINEARRRRR
+
+xyplot(log(Abundance) ~ Chl.Lab..ug.L., est.trim)
+est.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), est.trim)
 summary(est.Chl)
 confint(est.Chl, level=0.95)
   # Linear
 
-xyplot(Abundance ~ BGA.cells.mL, est.trim)
-est.BGA <- lm(BGA.cells.mL~Abundance, est.trim)
+xyplot(log(Abundance) ~ BGA.cells.mL, est.trim)
+est.BGA <- lm(BGA.cells.mL~log(Abundance), est.trim)
 summary(est.BGA)
 confint(est.BGA, level=0.95)
   # Not linear
 
-xyplot(Abundance ~ SO4.mg.L, est.trim)
-est.SO4 <- lm(SO4.mg.L~Abundance, est.trim)
+xyplot(log(Abundance) ~ SO4.mg.L, est.trim)
+est.SO4 <- lm(SO4.mg.L~log(Abundance), est.trim)
 summary(est.SO4)
 confint(est.SO4, level=0.95)
   # Linear
 
-xyplot(Abundance ~ NH3.mg.L, est.trim)
-est.NH3 <- lm(NH3.mg.L~Abundance, est.trim)
+xyplot(log(Abundance) ~ NH3.mg.L, est.trim)
+est.NH3 <- lm(NH3.mg.L~log(Abundance), est.trim)
 summary(est.NH3)
 confint(est.NH3, level=0.95)
-  # Linear?
+  # Not linear
 
-xyplot(Abundance ~ TKN.mg.L, est.trim)
-est.TKN <- lm(TKN.mg.L~Abundance, est.trim)
+xyplot(log(Abundance) ~ TKN.mg.L, est.trim)
+est.TKN <- lm(TKN.mg.L~log(Abundance), est.trim)
 summary(est.TKN)
 confint(est.TKN, level=0.95)
-  # asdfasdf
-  # Again with the negative R2
+  # Negative R2
 
-xyplot(Abundance ~ TP.ug.L, est.trim)
-est.TP <- lm(TP.ug.L~Abundance, est.trim)
+xyplot(log(Abundance) ~ TP.ug.L, est.trim)
+est.TP <- lm(TP.ug.L~log(Abundance), est.trim)
 summary(est.TP)
 confint(est.TP, level=0.95)
-  # asdfash
-  # Again with the negative R2
+  # Negative R2
 
-xyplot(Abundance ~ DO.probe.mg.L, est.trim)
-est.DO <- lm(DO.probe.mg.L~Abundance, est.trim)
+xyplot(log(Abundance) ~ DO.probe.mg.L, est.trim)
+est.DO <- lm(DO.probe.mg.L~log(Abundance), est.trim)
 summary(est.DO)
 confint(est.DO, level=0.95)
-  # Whyyy negative R2
+  # Negative R2
+        
 
 
-## Inland
-xyplot(Abundance ~ NO3.mg.L, inl.trim)
-inl.NO3 <- lm(NO3.mg.L~Abundance, inl.trim)
-summary(inl.NO3)
-confint(inl.NO3, level=0.95)
+
+
+### Inland
+xyplot(log(Abundance) ~ SRP.ug.L, inl.df)
+inl.SRP <- lm(SRP.ug.L~log(Abundance), inl.df)
+summary(inl.SRP)
+confint(inl.SRP, level=0.95)
   # Linear
 
-xyplot(Abundance ~ TP.ug.L, inl.trim)
-inl.TP <- lm(TP.ug.L~Abundance, inl.trim)
+xyplot(log(Abundance) ~ Chl.Lab..ug.L., inl.df)
+inl.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), inl.df)
+summary(inl.Chl)
+confint(inl.Chl, level=0.95)
+  # Linear, but R2 is essentially 0
+
+
+
+
+## Now let's test the environmental factors that I had trimmed
+xyplot(log(Abundance) ~ NO3.mg.L, inl.trim)
+inl.NO3 <- lm(NO3.mg.L~log(Abundance), inl.trim)
+summary(inl.NO3)
+confint(inl.NO3, level=0.95)
+  # Negative R2
+
+xyplot(log(Abundance) ~ TP.ug.L, inl.trim)
+inl.TP <- lm(TP.ug.L~log(Abundance), inl.trim)
 summary(inl.TP)
 confint(inl.TP, level=0.95)
   # Linear?
 
-xyplot(Abundance ~ NH4.ug.L, inl.trim)
-inl.NH4 <- lm(NH4.ug.L~Abundance, inl.trim)
+xyplot(log(Abundance) ~ NH4.ug.L, inl.trim)
+inl.NH4 <- lm(NH4.ug.L~log(Abundance), inl.trim)
 summary(inl.NH4)
 confint(inl.NH4, level=0.95)
   # Linear?
 
-
-
+xyplot(log(Abundance) ~ TDP.ug.L, inl.df)
+inl.TDP <- lm(TDP.ug.L~log(Abundance), inl.df)
+summary(inl.TDP)
+confint(inl.TDP, level=0.95)
+  # Imma say no because too many points are near 0 for TDP
 
 
 ```
