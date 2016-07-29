@@ -28,6 +28,7 @@ library(labdsv)
 library(geiger)
 library(sciplot)
 library(picante)
+library(leaps)
 theme_set(theme_bw())
 set.seed(1)
 ```
@@ -961,54 +962,21 @@ lau.df <- psmelt(lau.phy)
 est.df <- psmelt(est.phy)
 inl.df <- psmelt(inl.phy)
 
-# Look for correlations between environmental factors
+### Look for correlations between environmental factors
 pairs(lau.df[21:35])
-  # Only use DO, TP, PON, DOC, & PAR
-
+  # Using DO, Temp. & SiO2
 pairs(est.df[21:37])
-
-  # Only use ORP, Chl, BGA, SO4, NH3, TKN, TP, & DO
-png("test.png", width = 80, height = 40, units = "cm", res = 600)
+  # Using ORP, Temp, TDS, Chl, & SO4
 pairs(inl.df[21:26])
-dev.off()
-  # Only use NO3, TP, & NH4
-
-# Trim dataframes so that only uncorrelated factors are left
-## Laurentian
-lau.trim <- lau.df[,-23]
-lau.trim <- lau.trim[,-25]
-lau.trim <- lau.trim[,-25]
-lau.trim <- lau.trim[,-25]
-lau.trim <- lau.trim[,-21]
-lau.trim <- lau.trim[,-22]
-lau.trim <- lau.trim[,-23]
-lau.trim <- lau.trim[,-25]
-lau.trim <- lau.trim[,-25]
-lau.trim <- lau.trim[,-25]
-
-## Estuary
-est.trim <- est.df[,-22]
-est.trim <- est.trim[,-27]
-est.trim <- est.trim[,-28]
-est.trim <- est.trim[,-30]
-est.trim <- est.trim[,-31]
-est.trim <- est.trim[,-32]
-est.trim <- est.trim[,-22]
-est.trim <- est.trim[,-22]
-est.trim <- est.trim[,-21]
-
-## Inland
-inl.trim <- inl.df[,-21]
-inl.trim <- inl.trim[,-22]
-inl.trim <- inl.trim[,-23]
+  # Using SRP, Chl, & NH4
 
 
-##### Fit data to linear model #####
+####### Fit data to linear model #######
 # http://www.r-bloggers.com/simple-linear-regression-2/
 
-### Laurentian
-xyplot(log(Abundance) ~ DO.Probe..mg.L., lau.trim)
-lau.DO <- lm(DO.Probe..mg.L.~ log(Abundance), lau.trim)
+##### Laurentian #####
+xyplot(log(Abundance) ~ DO.Probe..mg.L., lau.df)
+lau.DO <- lm(DO.Probe..mg.L.~ log(Abundance), lau.df)
 summary(lau.DO)
 confint(lau.DO, level=0.95)
   # Linear
@@ -1026,30 +994,27 @@ confint(lau.Si, level=0.95)
   # Linear
 
 
-
-
-
-## Now let's test the environmental factors that I had trimmed
-xyplot(log(Abundance) ~ DOC.mg.L, lau.trim)
-lau.DOC <- lm(DOC.mg.L~log(Abundance), lau.trim)
+### Unused environmental factors
+xyplot(log(Abundance) ~ DOC.mg.L, lau.df)
+lau.DOC <- lm(DOC.mg.L~log(Abundance), lau.df)
 summary(lau.DOC)
 confint(lau.DOC, level=0.95)
   # Negative R2
 
-xyplot(log(Abundance) ~ TP.ug.L, lau.trim)
-lau.TP <- lm(TP.ug.L~log(Abundance), lau.trim)
+xyplot(log(Abundance) ~ TP.ug.L, lau.df)
+lau.TP <- lm(TP.ug.L~log(Abundance), lau.df)
 summary(lau.TP)
 confint(lau.TP, level=0.95)
   # Not linear
 
-xyplot(log(Abundance) ~ PON.mg.L, lau.trim)
-lau.PON <- lm(PON.mg.L~log(Abundance), lau.trim)
+xyplot(log(Abundance) ~ PON.mg.L, lau.df)
+lau.PON <- lm(PON.mg.L~log(Abundance), lau.df)
 summary(lau.PON)
 confint(lau.PON, level=0.95)
   # Not linear
 
-xyplot(log(Abundance) ~ PAR, lau.trim)
-lau.PAR <- lm(PAR~log(Abundance), lau.trim)
+xyplot(log(Abundance) ~ PAR, lau.df)
+lau.PAR <- lm(PAR~log(Abundance), lau.df)
 summary(lau.PAR)
 confint(lau.PAR, level=0.95)
   # Negative R2
@@ -1103,13 +1068,10 @@ confint(lau.fluor, level=0.95)
   # Not linear
 
 
-    
 
-
-
-### Estuary
-xyplot(log(Abundance) ~ ORP..mV., est.trim)
-est.ORP <- lm(ORP..mV.~log(Abundance), est.trim)
+##### Estuary #####
+xyplot(log(Abundance) ~ ORP..mV., est.df)
+est.ORP <- lm(ORP..mV.~log(Abundance), est.df)
 summary(est.ORP)
 confint(est.ORP, level=0.95)
   # Linear
@@ -1133,7 +1095,7 @@ confint(est.NO3, level=0.95)
   # LINEARRRRRR
 
 
-## Now let's test the environmental factors that I had trimmed
+### Unused environmental factors
 xyplot(log(Abundance) ~ pH, est.df)
 est.pH <- lm(pH~log(Abundance), est.df)
 summary(est.pH)
@@ -1170,58 +1132,56 @@ summary(est.SpCond)
 confint(est.SpCond, level=0.95)
   # LINEARRRRR
 
-xyplot(log(Abundance) ~ Chl.Lab..ug.L., est.trim)
-est.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ Chl.Lab..ug.L., est.df)
+est.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), est.df)
 summary(est.Chl)
 confint(est.Chl, level=0.95)
   # Linear
 
-xyplot(log(Abundance) ~ BGA.cells.mL, est.trim)
-est.BGA <- lm(BGA.cells.mL~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ BGA.cells.mL, est.df)
+est.BGA <- lm(BGA.cells.mL~log(Abundance), est.df)
 summary(est.BGA)
 confint(est.BGA, level=0.95)
   # Not linear
 
-xyplot(log(Abundance) ~ SO4.mg.L, est.trim)
-est.SO4 <- lm(SO4.mg.L~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ SO4.mg.L, est.df)
+est.SO4 <- lm(SO4.mg.L~log(Abundance), est.df)
 summary(est.SO4)
 confint(est.SO4, level=0.95)
   # Linear
 
-xyplot(log(Abundance) ~ NH3.mg.L, est.trim)
-est.NH3 <- lm(NH3.mg.L~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ NH3.mg.L, est.df)
+est.NH3 <- lm(NH3.mg.L~log(Abundance), est.df)
 summary(est.NH3)
 confint(est.NH3, level=0.95)
   # Not linear
 
-xyplot(log(Abundance) ~ TKN.mg.L, est.trim)
-est.TKN <- lm(TKN.mg.L~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ TKN.mg.L, est.df)
+est.TKN <- lm(TKN.mg.L~log(Abundance), est.df)
 summary(est.TKN)
 confint(est.TKN, level=0.95)
   # Negative R2
 
-xyplot(log(Abundance) ~ TP.ug.L, est.trim)
-est.TP <- lm(TP.ug.L~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ TP.ug.L, est.df)
+est.TP <- lm(TP.ug.L~log(Abundance), est.df)
 summary(est.TP)
 confint(est.TP, level=0.95)
   # Negative R2
 
-xyplot(log(Abundance) ~ DO.probe.mg.L, est.trim)
-est.DO <- lm(DO.probe.mg.L~log(Abundance), est.trim)
+xyplot(log(Abundance) ~ DO.probe.mg.L, est.df)
+est.DO <- lm(DO.probe.mg.L~log(Abundance), est.df)
 summary(est.DO)
 confint(est.DO, level=0.95)
   # Negative R2
-        
 
 
 
-
-### Inland
+##### Inland #####
 xyplot(log(Abundance) ~ SRP.ug.L, inl.df)
 inl.SRP <- lm(SRP.ug.L~log(Abundance), inl.df)
 summary(inl.SRP)
 confint(inl.SRP, level=0.95)
-  # Linear
+  # Linear, but super low R2
 
 xyplot(log(Abundance) ~ Chl.Lab..ug.L., inl.df)
 inl.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), inl.df)
@@ -1229,33 +1189,94 @@ summary(inl.Chl)
 confint(inl.Chl, level=0.95)
   # Linear, but R2 is essentially 0
 
+xyplot(log(Abundance) ~ TP.ug.L, inl.df)
+inl.TP <- lm(TP.ug.L~log(Abundance), inl.df)
+summary(inl.TP)
+confint(inl.TP, level=0.95)
+  # Linear
 
+xyplot(log(Abundance) ~ NH4.ug.L, inl.df)
+inl.NH4 <- lm(NH4.ug.L~log(Abundance), inl.df)
+summary(inl.NH4)
+confint(inl.NH4, level=0.95)
+  # Linear
 
-
-## Now let's test the environmental factors that I had trimmed
-xyplot(log(Abundance) ~ NO3.mg.L, inl.trim)
-inl.NO3 <- lm(NO3.mg.L~log(Abundance), inl.trim)
+### Unused environmental factors
+xyplot(log(Abundance) ~ NO3.mg.L, inl.df)
+inl.NO3 <- lm(NO3.mg.L~log(Abundance), inl.df)
 summary(inl.NO3)
 confint(inl.NO3, level=0.95)
   # Negative R2
-
-xyplot(log(Abundance) ~ TP.ug.L, inl.trim)
-inl.TP <- lm(TP.ug.L~log(Abundance), inl.trim)
-summary(inl.TP)
-confint(inl.TP, level=0.95)
-  # Linear?
-
-xyplot(log(Abundance) ~ NH4.ug.L, inl.trim)
-inl.NH4 <- lm(NH4.ug.L~log(Abundance), inl.trim)
-summary(inl.NH4)
-confint(inl.NH4, level=0.95)
-  # Linear?
 
 xyplot(log(Abundance) ~ TDP.ug.L, inl.df)
 inl.TDP <- lm(TDP.ug.L~log(Abundance), inl.df)
 summary(inl.TDP)
 confint(inl.TDP, level=0.95)
   # Imma say no because too many points are near 0 for TDP
+
+
+
+##### MODELLING TIME #####  
+
+# Function to extract the best subset multiple linear regression model 
+# Arguments:
+#   vars: vectors of all variables to consider in the model
+#   response: response variable of the model (must be in quotes!)
+#   dat: dataframe with vars and response
+# Returns: a list with the variables in the best model, bic, cp, and adjusted r2
+get_bestsub_summary <- function(vars, response, dat) {
+  formula = reformulate(termlabels = vars, response = response)
+  lm_model <- regsubsets(formula, method = "exhaustive", dat)
+  bic <- summary(lm_model)$bic
+  cp <- summary(lm_model)$cp
+  adjr2 <- summary(lm_model)$adjr2
+  best_model <- summary(lm_model)$which[which.min(bic), ]
+  return(list(model = best_model, bic = bic, cp = cp, adjr2 = adjr2))
+}
+
+
+# Variables to include in models
+lau.vars <- c("Temperature..C.", "DO.Probe..mg.L.", "SiO2.mg.L")
+est.vars <- c("ORP..mV.", "Temperature..C.", "TDS..mg.L.", "Chl.Lab..ug.L.", "SO4.mg.L")
+inl.vars <- c("SRP.ug.L", "Chl.Lab..ug.L.", "NH4.ug.L")
+
+# Get the best variable subset model 
+# Then fit the model to extract coefficients and p-values
+lau.best.model <- lapply(lau.df, 
+  function(x) {
+    best_model <- get_bestsub_summary(lau.vars, "Abundance", lau.df)
+    model <- lm(
+      formula = reformulate(lau.vars[best_model$model[-1]], "Abundance"), 
+      data = lau.df)
+    return(model)
+  })
+  # SiO2 coefficient = 1.190
+  # Intercept = 2.443
+
+
+est.best.model <- lapply(est.df, 
+  function(x) {
+    best_model <- get_bestsub_summary(est.vars2, "Abundance", est.df)
+    model <- lm(
+      formula = reformulate(est.vars2[best_model$model[-1]], "Abundance"), 
+      data = est.df)
+    return(model)
+  })
+  # ORP coefficient = 0.03577
+  # Temp coefficient = -0.56380
+  # TDS coefficient = -0.11094
+  # Intercept = 36.16245
+
+inl.best.model <- lapply(inl.df, 
+  function(x) {
+    best_model <- get_bestsub_summary(inl.vars2, "Abundance", inl.df)
+    model <- lm(
+      formula = reformulate(inl.vars2[best_model$model[-1]], "Abundance"), 
+      data = inl.df)
+    return(model)
+  })
+  # NH4.ug.L coefficient = -0.007094
+  # Intercept = 11.894036
 
 
 ```
