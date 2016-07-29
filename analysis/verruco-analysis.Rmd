@@ -1250,15 +1250,16 @@ lau.best.model <- lapply(lau.df,
       data = lau.df)
     return(model)
   })
+summary(lau.best.model)
   # SiO2 coefficient = 1.190
   # Intercept = 2.443
 
 
 est.best.model <- lapply(est.df, 
   function(x) {
-    best_model <- get_bestsub_summary(est.vars2, "Abundance", est.df)
+    best_model <- get_bestsub_summary(est.vars, "Abundance", est.df)
     model <- lm(
-      formula = reformulate(est.vars2[best_model$model[-1]], "Abundance"), 
+      formula = reformulate(est.vars[best_model$model[-1]], "Abundance"), 
       data = est.df)
     return(model)
   })
@@ -1269,16 +1270,38 @@ est.best.model <- lapply(est.df,
 
 inl.best.model <- lapply(inl.df, 
   function(x) {
-    best_model <- get_bestsub_summary(inl.vars2, "Abundance", inl.df)
+    best_model <- get_bestsub_summary(inl.vars, "Abundance", inl.df)
     model <- lm(
-      formula = reformulate(inl.vars2[best_model$model[-1]], "Abundance"), 
+      formula = reformulate(inl.vars[best_model$model[-1]], "Abundance"), 
       data = inl.df)
     return(model)
   })
   # NH4.ug.L coefficient = -0.007094
   # Intercept = 11.894036
 
+#### Pull out p-value
+## Laurentian
+lau.best.model <- get_bestsub_summary(lau.vars, "Abundance", lau.df)
+lau.model <- lm(Abundance ~ SiO2.mg.L, lau.df)
+summary(lau.model)
+  # SiO2 p-value = 0.1262
+  # Adjusted R2 = 0.06225
 
+## Estuary
+est.best.model <- get_bestsub_summary(est.vars, "Abundance", est.df)
+est.model <- lm(Abundance ~ ORP..mV. + Temperature..C. + TDS..mg.L., est.df)
+summary(est.model)
+  # ORP p-value = 0.012133
+  # Temp p-value = 0.008675
+  # TDS = 0.000118
+  # Adjusted R2 = 0.5989
+
+## Inland
+inl.best.model <- get_bestsub_summary(inl.vars, "Abundance", inl.df)
+inl.model <- lm(Abundance ~ NH4.ug.L, inl.df)
+summary(inl.model)
+  # p-value = 2e-16
+  # Adjusted R2 = 0.06124
 ```
 
 
@@ -5071,13 +5094,48 @@ which(bs.tre$node.label < 50)
   # 11 nodes
 
 ### Export tree with bootstrap values as node labels
-#write.tree(bs.tre, "treeBS")
+#write.tree(bs.tre, "bootstrap.tre")
 
 # Compare IToL tree with bootstrap tree
-bs.tre <- read.newick(file="treeBS")
+bs.tre <- read.newick(file="bootstrap.tre")
 length(intersect(ver.sig.tre$tip.label,bs.tre$tip.label))
   # Same tip labels on ver.sig.tre & treeBS
 
+##### Rename bootstrap tree tips with full taxonomy #####
+# Pull out only significant Verrucos
+ver.sig <- merge_phyloseq(Ver, bs.tre)
+tax.name <- data.frame(tax_table(ver.sig))
+tax.name$Tip_Name <- NA
+
+# Create tip name of class;order;family;genus
+for (i in 1:125){
+  class <- paste(tax.name[i,3])
+  order <- paste(tax.name[i,4])
+  family <- paste(tax.name[i,5])
+  genus <- paste(tax.name[i,6])
+  tax.name[i,8] <- paste(class, order, family, genus, sep=";")
+}
+
+# Write new tip names into csv file
+# I have to manually edit out the unclassified
+# Change ";" to "--- " (IToL doesn't recognize ";")
+write.csv(tax.name$Tip_Name, "tip_name", row.names = F)
+
+# Read in the final tip names
+tip.name <- read.csv("tip_name", header=F)
+tip.name$OTU <- tax.name$Species
+
+# Make bootstrapped tree with new tip names
+name.tre <- bs.tre
+
+# Match current tip names with new tip names
+name.tre$tip.label <- tip.name$V1[match(name.tre$tip.label, tip.name$OTU)]
+
+# Convert new tip labels from integer to character
+name.tre$tip.label <- as.character(name.tre$tip.label)
+
+# Save the new tree!
+#write.tree(name.tre, "bootstrap.tre")
 ```
 
 
