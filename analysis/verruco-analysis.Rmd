@@ -5135,7 +5135,7 @@ name.tre$tip.label <- tip.name$V1[match(name.tre$tip.label, tip.name$OTU)]
 name.tre$tip.label <- as.character(name.tre$tip.label)
 
 # Save the new tree!
-#write.tree(name.tre, "bootstrap.tre")
+write.tree(name.tre, "bootstrap.tax.tre")
 ```
 
 
