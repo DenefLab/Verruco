@@ -1,0 +1,7 @@
+#remove.groups(count=combined.trim.contigs.good.unique.good.filter.unique.precluster.uchime.pick.count_table, accnos=mothur.remove.groups)
+#get.lineage(taxonomy=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.nr_v119.wang.taxonomy, taxon=Bacteria;Verrucomicrobia;, count=combined.trim.contigs.good.unique.good.filter.unique.precluster.uchime.pick.count_table)
+#list.seqs(count=current)
+#get.seqs(fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, accnos=current)
+dist.seqs(fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, output=lt, processors=40)
+clearcut(phylip=current)
+
