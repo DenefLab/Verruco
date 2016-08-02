@@ -1,7 +1,19 @@
-#remove.groups(count=combined.trim.contigs.good.unique.good.filter.unique.precluster.uchime.pick.count_table, accnos=mothur.remove.groups)
-#get.lineage(taxonomy=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.nr_v119.wang.taxonomy, taxon=Bacteria;Verrucomicrobia;, count=combined.trim.contigs.good.unique.good.filter.unique.precluster.uchime.pick.count_table)
-#list.seqs(count=current)
-#get.seqs(fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, accnos=current)
-dist.seqs(fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, output=lt, processors=40)
-clearcut(phylip=current)
+#get.oturep(fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, list=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.list, name=combined.trim.contigs.good.names, method=abundance)
+### Get a representative sequence for each OTU. This comes from the most abundant sequence within the OTU
 
+###Trim fasta file so that we only have OTU name left
+##First we trim out the # of seq per OTU
+#cut -d "|" -f 1 combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.fasta> combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut.fasta
+##Next we trim out the sequence header
+#cut -f 2 combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut.fasta > combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut2.fasta
+##We just trimmed out the >, which is necessary for mothur to recognize the fasta file; let's put that back in
+#sed 's/O/>O/g' combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut2.fasta > combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.fasta
+
+#get.seqs(accnos=topver, fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.fasta)
+### Creating a list of only our desired verruco sequences. topver has the top 50 most abundant verruco OTUs. verotus has all verruco otus.
+
+#dist.seqs(fasta=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.fasta, output=lt, processors=40)
+### Calculating a distance between sequences
+
+#clearcut(phylip=combined.trim.contigs.good.unique.good.filter.unique.precluster.pick.an.unique_list.0.03.rep.cut3.pick.phylip.dist)
+### Makes tree based on the dist file
