@@ -773,7 +773,7 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1.33), y=c(41,41,27), size=4, color="red")
+  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1.33), y=c(42,42,42), size=4, color="red")
 
 
 
@@ -1435,7 +1435,7 @@ inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) 
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.frac, aes(x = c(1,1.33,1), y=c(15.6, 15.9, 15.6), label = lab), size = 4, color="red")
+  geom_text(data = ann.frac, aes(x = c(1,1.33,1), y=c(16.5, 16.5, 16.5), label = lab), size = 4, color="red")
  
 
 ### Season ###
@@ -1462,7 +1462,7 @@ inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text( data = ann.seas, aes(x=c(1,1,1), y=c(14,13.7,14), label=lab), size=4, color="red")
+  geom_text( data = ann.seas, aes(x=c(1,1,1), y=c(16.5,16.5,16.5), label=lab), size=4, color="red")
 
 
 
@@ -1600,7 +1600,7 @@ kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Inl
 ### RelAbun + Inverse Simpson Plot
 ```{r}
 # Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-png("boxplot.invsimp.png", width = 17.8, height = 15, units = "cm", res = 600)
+tiff("boxplot.invsimp.tiff", width = 17.8, height = 15, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
 print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
