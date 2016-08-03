@@ -1415,7 +1415,7 @@ inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
 
 # This is the annotation text for the plot below (seas.box)
 # Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
-ann.frac <- data.frame(lab=c(" ", "+", ""),
+ann.frac <- data.frame(lab=c(" ", "*", ""),
                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
                                           levels = c("Laurentian", "Estuary",
                                                      "Inland")),
@@ -1435,7 +1435,7 @@ inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) 
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.frac, aes(x = c(1,1.33,1), y=c(16.5, 16.5, 16.5), label = lab), size = 4, color="red")
+  geom_text(data = ann.frac, aes(x = c(1,1,1), y=c(16.5, 16.2, 16.5), label = lab), size = 6, color="red")
  
 
 ### Season ###
