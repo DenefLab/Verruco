@@ -1465,7 +1465,6 @@ inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
   geom_text( data = ann.seas, aes(x=c(1,1,1), y=c(16.5,16.5,16.5), label=lab), size=4, color="red")
 
 
-
 ### Plot ###
 #png("inv.simp.png", width = 8.7, height = 13, units = "cm", res = 600)
 # inv.simp.plot <- ggplot(inv.simp, aes(x = Fraction, y = mean)) +
@@ -1994,6 +1993,9 @@ kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary")
   # Fraction
   # p-value = 1.231e-06
+kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
+  # Source
+  # p-value = 4.635e-05
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Sediment")
   # Free vs Part
   # p-value = 0.002038
@@ -2068,6 +2070,9 @@ kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Lau
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary")
   # Depth
   # p-value = 0.0001166
+kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
+  # Depth
+  # p-value = 4.635e-05
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Sediment")
   # Top vs Bottom
   # p-value = 0.2154
