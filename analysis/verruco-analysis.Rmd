@@ -1313,7 +1313,7 @@ summary(inl.model)
 # Min # of reads
 min_lib <- min(sample_sums(Ver))
 
-# We will subsample to 35, the minimum number of reads. We will repeat this 100 times and average the diversity estimates from each trial.
+# We will subsample to the minimum number of reads. We will repeat this 100 times and average the diversity estimates from each trial.
 
 # Initialize matrices to store richness and evenness estimates
 nsamp = nsamples(Ver)
@@ -1424,7 +1424,7 @@ ann.frac <- data.frame(lab=c(" ", "*", ""),
 inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
-  xlab("Lake Type") + ylab("Mean Inverse Simpson") +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
@@ -1451,7 +1451,7 @@ ann.seas <- data.frame(lab=c(" ", "+", ""),
 inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
   #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
-  xlab("Lake Type") + ylab("Mean Inverse Simpson") +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
