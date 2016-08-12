@@ -296,7 +296,7 @@ label_rev <- function(labels) {
 }
 
 
-png("phy.relabund.png", width = 17.8, height = 23, units = "cm", res = 600)
+tiff("phy.relabund.tiff", width = 17.8, height = 23, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
@@ -305,7 +305,7 @@ ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
   facet_grid(Fraction + Season ~ Lake_Type, space="free", scales = "free_x",
              labeller = label_rev) +
   coord_flip() +
-  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40), limits = c(0,51)) +
+  scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50), limits = c(0,51)) +
           theme(axis.title.x = element_text(size=10, face="bold"),
                 axis.text.x = element_text(size=8),
                 axis.text.y = element_blank(),
