@@ -5322,14 +5322,13 @@ plot(inl.env$NH4.ug.L)
 
 ##### Run Bioenv #####
 bioenv.lau <- bioenv(lau.otus ~ Temperature..C. + DO.Probe..mg.L. +
-                       Chl.Probe...g.L. + Chl.Lab..ug.L. +
-                       TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
-                       PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
-                       Fluorescence.mg.m3. + PAR, lau.env,
-                     method = "spearman", index = "bray", trace = TRUE,
-                     partial = NULL)
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
+                     lau.env, method = "spearman", index = "bray",
+                     trace = TRUE, partial = NULL)
   # Best parameter = DO.probe..mg.L
-  # correlation = 0.4545795
+  # correlation = 0.4432778
 bioenv.est <- bioenv(est.otus ~ Temperature..C. + SpCond...S.cm. +
                        TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
                        BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
@@ -5361,10 +5360,9 @@ while (x < 100){
   lau.otus.rand <- lau.otus[sample(1:nrow(lau.otus)),]
   x <- x + 1
   bioenv.rand <- bioenv(lau.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
-                       Chl.Probe...g.L. + Chl.Lab..ug.L. +
-                       TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
-                       PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
-                       Fluorescence.mg.m3. + PAR, lau.env,
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, lau.env,
                        method = "spearman",index = "bray", trace = TRUE,
                        partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
@@ -5485,18 +5483,16 @@ inl.env <- inl.env[,-1:-10]
 
 ##### Run Whole Com Bioenv #####
 scaled.bioenv.lau <- bioenv(scaled.lau.otus ~ Temperature..C. +
-                              DO.Probe..mg.L. + Chl.Probe...g.L. +
-                              Chl.Lab..ug.L. + TP.ug.L + PP.ug.L +
-                              TDP.ug.L + TDP.SRP + POC.mg.L + PON.mg.L +
-                              DOC.mg.L + SiO2.mg.L + TSS.mg.L +
+                              DO.Probe..mg.L. + Chl.Lab..ug.L. + TP.ug.L +
+                              PP.ug.L + TDP.ug.L + POC.mg.L + PON.mg.L +
+                              DOC.mg.L +  SiO2.mg.L + TSS.mg.L +
                               Fluorescence.mg.m3. + PAR, lau.env,
                             method = "spearman", index = "bray",
                             trace = TRUE, partial = NULL)
-  # Best parameters: Chl.Probe...g.L.
-  #                  PP.ug.L
-  #                  TDP.SRP
+  # Best parameters: PP.ug.L
+  #                  TDP
   #                  PAR
-  # correlation = 0.3751753
+  # correlation = 0.373295
 scaled.bioenv.est <- bioenv(scaled.est.otus ~ Temperature..C. + 
                               SpCond...S.cm. + TDS..mg.L. + pH +
                               ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL +
@@ -5529,11 +5525,11 @@ result.scaled.lau <- vector(mode="numeric", length = 100)
 while (x < 100){
   lau.otus.rand <- scaled.lau.otus[sample(1:nrow(scaled.lau.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(lau.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
-                       Chl.Probe...g.L. + Chl.Lab..ug.L. +
-                       TP.ug.L + PP.ug.L + TDP.ug.L + TDP.SRP + POC.mg.L +
-                       PON.mg.L + DOC.mg.L + SiO2.mg.L + TSS.mg.L +
-                       Fluorescence.mg.m3. + PAR, lau.env,
+  bioenv.rand <- bioenv(lau.otus.rand ~ Temperature..C. +
+                              DO.Probe..mg.L. + Chl.Lab..ug.L. + TP.ug.L +
+                              PP.ug.L + TDP.ug.L + POC.mg.L + PON.mg.L +
+                              DOC.mg.L +  SiO2.mg.L + TSS.mg.L +
+                              Fluorescence.mg.m3. + PAR, lau.env,
                        method = "spearman",index = "bray", trace = TRUE,
                        partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
