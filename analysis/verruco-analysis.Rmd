@@ -2857,7 +2857,7 @@ adonis(Ver.bray ~ Lake_Type + Depth + Fraction + Season, data = sampledf)
 ```{r}
 # After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
 
-# tiff("pcoa.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
+# tiff("pcoa2.tiff", width = 14, height = 10, units = "in", res = 500)
 # grid.newpage()
 # pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
 # print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -2896,14 +2896,14 @@ Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
+        axis.title.x = element_text(face="bold", size=9),
+        axis.title.y = element_text(face="bold", size=9),
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.38, y=0.45, label = "A", fontface = "bold", size=6, colour="black") +
+        plot.title = element_text(size = 9, face="bold")) +
+  annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE)
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -2936,18 +2936,18 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
   scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
+        axis.title.x = element_text(face="bold", size=9),
+        axis.title.y = element_text(face="bold", size=9),
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.29, y=0.45, label = "B", fontface = "bold", size=6, colour="black") +
-  #guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-         shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-         alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+        plot.title = element_text(size = 9, face="bold")) +
+  annotate("text", x= -0.31, y=0.41, label = "B", fontface = "bold", size=5, colour="black") +
+  guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
+  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
+   #      shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+    #     alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
 
 
 # The function below is to save a legend from a plot, that can then later be called upon and printed
@@ -2955,12 +2955,12 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
 # Then perform the g_legend(plot) function to steal the legend
 # Go back to your plot and now remove the legend (guide)
  ##### Let's steal the legend 
-  #g_legend <- function(a.gplot){
-  #  tmp <- ggplot_gtable(ggplot_build(a.gplot))
-  #  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  #  legend <- tmp$grobs[[leg]]
-  #  return(legend)}
-  #legend <- g_legend(Ver.est.ord)
+  g_legend <- function(a.gplot){
+   tmp <- ggplot_gtable(ggplot_build(a.gplot))
+   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+   legend <- tmp$grobs[[leg]]
+   return(legend)}
+  legend <- g_legend(Ver.est.ord)
 
   
 ##### Inland #####
@@ -2985,14 +2985,14 @@ Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
+        axis.title.x = element_text(face="bold", size=9),
+        axis.title.y = element_text(face="bold", size=9),
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.46, y=0.69, label = "C", fontface = "bold", size=6, colour="black") +
+        plot.title = element_text(size = 9, face="bold")) +
+  annotate("text", x= -0.46, y=0.66, label = "C", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -3487,15 +3487,15 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
   #scale_y_reverse() + 
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
+        axis.title.x = element_text(face="bold", size=9),
+        axis.title.y = element_text(face="bold", size=9),
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
+        plot.title = element_text(size = 9, face="bold")) +
   scale_y_reverse() + scale_x_reverse() +
-  annotate("text", x= 0.42, y=-0.45, label = "D", fontface = "bold", size=6, colour="black") +
+  annotate("text", x= 0.42, y=-0.44, label = "D", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -3527,15 +3527,15 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
   scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
+        axis.title.x = element_text(face="bold", size=9),
+        axis.title.y = element_text(face="bold", size=9),
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
+        plot.title = element_text(size = 9, face="bold")) +
   scale_y_reverse() +
-  annotate("text", x= -0.24, y=-0.45, label = "E", fontface = "bold", size=6, colour="black") +
+  annotate("text", x= -0.26, y=-0.26, label = "E", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -3566,14 +3566,14 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
+        axis.title.x = element_text(face="bold", size=9),
+        axis.title.y = element_text(face="bold", size=9),
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  annotate("text", x= -0.37, y=0.6, label = "F", fontface = "bold", size=6, colour="black") +
+        plot.title = element_text(size = 9, face="bold")) +
+  annotate("text", x= -0.37, y=0.55, label = "F", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -3594,15 +3594,15 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 ### Big PCoA Figure
 ```{r}
-#tiff("pcoa.tiff", width = 17.8, height = 17.8, units = "cm", res = 600)
-pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
+tiff("pcoa2.tiff", width = 17.8, height = 11, units = "cm", res = 600)
+#pdf("pcoa2.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,7.5), heights=c(0.7,14,14)))))
-grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=12,fontface="bold"))
-grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=12,fontface="bold"))
-grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=12,fontface="bold"))
-grid.text("Verrucomicrobial Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=12,fontface="bold"))
-grid.text("Whole Bacterial Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=12,fontface="bold"))
+pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,7.5), heights=c(1,14,14)))))
+grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Verrucomicrobial Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Whole Bacterial Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
 print(Ver.lau.ord, vp=viewport(layout.pos.row=2, layout.pos.col=2))
 print(Ver.est.ord, vp=viewport(layout.pos.row=2, layout.pos.col=3))
 print(Ver.inl.ord, vp=viewport(layout.pos.row=2, layout.pos.col=4))
