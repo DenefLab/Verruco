@@ -1,7 +1,7 @@
 library(phyloseq)
 library(dplyr)
 
-setwd("~/git_repos/Verruco/analysis/")
+#setwd("~/git_repos/Verruco/analysis/")
 
 # files
 sharedfile = "verruco.shared"
