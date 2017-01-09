@@ -572,6 +572,7 @@ ggplot(depthfrac, aes(y=Mean, x = Class, fill = Class)) +
 
 
 ##### Fraction + Season & Lake_Type facet #####
+##### THIS ONE!!!!!!!! #####
 
 # Pull out the factors that I'll be using to make my graph
 sub.classVer.df <- subset(classVer.df, select = c("Sample","Lake_Type", "Class", "Abundance","Fraction", "Season"))
@@ -591,7 +592,7 @@ lakefracseas[which(lakefracseas$iqr.min < 0), 10] <- 0
 lakefracseas$iqr.max <- lakefracseas$Median + 0.5*lakefracseas$iqr
 
 
-###### THIS ONE! ######
+###### THIS ONE!!!!!!!! ######
 
 # This command is used to rearrange the vertical facet labels so that Fraction is on the outside & Season is on the inside
 label_rev <- function(labels) {
