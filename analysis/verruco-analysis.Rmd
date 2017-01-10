@@ -932,6 +932,18 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
   # p-value = 0.02212
 
 
+##### Adjust P-Values #####
+pvals <- c(4.219e-8, 1.206e-10, 0.8792, 0.0003097, 0.0001692, 0.1491,
+           0.0005459, 0.0001081, 0.01748, 6.914e-06, 0.02291, 3.859e-06,
+           0.000259, 3.624e-05, 0.6103, 0.241, 0.2177, 0.0009751,
+           0.0005545, 0.0007583, 0.3826, 0.000829, 0.8748, 0.07562,
+           1.348e-05, 6.914e-06, 0.1037, 9.896e-06, 0.0001089, 0.02212)
+boxplot.kw.vals <- data.frame(pvals)
+boxplot.kw.vals$Lake <- c("LE", "LI", "EI", "All", "All", "All", "All", "All", "L", "E", "E", "E", "E", "I", "All", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
+boxplot.kw.vals$Comp <- c("Lake", "Lake", "Lake", "Frac", "Source", "PF", "PS", "FS", "Frac", "Source", "PF", "PS", "FS", "Frac", "Seas", "Seas", "Est", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "WS", "TB", "BS", "TS", "Depth")
+boxplot.kw.vals$Bonf <- p.adjust(boxplot.kw.vals$pvals, method="bonferroni")
+boxplot.kw.vals$BenH <- p.adjust(boxplot.kw.vals$pvals, method="BH")
+
 ```
 
 
