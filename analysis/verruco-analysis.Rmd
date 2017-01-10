@@ -29,6 +29,7 @@ library(geiger)
 library(sciplot)
 library(picante)
 library(leaps)
+library(PMCMR)
 theme_set(theme_bw())
 set.seed(1)
 ```
@@ -791,6 +792,10 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
 ##### Kruskal-Wallis #####
 
 ### Test between lake types ###
+
+kruskalmc(resp = Relative_Abundance ~ Lake_Type, data = Ver.box)
+  # Laur vs Est, Laur vs Inl = sig
+  # Est vs Inl = nonsig
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Estuary")
   # Laurentian vs Estuary
   # p-value = 4.219e-8
@@ -809,6 +814,9 @@ kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box)
 kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box)
   # All Source
   # p-value = 0.0001692
+kruskalmc(resp = Relative_Abundance ~ Fraction, data = Ver.box)
+  # Part-Sed, Free-Sed = Sig
+  # Part-Free = nonsig
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Sediment")
   # All Free vs Part
   # p-value = 0.1491
@@ -828,6 +836,9 @@ kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lak
 kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_Type=="Estuary")
   # Source
   # p-value = 6.914e-06
+kruskalmc(resp = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Part-Sed, Free-Sed = Sig
+  # Part-Free = Nonsig
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
   # Free vs Part
   # p-value = 0.02291
@@ -848,21 +859,29 @@ kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lak
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box)
   # All Season
   # p-value = 0.6103
+kruskalmc(resp = Relative_Abundance ~ Season, data = Ver.box)
+  # Nonsig
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Laurentian")
   # Season
   # p-value = 0.241
+kruskalmc(resp = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Laurentian")
+  # nonsig
 
 # Estuary
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Estuary")
   # Season
   # p-value = 0.2177
+kruskalmc(resp = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Nonsig
 
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland")
   # Season
   # p-value = 0.0009751
+kruskalmc(resp = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland")
+  # Nonsig
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland" & Season != "Spring")
   # Summer vs Fall
   # p-value = 0.0005545
@@ -877,6 +896,8 @@ kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box)
   # All Depth
   # p-value = 0.000829
+kruskalmc(resp = Relative_Abundance ~ Depth, data = Ver.box)
+  # Water sig from sed
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset = Depth !="Sediment")
   # All Top vs Bot
   # p-value = 0.8748
@@ -890,6 +911,8 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary")
   # Depth
   # p-value = 1.348e-05
+kruskalmc(resp = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary")
+  # Water sig from sed
 kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_Type=="Estuary")
   # Water vs Sediment
   # p-value = 6.914e-06
@@ -907,6 +930,7 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Inland")
   # Depth
   # p-value = 0.02212
+
 
 ```
 
