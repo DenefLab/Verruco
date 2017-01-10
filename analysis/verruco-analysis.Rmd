@@ -652,7 +652,7 @@ label_rev <- function(labels) {
   label_value(rev(labels))
 }
 
-png("intraver.all.png", width = 17.8, height = 18, units = "cm", res = 600)
+#png("intraver.all.png", width = 17.8, height = 18, units = "cm", res = 600)
 ggplot(lakefracseasdepth, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type + Depth, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -674,7 +674,7 @@ ggplot(lakefracseasdepth, aes(y=Median, x = Class, fill = Class)) +
         strip.background = element_blank(),
         legend.position="right") +
   guides(fill = guide_legend(reverse=TRUE))
-dev.off()
+#dev.off()
 
 
 ```
@@ -876,14 +876,14 @@ kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_
 ### Test Depth ###
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box)
   # All Depth
-  # p-value = 0.004995
+  # p-value = 0.000829
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset = Depth !="Sediment")
   # All Top vs Bot
-  # p-value = 0.3348
+  # p-value = 0.8748
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Laurentian")
-  # Deptb
+  # Depth
   # p-value = 0.07562
 
 # Estuary
@@ -906,7 +906,7 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Inland")
   # Depth
-  # p-value = 0.1201
+  # p-value = 0.02212
 
 ```
 
