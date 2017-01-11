@@ -1477,34 +1477,31 @@ final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "
 # Pull out just Inverse Simpson
 inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
 
-### Boxplot ###
 
-### Fraction ###
-
-# This is the annotation text for the plot below (seas.box)
-# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
-ann.frac <- data.frame(lab=c(" ", "*", ""),
-                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
-                                          levels = c("Laurentian", "Estuary",
-                                                     "Inland")),
-                       Fraction = factor(c("Particle", "Free", "Sediment")))
-
-inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) +
-  geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
-  xlab("Lake Type") + ylab("Inverse Simpson") +
-  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=8),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
-        strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.frac, aes(x = c(1,1,1), y=c(16.5, 16.2, 16.5), label = lab), size = 6, color="red")
- 
+# ### Fraction ###
+# # This is the annotation text for the plot below (seas.box)
+# # Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+# ann.frac <- data.frame(lab=c(" ", "*", ""),
+#                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+#                                           levels = c("Laurentian", "Estuary",
+#                                                      "Inland")),
+#                        Fraction = factor(c("Particle", "Free", "Sediment")))
+# inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) +
+#   geom_boxplot(position=position_dodge(1)) +
+#   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
+#   xlab("Lake Type") + ylab("Inverse Simpson") +
+#   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+#   theme(axis.title.x = element_text(face="bold", size=10),
+#         axis.text.x = element_text(angle=0, colour="black", size=8),
+#         axis.text.y = element_text(colour="black", size=8),
+#         axis.title.y = element_text(face="bold", size=10),
+#         plot.title = element_text(face="bold", size=10),
+#         legend.title = element_text(size=10, face="bold"),
+#         legend.text = element_text(size = 9),
+#         strip.text.x = element_blank(),
+#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+#   geom_text(data = ann.frac, aes(x = c(1,1,1), y=c(16.5, 16.2, 16.5), label = lab), size = 6, color="red")
+#  
 
 ### Season ###
 
@@ -1531,6 +1528,36 @@ inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
   geom_text( data = ann.seas, aes(x=c(1,1,1), y=c(16.5,16.5,16.5), label=lab), size=4, color="red")
+
+
+
+### Depth ###
+
+# This is the annotation text for the plot below (seas.box)
+# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+ann.depth <- data.frame(lab=c(" ", "+", ""),
+                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Depth = factor(c("Top", "Bottom", "Sediment")))
+
+inv.simp.depth.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Depth)) +
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  geom_text( data = ann.depth, aes(x=c(1,1.33,1), y=c(16.5,16.5,16.5), label=lab), size=4, color="red")
+
+
 
 
 ### Plot ###
