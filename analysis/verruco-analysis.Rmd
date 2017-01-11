@@ -4609,6 +4609,17 @@ ggplot(pro.inl.df) +
 # Phyloseq to DESeq: http://joey711.github.io/phyloseq-extensions/DESeq.html
 
 
+deSEQ <- function(data, valuetest, cutoff = 0, alpha = 0.05){
+    data_pruned <- prune_taxa(taxa_sums(data) > cutoff, data)
+    de_data <- phyloseq_to_deseq2(data_pruned, valuetest)
+   de_data2 <- DESeq(de_data, test="Wald", fitType="local")
+    res_data <- results(de_data2, cooksCutoff = FALSE)
+    sig_data <- res_data[which(res_data$padj < alpha), ]
+    sigtab_sherm <- cbind(as(sig_data, "data.frame"),
+                          as(tax_table(data_pruned)[rownames(sig_data), ], "matrix"))
+}
+
+
 ### DESeq2 ###
 
 # Subset out Verrucos from RAW COUNT phyloseq object
