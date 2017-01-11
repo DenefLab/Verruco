@@ -3443,13 +3443,13 @@ sampledf <- data.frame(sample_data(Ver.inl))
 
 ### Depth
 adonis(Ver.inl.bray ~ Depth, data=sampledf)
-  # R2 = 0.03548
-  # p-value = 0.002
+  # R2 = 0.08139
+  # p-value = 0.001
 beta.tax = betadisper(d=Ver.inl.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.003
-  # F = 9.534813
+  # p-value = 0.006
+  # F = 8.347568
 
 ### Season
 adonis(Ver.inl.bray ~ Season, data=sampledf)
@@ -3515,8 +3515,8 @@ adonis(Ver.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
   ## Fraction R2= 0.11226; p-value = 0.001
   ## Season R2= 0.07723; p-value = 0.001
   ## Lake R2= 0.27145; p-value = 0.001
-  ## Depth R2= 0.03532; p-value = 0.001
-  ## Residuals = 0.50380
+  ## Depth R2= 0.07777; p-value = 0.001
+  ## Residuals = 0.46128
 ```
 
 
@@ -3735,8 +3735,8 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 ### Big PCoA Figure
 ```{r}
-tiff("pcoa2.tiff", width = 17.8, height = 11, units = "cm", res = 600)
-#pdf("pcoa2.pdf", width=7, height=7, useDingbats = F)
+tiff("pcoa.tiff", width = 17.8, height = 11, units = "cm", res = 600)
+#pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,7.5), heights=c(1,14,14)))))
 grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=10,fontface="bold"))
@@ -4280,13 +4280,13 @@ sampledf <- data.frame(sample_data(scaled.inl))
 
 ### Depth
 adonis(scaled.inl.bray ~ Depth, data=sampledf)
-  # R2 = 0.03975
+  # R2 = 0.100041
   # p-value = 0.001
 beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 25.05928
+  # F = 20.89009
 
 ### Season
 adonis(scaled.inl.bray ~ Season, data=sampledf)
@@ -4352,8 +4352,8 @@ adonis(scaled.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
   ## Fraction R2= 0.17221; p-value = 0.001
   ## Season R2= 0.09735; p-value = 0.001
   ## Lake R2 = 0.21003; p-value = 0.001
-  ## Depth R2= 0.04004; p-value = 0.001
-  ## Residuals = 0.48033
+  ## Depth R2= 0.09506; p-value = 0.001
+  ## Residuals = 0.42535
 ```
 
 
