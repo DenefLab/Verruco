@@ -732,10 +732,12 @@ ks.test(log(Ver.box$Relative_Abundance), "pnorm",
 
 ### Fraction ###
 
+Ver.box.frac <- Ver.box[Ver.box$Fraction != "Sediment",]
+
 #tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
-frac.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
+frac.box <- ggplot(Ver.box.frac, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
+  scale_fill_manual(values = c("gray47","gray87")) +
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
@@ -777,6 +779,35 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
   geom_text(data = ann_text, aes(label=lab), x=c(1,1,1.33), y=c(42,42,42), size=4, color="red")
 
+
+
+### Depth ###
+
+# This is the annotation text for the plot below (seas.box)
+# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+ann2_text <- data.frame(lab=c(" ", "+", "+"),
+                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Depth = factor(c("Top", "Bottom", "Sediment")))
+
+#tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
+depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth)) +
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
+  xlab("Lake Type") + ylab("Relative Abundance (%)") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  geom_text(data = ann2_text, aes(label=lab), x=c(1,1.33,1.3), y=c(42,42,42), size=4, color="red")
+#dev.off()
 
 
 
@@ -1603,7 +1634,7 @@ kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Inland
 ### Depth
 kruskal.test(formula = mean ~ Depth, data = inv.simp)
   # All Depth
-  # p-value = 0.0006259
+  # p-value = 0.00115
 kruskal.test(formula = mean ~ Depth, data = inv.simp, subset= Depth != "Sediment")
   # All Water
   # p-value = 0.09118
@@ -1629,7 +1660,7 @@ kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Est
 
 # Inland
 kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Inland")
-  # p-value = 0.9106
+  # p-value = 0.9449
 
 ```
 
