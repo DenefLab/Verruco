@@ -5246,8 +5246,8 @@ bs.tre <- plotBS(midpoint(fit$tree), bs, p = 50, type="p")
 cnet <- consensusNet(bs)
 
 ### Which nodes have a bootstrap value of < 50
-which(bs.tre$node.label < 50)
-  # 11 nodes
+length(which(bs.tre$node.label < 50))
+  # 57 nodes
 
 ### Export tree with bootstrap values as node labels
 #write.tree(bs.tre, "bootstrap.tre")
@@ -5275,7 +5275,7 @@ for (i in 1:125){
 # Write new tip names into csv file
 # I have to manually edit out the unclassified
 # Change ";" to "--- " (IToL doesn't recognize ";")
-write.csv(tax.name$Tip_Name, "tip_name", row.names = F)
+#write.csv(tax.name$Tip_Name, "tip_name", row.names = F)
 
 # Read in the final tip names
 tip.name <- read.csv("tip_name", header=F)
@@ -5291,7 +5291,7 @@ name.tre$tip.label <- tip.name$V1[match(name.tre$tip.label, tip.name$OTU)]
 name.tre$tip.label <- as.character(name.tre$tip.label)
 
 # Save the new tree!
-write.tree(name.tre, "bootstrap.tax.tre")
+#write.tree(name.tre, "bootstrap.tax.tre")
 ```
 
 
