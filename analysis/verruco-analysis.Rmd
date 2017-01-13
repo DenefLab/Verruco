@@ -32,6 +32,7 @@ library(leaps)
 library(pgirmess)
 theme_set(theme_bw())
 set.seed(1)
+setwd("~/Verruco/analysis")
 ```
 
 ### Import Data
@@ -5579,7 +5580,257 @@ print(quantile(result.inl,1))
 
 
 
+##### Fraction #####
 
+# Subset out samples
+lau <- subset_samples(meta.otus, Lake_Type=="Laurentian")
+lau.part.otus <- data.frame(otu_table(subset_samples(lau, Fraction=="Particle")))
+lau.free.otus <- data.frame(otu_table(subset_samples(lau, Fraction=="Free")))
+est <- subset_samples(meta.otus, Lake_Type=="Estuary")
+est.part.otus <- data.frame(otu_table(subset_samples(est, Fraction=="Particle")))
+est.free.otus <- data.frame(otu_table(subset_samples(est, Fraction=="Free")))
+inl <- subset_samples(meta.otus, Lake_Type=="Inland")
+inl.part.otus <- data.frame(otu_table(subset_samples(inl, Fraction=="Particle")))
+inl.free.otus <- data.frame(otu_table(subset_samples(inl, Fraction=="Free")))
+
+# Now prune taxa that have 0 counts
+lau.part.0 <- which(colSums(lau.part.otus) == 0)
+lau.part.otus <- lau.part.otus[,-lau.part.0]
+lau.free.0 <- which(colSums(lau.free.otus) == 0)
+lau.free.otus <- lau.free.otus[,-lau.free.0]
+est.part.0 <- which(colSums(est.part.otus) == 0)
+est.part.otus <- est.part.otus[,-est.part.0]
+est.free.0 <- which(colSums(est.free.otus) == 0)
+est.free.otus <- est.free.otus[,-est.free.0]
+inl.part.0 <- which(colSums(inl.part.otus) == 0)
+inl.part.otus <- inl.part.otus[,-inl.part.0]
+inl.free.0 <- which(colSums(inl.free.otus) == 0)
+inl.free.otus <- inl.part.otus[,-inl.free.0]
+
+# Read in metadata files
+lau.part.env <- read.table("metadata.lau.part.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+lau.free.env <- read.table("metadata.lau.free.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+est.part.env <- read.table("metadata.est.part.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+est.part.env <- est.part.env[,-27]
+  # Remove DO %
+est.free.env <- read.table("metadata.est.free.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+est.free.env <- est.free.env[,-27]
+  # Remove DO %
+inl.part.env <- read.table("metadata.inl.part.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+inl.free.env <- read.table("metadata.inl.free.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+
+# Trim any metadata that isn't numeric
+lau.part.env <- lau.part.env[,-1:-10]
+lau.free.env <- lau.free.env[,-1:-10]
+est.part.env <- est.part.env[,-1:-10]
+est.free.env <- est.free.env[,-1:-10]
+inl.part.env <- inl.part.env[,-1:-10]
+inl.free.env <- inl.free.env[,-1:-10]
+
+
+##### Run Frac Bioenv #####
+bioenv.lau.part <- bioenv(lau.part.otus ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
+                     lau.part.env, method = "spearman", index = "bray",
+                     trace = TRUE, partial = NULL)
+  # Best parameters = Chl.Lab..ug.L.
+  #                   TP.ug.L
+  #                   PON.mg.L
+  # correlation = 0.311058
+bioenv.lau.free <- bioenv(lau.free.otus ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
+                     lau.free.env, method = "spearman", index = "bray",
+                     trace = TRUE, partial = NULL)
+  # Best parameters = DO.Probe..mg.L.
+  #                   Fluorescence.mg.m3
+  # correlation = 0.167519
+bioenv.est.part <- bioenv(est.part.otus ~ Temperature..C. + SpCond...S.cm. +
+                       TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                       BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                       NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                       Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                     est.part.env, method = "spearman", index = "bray",
+                     trace =TRUE, partial=NULL)
+  # Best parameters = Chl.Lab..ug.L.
+  # correlation = 0.07330661
+bioenv.est.free <- bioenv(est.free.otus ~ Temperature..C. + SpCond...S.cm. +
+                       TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                       BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                       NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                       Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                     est.free.env, method = "spearman", index = "bray",
+                     trace =TRUE, partial=NULL)
+  # Best parameters = SpCond...S.cm.
+  #                   NH3.mg.L
+  # correlation = 0.1472449
+bioenv.inl.part <- bioenv(inl.part.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, inl.part.env,
+                     method = "spearman", index = "bray", trace = TRUE,
+                     partial = NULL)
+  # Best parameters = NO3.mg.L
+  #                   SRP.ug.L
+  #                   TP.ug.L
+  #                   NH4.ug.L
+  # correlation = 0.5861714
+bioenv.inl.free <- bioenv(inl.free.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, inl.free.env,
+                     method = "spearman", index = "bray", trace = TRUE,
+                     partial = NULL)
+  # Best parameters = NO3.mg.L
+  #                   SRP.ug.L
+  #                   TP.ug.L
+  #                   NH4.ug.L
+  # correlation = 0.5476402
+
+##### P-value Frac Calculations #####
+# Perform random permutations of row names
+# Laurentian Particle
+x <- 0
+result.lau.part <- vector(mode="numeric", length = 100)
+while (x < 100){
+  lau.part.otus.rand <- lau.part.otus[sample(1:nrow(lau.part.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(lau.part.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, lau.part.env,
+                       method = "spearman",index = "bray", trace = TRUE,
+                       partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.lau.part[x] = max(tmp)
+  print(x)
+}
+hist(result.lau.part)
+print(mean(result.lau.part))
+print(max(result.lau.part))
+print(quantile(result.lau.part,0.66))
+  # p-value = 0.34
+
+# Laurentian Free
+x <- 0
+result.lau.free <- vector(mode="numeric", length = 100)
+while (x < 100){
+  lau.free.otus.rand <- lau.free.otus[sample(1:nrow(lau.free.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(lau.free.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, lau.free.env,
+                       method = "spearman",index = "bray", trace = TRUE,
+                       partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.lau.free[x] = max(tmp)
+  print(x)
+}
+hist(result.free.lau)
+print(mean(result.lau.free))
+print(max(result.lau.free))
+print(quantile(result.lau.free,0.95))
+print(quantile(result.lau.free,0.55)) 
+print(quantile(result.lau.free,1))
+  # p-value = 0.45
+
+# Estuary Particle
+x <- 0
+result.est.part <- vector(mode="numeric", length = 100)
+while (x < 100){
+  est.part.otus.rand <- est.part.otus[sample(1:nrow(est.part.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(est.part.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+                          TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                          BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                          NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                          Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                        est.part.env, method = "spearman", index = "bray", 
+                        trace =TRUE, partial=NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.est.part[x] = max(tmp)
+  print(x)
+}
+hist(result.est.part)
+print(mean(result.est.part))
+print(max(result.est.part))
+print(quantile(result.est.part,0.95))
+print(quantile(result.est.part,0.00))
+ # p-value= = 1
+
+# Estuary Free
+x <- 0
+result.est.free <- vector(mode="numeric", length = 100)
+while (x < 100){
+  est.free.otus.rand <- est.free.otus[sample(1:nrow(est.free.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(est.free.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+                          TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                          BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                          NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                          Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                        est.free.env, method = "spearman", index = "bray", 
+                        trace =TRUE, partial=NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.est.free[x] = max(tmp)
+  print(x)
+}
+hist(result.est.free)
+print(mean(result.est.free))
+print(max(result.est.free))
+print(quantile(result.est.free,0.95))
+print(quantile(result.est.free,0.22))
+  # correlation = 0.78
+
+# Inland Particle
+x <- 0
+result.inl.part <- vector(mode="numeric", length = 100)
+while (x < 100){
+  inl.part.otus.rand <- inl.part.otus[sample(1:nrow(inl.part.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(inl.part.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+                          SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                        inl.part.env, method = "spearman", index = "bray",
+                        trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.inl.part[x] = max(tmp)
+  print(x)
+}
+hist(result.inl.part)
+print(mean(result.inl.part))
+print(max(result.inl.part))
+print(quantile(result.inl.part,0.95))
+print(quantile(result.inl.part,0.99))
+print(quantile(result.inl.part,1))
+  # p-value < 0.01
+
+# Inland Free
+x <- 0
+result.inl.free <- vector(mode="numeric", length = 100)
+while (x < 100){
+  inl.free.otus.rand <- inl.free.otus[sample(1:nrow(inl.free.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(inl.free.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+                          SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                        inl.free.env, method = "spearman", index = "bray",
+                        trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.inl.free[x] = max(tmp)
+  print(x)
+}
+hist(result.inl.free)
+print(mean(result.inl.free))
+print(max(result.inl.free))
+print(quantile(result.inl.free,0.95))
+print(quantile(result.inl.free,0.99))
+print(quantile(result.inl.free,1))
+  # p-value < 0.01
 
 
 
@@ -5719,7 +5970,6 @@ print(max(result.scaled.est))
 print(quantile(result.scaled.est,0.95))
 print(quantile(result.scaled.est,0.99)) 
 print(quantile(result.scaled.est,1))
-  # All results are 0 o.O
   ###Yay, p-value < 0.01!
 
 
@@ -5743,14 +5993,263 @@ print(max(result.scaled.inl))
 print(quantile(result.scaled.inl,0.95))
 print(quantile(result.scaled.inl,0.99))
 print(quantile(result.scaled.inl,1))
-  # All results are 0 o.O
   ###Yay, p-value < 0.01!
 
 
 
                         
 
+##### Fraction #####
 
+# Subset out samples
+scaled.lau <- subset_samples(scaled.meta.otus, Lake_Type=="Laurentian")
+scaled.lau.part.otus <- data.frame(otu_table(subset_samples(scaled.lau, Fraction=="Particle")))
+scaled.lau.free.otus <- data.frame(otu_table(subset_samples(scaled.lau, Fraction=="Free")))
+scaled.est <- subset_samples(scaled.meta.otus, Lake_Type=="Estuary")
+scaled.est.part.otus <- data.frame(otu_table(subset_samples(scaled.est, Fraction=="Particle")))
+scaled.est.free.otus <- data.frame(otu_table(subset_samples(scaled.est, Fraction=="Free")))
+scaled.inl <- subset_samples(scaled.meta.otus, Lake_Type=="Inland")
+scaled.inl.part.otus <- data.frame(otu_table(subset_samples(scaled.inl, Fraction=="Particle")))
+scaled.inl.free.otus <- data.frame(otu_table(subset_samples(scaled.inl, Fraction=="Free")))
+
+# Now prune taxa that have 0 counts
+scaled.lau.part.0 <- which(colSums(scaled.lau.part.otus) == 0)
+scaled.lau.part.otus <- scaled.lau.part.otus[,-scaled.lau.part.0]
+scaled.lau.free.0 <- which(colSums(scaled.lau.free.otus) == 0)
+scaled.lau.free.otus <- scaled.lau.free.otus[,-scaled.lau.free.0]
+scaled.est.part.0 <- which(colSums(scaled.est.part.otus) == 0)
+scaled.est.part.otus <- scaled.est.part.otus[,-scaled.est.part.0]
+scaled.est.free.0 <- which(colSums(scaled.est.free.otus) == 0)
+scaled.est.free.otus <- scaled.est.free.otus[,-scaled.est.free.0]
+scaled.inl.part.0 <- which(colSums(scaled.inl.part.otus) == 0)
+scaled.inl.part.otus <- scaled.inl.part.otus[,-scaled.inl.part.0]
+scaled.inl.free.0 <- which(colSums(scaled.inl.free.otus) == 0)
+scaled.inl.free.otus <- scaled.inl.part.otus[,-scaled.inl.free.0]
+
+# Read in metadata files
+scaled.lau.part.env <- read.table("metadata.lau.part.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+scaled.lau.free.env <- read.table("metadata.lau.free.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+scaled.est.part.env <- read.table("metadata.est.part.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+scaled.est.part.env <- scaled.est.part.env[,-27]
+  # Remove DO %
+scaled.est.free.env <- read.table("metadata.est.free.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+scaled.est.free.env <- scaled.est.free.env[,-27]
+  # Remove DO %
+scaled.inl.part.env <- read.table("metadata.inl.part.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+scaled.inl.free.env <- read.table("metadata.inl.free.csv", header=T, sep=",", row.names=1,
+                      as.is=T)
+
+# Trim any metadata that isn't numeric
+scaled.lau.part.env <- scaled.lau.part.env[,-1:-10]
+scaled.lau.free.env <- scaled.lau.free.env[,-1:-10]
+scaled.est.part.env <- scaled.est.part.env[,-1:-10]
+scaled.est.free.env <- scaled.est.free.env[,-1:-10]
+scaled.inl.part.env <- scaled.inl.part.env[,-1:-10]
+scaled.inl.free.env <- scaled.inl.free.env[,-1:-10]
+
+
+##### Run Frac Bioenv #####
+bioenv.scaled.lau.part <- bioenv(scaled.lau.part.otus ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
+                     scaled.lau.part.env, method = "spearman", index = "bray",
+                     trace = TRUE, partial = NULL)
+  # Best parameters = DOC.mg.L
+  #                   SIO2.mg.L
+  # correlation = 0.3971576
+bioenv.scaled.lau.free <- bioenv(scaled.lau.free.otus ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
+                     scaled.lau.free.env, method = "spearman", index = "bray",
+                     trace = TRUE, partial = NULL)
+  # Best parameters = DO.Probe..mg.L.
+  #                   DOC.mg.L
+  # correlation = 0.07188957
+bioenv.scaled.est.part <- bioenv(scaled.est.part.otus ~ Temperature..C. + SpCond...S.cm. +
+                       TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                       BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                       NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                       Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                     scaled.est.part.env, method = "spearman", index = "bray",
+                     trace =TRUE, partial=NULL)
+  # Best parameters = Temperature..C.
+  #                   NH3.mg.L
+  # correlation = 0.04355959
+bioenv.scaled.est.free <- bioenv(scaled.est.free.otus ~ Temperature..C. + SpCond...S.cm. +
+                       TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                       BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                       NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                       Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                     scaled.est.free.env, method = "spearman", index = "bray",
+                     trace =TRUE, partial=NULL)
+  # Best parameters = SpCond...S.cm.
+  #                   NH3.mg.L
+  # correlation = 0.08311599
+bioenv.scaled.inl.part <- bioenv(scaled.inl.part.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, scaled.inl.part.env,
+                     method = "spearman", index = "bray", trace = TRUE,
+                     partial = NULL)
+  # Best parameters = NO3.mg.L
+  #                   TP.ug.L
+  #                   TDP.ug.L
+  #                   NH4.ug.L
+  # correlation = 0.7564373
+bioenv.scaled.inl.free <- bioenv(scaled.inl.free.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, scaled.inl.free.env,
+                     method = "spearman", index = "bray", trace = TRUE,
+                     partial = NULL)
+  # Best parameters = NO3.mg.L
+  #                   TP.ug.L
+  #                   TDP.ug.L
+  #                   NH4.ug.L
+  # correlation = 0.755128
+
+##### P-value Frac Calculations #####
+# Perform random permutations of row names
+# scaled.laurentian Particle
+x <- 0
+result.scaled.lau.part <- vector(mode="numeric", length = 100)
+while (x < 100){
+  scaled.lau.part.otus.rand <- scaled.lau.part.otus[sample(1:nrow(scaled.lau.part.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(scaled.lau.part.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, scaled.lau.part.env,
+                       method = "spearman",index = "bray", trace = TRUE,
+                       partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.scaled.lau.part[x] = max(tmp)
+  print(x)
+}
+hist(result.scaled.lau.part)
+print(mean(result.scaled.lau.part))
+print(max(result.scaled.lau.part))
+print(quantile(result.scaled.lau.part,0.95))
+print(quantile(result.scaled.lau.part,0.78))
+  # correlation = 0.22
+
+# scaled.laurentian Free
+x <- 0
+result.scaled.lau.free <- vector(mode="numeric", length = 100)
+while (x < 100){
+  scaled.lau.free.otus.rand <- scaled.lau.free.otus[sample(1:nrow(scaled.lau.free.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(scaled.lau.free.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+                       Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
+                       POC.mg.L + PON.mg.L + DOC.mg.L + 
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, scaled.lau.free.env,
+                       method = "spearman",index = "bray", trace = TRUE,
+                       partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.scaled.lau.free[x] = max(tmp)
+  print(x)
+}
+hist(result.free.scaled.lau)
+print(mean(result.scaled.lau.free))
+print(max(result.scaled.lau.free))
+print(quantile(result.scaled.lau.free,0.95))
+print(quantile(result.scaled.lau.free,0.15))
+  # p-value = 0.85
+
+# scaled.estuary Particle
+x <- 0
+result.scaled.est.part <- vector(mode="numeric", length = 100)
+while (x < 100){
+  scaled.est.part.otus.rand <- scaled.est.part.otus[sample(1:nrow(scaled.est.part.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(scaled.est.part.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+                          TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                          BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                          NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                          Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                        scaled.est.part.env, method = "spearman", index = "bray", 
+                        trace =TRUE, partial=NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.scaled.est.part[x] = max(tmp)
+  print(x)
+}
+hist(result.scaled.est.part)
+print(mean(result.scaled.est.part))
+print(max(result.scaled.est.part))
+print(quantile(result.scaled.est.part,0.95))
+print(quantile(result.scaled.est.part,0.00))
+  # p-value = 1
+
+# scaled.estuary Free
+x <- 0
+result.scaled.est.free <- vector(mode="numeric", length = 100)
+while (x < 100){
+  scaled.est.free.otus.rand <- scaled.est.free.otus[sample(1:nrow(scaled.est.free.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(scaled.est.free.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+                          TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
+                          BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
+                          NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
+                          Alk.mg.L + DO.probe.mg.L + Turb.NTU,
+                        scaled.est.free.env, method = "spearman", index = "bray", 
+                        trace =TRUE, partial=NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.scaled.est.free[x] = max(tmp)
+  print(x)
+}
+hist(result.scaled.est.free)
+print(mean(result.scaled.est.free))
+print(max(result.scaled.est.free))
+print(quantile(result.scaled.est.free,0.95))
+print(quantile(result.scaled.est.free,0.03))
+  # p-value = 0.97
+
+# scaled.inland Particle
+x <- 0
+result.scaled.inl.part <- vector(mode="numeric", length = 100)
+while (x < 100){
+  scaled.inl.part.otus.rand <- scaled.inl.part.otus[sample(1:nrow(scaled.inl.part.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(scaled.inl.part.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+                          SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                        scaled.inl.part.env, method = "spearman", index = "bray",
+                        trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.scaled.inl.part[x] = max(tmp)
+  print(x)
+}
+hist(result.scaled.inl.part)
+print(mean(result.scaled.inl.part))
+print(max(result.scaled.inl.part))
+print(quantile(result.scaled.inl.part,0.95))
+print(quantile(result.scaled.inl.part,0.99))
+print(quantile(result.scaled.inl.part,1))
+  # p-value < 0.01
+
+# scaled.inland Free
+x <- 0
+result.scaled.inl.free <- vector(mode="numeric", length = 100)
+while (x < 100){
+  scaled.inl.free.otus.rand <- scaled.inl.free.otus[sample(1:nrow(scaled.inl.free.otus)),]
+  x <- x + 1
+  bioenv.rand <- bioenv(scaled.inl.free.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+                          SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
+                        scaled.inl.free.env, method = "spearman", index = "bray",
+                        trace = TRUE, partial = NULL)
+  tmp <- data.frame(summary(bioenv.rand)[2])
+  result.scaled.inl.free[x] = max(tmp)
+  print(x)
+}
+hist(result.scaled.inl.free)
+print(mean(result.scaled.inl.free))
+print(max(result.scaled.inl.free))
+print(quantile(result.scaled.inl.free,0.95))
+print(quantile(result.scaled.inl.free,0.99))
+print(quantile(result.scaled.inl.free,1))
+  # p-value < 0.01
 ```
 
 
