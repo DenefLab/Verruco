@@ -1062,6 +1062,25 @@ summary(lau.Si)
 confint(lau.Si, level=0.95)
   # Linear
 
+##### Laur SINE TRANS #####
+xyplot(sin(Abundance) ~ DO.Probe..mg.L., lau.df)
+lau.DO.sin <- lm(DO.Probe..mg.L.~ sin(Abundance), lau.df)
+summary(lau.DO.sin)
+confint(lau.DO.sin, level=0.95)
+  # Linear
+
+xyplot(sin(Abundance) ~ Temperature..C., lau.df)
+lau.temp.sin <- lm(Temperature..C.~sin(Abundance), lau.df)
+summary(lau.temp.sin)
+confint(lau.temp.sin, level=0.95)
+  # Says linear, but R2 is essentially 0
+
+xyplot(sin(Abundance) ~ SiO2.mg.L, lau.df)
+lau.Si.sin <- lm(SiO2.mg.L~sin(Abundance), lau.df)
+summary(lau.Si.sin)
+confint(lau.Si.sin, level=0.95)
+  # Linear
+
 
 ### Unused environmental factors
 xyplot(log(Abundance) ~ DOC.mg.L, lau.df)
@@ -2509,28 +2528,6 @@ pd.kw.vals$BenH <- p.adjust(pd.kw.vals$pvals, method="BH")
 
 
 
-### Create NMDS comparison plots
-```{r}
-# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
-#tiff("nmds.compare.tiff", width = 14, height = 10, units = "in", res = 500)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-# print(bray.nmds.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# print(bray.nmds.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-# print(soren.nmds.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-# print(soren.nmds.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-#dev.off()
-
-### Bray-Curtis seems to cluster a bit more clearly than Sorensen
-
-```
-
-
-
-
-
-
-
 ### PCoA (Bray-Curtis)
 ```{r}
 # Calculate bray-curtis dissimilarity from phyloseq object
@@ -2652,123 +2649,6 @@ bray.pcoa.facet <- plot_ordination(
          shape = guide_legend(order=2, override.aes=list(size=3)))
 ```
 
-
-
-### PCoA (Sorensen)
-``` {r}
-# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
-
-# # Calculates sorensen dissimilarity matrix
-# test <- dsvdis(nowinOTU.df, index="sorensen")
-# # Performs ordination on phyloseq object
-# soren.pcoa<- ordinate(physeq = Ver.rel, method = "PCoA", distance = test)
-# 
-# ### Plot
-# ## Depth
-# plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = soren.pcoa, 
-#   color = "Depth",
-#   axes = c(1,2),
-#   title = "Sorensen Dissimilarity") +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold"))
-# 
-# ### Plot
-# ## Lake_Type
-# plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = soren.pcoa, 
-#   color = "Lake_Type",
-#   axes = c(2,3),
-#   title = "Sorensen Dissimilarity") +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold"))
-# 
-# 
-# ### Plot
-# ## Color = Lake_Type, Shape = Depth
-# soren.pcoa.Lake_Type.depth <- plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = soren.pcoa, 
-#   color = "Lake_Type",
-#   shape = "Depth",
-#   axes = c(2,3),
-#   title = "Sorensen Dissimilarity") +
-#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold")) +
-#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
-#          shape = guide_legend(order=2, override.aes=list(size=3)))
-# 
-# ### Plot
-# ## Facet = Lake_Type, Color = Fraction, Shape = Season
-# plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = soren.pcoa, 
-#   color = "Fraction",
-#   shape = "Season",
-#   axes = c(1, 3),
-#   title = "Sorensen Dissimilarity") +
-#   facet_wrap(facets = ~Lake_Type) +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold")) +
-#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
-#          shape = guide_legend(order=2, override.aes=list(size=3)))
-# 
-# 
-# ### Plot
-# ## Facet = Lake_Type, Color = Season, Shape = Fraction
-# soren.pcoa.facet <- plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = Ver.pcoa, 
-#   color = "Season",
-#   shape = "Fraction",
-#   axes = c(1,2),
-#   title = "Sorensen Dissimilarity") +
-#   facet_wrap(facets = ~Lake_Type) +
-#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold")) +
-#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
-#          shape = guide_legend(order=2, override.aes=list(size=3)))
-
-```
 
 
 ### Ver PERMANOVA
@@ -2993,25 +2873,6 @@ adonis(Ver.bray ~ Lake_Type + Depth + Fraction + Season, data = sampledf)
 
 
 ```
-
-
-### Create PCoA comparison plots
-```{r}
-# After comparing NMDS/PCoA & Bray-Curtis/Sorensen, I went with PCoA Bray-Curtis, so this code is now commented out
-
-# tiff("pcoa2.tiff", width = 14, height = 10, units = "in", res = 500)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-# print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-# print(soren.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-# print(soren.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-# dev.off()
-
-### Bray-Curtis seems to cluster a bit more clearly than Sorensen
-
-```
-
 
 
 ### Ver Lake Type PCoA
