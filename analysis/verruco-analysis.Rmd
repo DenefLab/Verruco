@@ -158,7 +158,7 @@ sample_data(scaled)$Lake_Type <- ordered(sample_data(scaled)$Lake_Type,
 sample_data(scaled)$Fraction <- ordered(sample_data(scaled)$Fraction,
                                      levels = c("Particle","Free","Sediment"))
 sample_data(scaled)$Depth <- ordered(sample_data(scaled)$Depth,
-                                  levels = c("Top", "Bottom","Sediment"))
+                                  levels = c("Surface", "Bottom","Sediment"))
 sample_data(scaled)$Season <- ordered(sample_data(scaled)$Season,
                                    levels = c("Spring","Summer","Fall"))
 
@@ -271,8 +271,6 @@ phy.trim <- phy.trim[-which(phy.trim$Phylum== "TM6"),]
 #phy.trim <- phy.trim[-which(phy.trim$Phylum== "unclassified"),]
 #phy.trim <- phy.trim[-which(phy.trim$Phylum== "Acidobacteria"),]
 #phy.trim <- phy.trim[-which(phy.trim$Phylum== "Chloroflexi"),]
-phy.trim$Phylum <- ordered(phy.trim$Phylum, levels=c("Acidobacteria", "Actinobacteria", "Armatimonadetes", "Bacteroidetes", "Candidate_division_WS3", "Chlorobi", "Chloroflexi", "Cyanobacteria", "Nitrospirae", "Planctomycetes", "Proteobacteria", "Spirochaetae", "unclassified", "Verrucomicrobia"))
-
 phy.trim$Phylum <- ordered(phy.trim$Phylum, levels=c("Verrucomicrobia", "unclassified", "Spirochaetae", "Proteobacteria", "Planctomycetes", "Nitrospirae", "Cyanobacteria", "Chloroflexi", "Chlorobi", "Candidate_division_WS3", "Bacteroidetes", "Armatimonadetes", "Actinobacteria", "Acidobacteria"))
 
 # Set phylum plotting colors for 14 taxa
@@ -298,7 +296,7 @@ label_rev <- function(labels) {
 }
 
 
-tiff("phy.relabund.tiff", width = 17.8, height = 23, units = "cm", res = 600)
+#tiff("phy.relabund.tiff", width = 17.8, height = 23, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
@@ -322,7 +320,7 @@ ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
                 strip.background = element_blank(),
                 legend.position="right") +
   guides(fill = guide_legend(reverse=TRUE, keywidth = 0.75, keyheight = 0.75))
-dev.off()
+#dev.off()
 
 
 ```
@@ -790,7 +788,7 @@ ann2_text <- data.frame(lab=c(" ", "+", "+"),
                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
                                           levels = c("Laurentian", "Estuary",
                                                      "Inland")),
-                       Depth = factor(c("Top", "Bottom", "Sediment")))
+                       Depth = factor(c("Surface", "Bottom", "Sediment")))
 
 #tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
 depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth)) +
@@ -931,7 +929,7 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box)
 kruskalmc(resp = Relative_Abundance ~ Depth, data = Ver.box)
   # Water sig from sed
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset = Depth !="Sediment")
-  # All Top vs Bot
+  # All Sur vs Bot
   # p-value = 0.8748
 
 # Laurentian
@@ -949,13 +947,13 @@ kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_
   # Water vs Sediment
   # p-value = 6.914e-06
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Source == "Water")
-  # Top vs Bot
+  # Sur vs Bot
   # p-value = 0.1037
-kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Top")
+kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Surface")
   # Bot vs Sed
   # p-value = 9.896e-06
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Bottom")
-  # Top vs Sed
+  # Sur vs Sed
   # p-value = 0.0001089
 
 # Inland
@@ -1563,7 +1561,7 @@ ann.depth <- data.frame(lab=c(" ", "+", ""),
                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
                                           levels = c("Laurentian", "Estuary",
                                                      "Inland")),
-                       Depth = factor(c("Top", "Bottom", "Sediment")))
+                       Depth = factor(c("Surface", "Bottom", "Sediment")))
 
 inv.simp.depth.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Depth)) +
   geom_boxplot(position=position_dodge(1)) +
@@ -1692,8 +1690,8 @@ kruskal.test(formula = mean ~ Depth, data = inv.simp)
   # All Depth
   # p-value = 0.00115
 kruskalmc(resp = mean ~ Depth, data = inv.simp)
-  # Top-Sed, Bot-Sed = Sig
-  # Top-Bot = nonsig
+  # Sur-Sed, Bot-Sed = Sig
+  # Sur-Bot = nonsig
 kruskal.test(formula = mean ~ Depth, data = inv.simp, subset= Depth != "Sediment")
   # All Water
   # p-value = 0.09118
@@ -1708,16 +1706,16 @@ kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Est
   # Depth
   # p-value = 0.00213
 kruskalmc(resp = mean ~ Depth, data = inv.simp, subset=Lake_Type=="Estuary")
-  # Top-Bot = nonsig
-  # Top-Sed, Bot-Sed = Sig
+  # Sur-Bot = nonsig
+  # Sur-Sed, Bot-Sed = Sig
 kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Sediment" )
-  # Top vs Bottom
+  # Sur vs Bottom
   # p-value = 0.3071
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Top" )
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Surface" )
   # Bottom vs Sediment
   # p-value = 0.004267
 kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Bottom" )
-  # Top vs Sediment 
+  # Sur vs Sediment 
   # p-value = 0.0008396
 
 # Inland
@@ -2205,10 +2203,10 @@ kruskal.test(formula = Stat ~ Depth, data = final.pd)
   # All Depth
   # p-value = 7.962e-06
 kruskalmc(resp = Stat ~ Depth, data = final.pd)
-  # Top-Sed, Bot-Sed = Sig
-  # Top-Bot = nonsig
+  # Sur-Sed, Bot-Sed = Sig
+  # Sur-Bot = nonsig
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Depth != "Sediment")
-  # All Top vs Bottom
+  # All Sur vs Bottom
   # p-value = 0.0987
 
 # Laurentian
@@ -2221,19 +2219,19 @@ kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Est
   # Depth
   # p-value = 0.0001166
 kruskalmc(resp = Stat ~ Depth, data = final.pd, subset = Lake_Type=="Estuary")
-  # Top-Sed, Bot-Sed = Sig
-  # Top-Bot = Nonsig
+  # Sur-Sed, Bot-Sed = Sig
+  # Sur-Bot = Nonsig
 kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
   # Source
   # p-value = 4.635e-05
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Sediment")
-  # Top vs Bottom
+  # Sur vs Bottom
   # p-value = 0.2154
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Top")
+kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Surface")
   # Bottom vs Sediment
   # p-value = 0.001097
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Bottom")
-  # Top vs Sediment
+  # Sur vs Sediment
   # p-value =2.445e-05
 
 # Inland
@@ -2388,7 +2386,7 @@ p$tab
   # p-value = 0.001
   # F = 28.00798
 
-# Top vs. Bottom
+# Surface vs. Bottom
 adonis.tb <- subset_samples(physeq = Ver.rel, Depth != "DCM")
 adonis.tb <- subset_samples(physeq = adonis.tb, Depth != "Sediment")
 adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
@@ -2402,7 +2400,7 @@ p$tab
   # p-value = 0.498
   # F = 0.5144987
 
-# Top vs. Sediment
+# Surface vs. Sediment
 adonis.ts <- subset_samples(physeq = Ver.rel, Depth != "DCM")
 adonis.ts <- subset_samples(physeq = adonis.ts, Depth != "Bottom")
 adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
@@ -2418,7 +2416,7 @@ p$tab
 
 # Bottom vs. Sediment
 adonis.bs <- subset_samples(physeq = Ver.rel, Depth != "DCM")
-adonis.bs <- subset_samples(physeq = adonis.bs, Depth != "Top")
+adonis.bs <- subset_samples(physeq = adonis.bs, Depth != "Surface")
 adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
 adonis.bs <- data.frame(sample_data(adonis.bs))
 adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
@@ -2863,7 +2861,7 @@ p$tab
   # p-value = 0.004
   # F = 9.392686
 
-# Top vs. Bottom
+# Surface vs. Bottom
 adonis.tb <- subset_samples(physeq = Ver.est, Depth != "Sediment")
 adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
 adonis.tb <- data.frame(sample_data(adonis.tb))
@@ -2876,7 +2874,7 @@ p$tab
   # p-value = 0.811
   # F = 0.05359156
 
-# Top vs. Sediment
+# Surface vs. Sediment
 adonis.ts <- subset_samples(physeq = Ver.est, Depth != "Bottom")
 adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
 adonis.ts <- data.frame(sample_data(adonis.ts))
@@ -2890,7 +2888,7 @@ p$tab
   # F = 6.536549
 
 # Bottom vs. Sediment
-adonis.bs <- subset_samples(physeq = Ver.est, Depth != "Top")
+adonis.bs <- subset_samples(physeq = Ver.est, Depth != "Surface")
 adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
 adonis.bs <- data.frame(sample_data(adonis.bs))
 adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
@@ -3368,7 +3366,7 @@ p$tab
   # p-value = 0.001
   # F = 18.0238 
 
-# Top vs. Bottom
+# Surface vs. Bottom
 adonis.scaled.tb <- subset_samples(physeq = scaled, Depth != "DCM")
 adonis.scaled.tb <- subset_samples(physeq = adonis.scaled.tb, Depth != "Sediment")
 adonis.scaled.tb.bray <- phyloseq::distance(physeq = adonis.scaled.tb, method = "bray")
@@ -3382,7 +3380,7 @@ p$tab
   # p-value = 0.003
   # F = 9.793284
 
-# Top vs. Sediment
+# Surface vs. Sediment
 adonis.scaled.ts <- subset_samples(physeq = scaled, Depth != "DCM")
 adonis.scaled.ts <- subset_samples(physeq = adonis.scaled.ts, Depth != "Bottom")
 adonis.scaled.ts.bray <- phyloseq::distance(physeq = adonis.scaled.ts, method = "bray")
@@ -3398,7 +3396,7 @@ p$tab
 
 # Bottom vs. Sediment
 adonis.scaled.bs <- subset_samples(physeq = scaled, Depth != "DCM")
-adonis.scaled.bs <- subset_samples(physeq = adonis.scaled.bs, Depth != "Top")
+adonis.scaled.bs <- subset_samples(physeq = adonis.scaled.bs, Depth != "Surface")
 adonis.scaled.bs.bray <- phyloseq::distance(physeq = adonis.scaled.bs, method = "bray")
 adonis.scaled.bs <- data.frame(sample_data(adonis.scaled.bs))
 adonis(adonis.scaled.bs.bray ~ Depth, data=adonis.scaled.bs)
@@ -3700,7 +3698,7 @@ p$tab
   # p-value = 0.084
   # F = 3.271663
 
-# Top vs. Bottom
+# Surface vs. Bottom
 adonis.tb <- subset_samples(physeq = scaled.est, Depth != "Sediment")
 adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
 adonis.tb <- data.frame(sample_data(adonis.tb))
@@ -3713,7 +3711,7 @@ p$tab
   # p-value = 0.501
   # F = 0.4961036
 
-# Top vs. Sediment
+# Surface vs. Sediment
 adonis.ts <- subset_samples(physeq = scaled.est, Depth != "Bottom")
 adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
 adonis.ts <- data.frame(sample_data(adonis.ts))
@@ -3727,7 +3725,7 @@ p$tab
   # F = 1.410866
 
 # Bottom vs. Sediment
-adonis.bs <- subset_samples(physeq = scaled.est, Depth != "Top")
+adonis.bs <- subset_samples(physeq = scaled.est, Depth != "Surface")
 adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
 adonis.bs <- data.frame(sample_data(adonis.bs))
 adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
@@ -4254,11 +4252,11 @@ water.top.otus <- rownames(watercol[water.top,])
 # Plot
 # deseq.watercol<- ggplot(watercol, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
 #   scale_color_brewer (palette="Set1") +
-#   ggtitle("Top (Top) vs. Bottom (Bottom)")
+#   ggtitle("Surface (Top) vs. Bottom (Bottom)")
 
 
 # Verrucos in Bottom vs. Sediment
-Ver.bs <- subset_samples(Ver1, Depth != "Top")
+Ver.bs <- subset_samples(Ver1, Depth != "Surface")
 Ver.bs <- subset_samples(Ver.bs, Depth != "DCM")
 Vbs <- deSEQ(data=Ver.bs, valuetest= ~Lake_Type+Season+Depth, alpha=0.05)
 
@@ -4275,7 +4273,7 @@ bs.sed.otus <- rownames(Vbs[bs.sed,])
 
 
 
-# Verrucos in Sediment vs. Top
+# Verrucos in Sediment vs. Surface
 Ver.st <- subset_samples(Ver1, Depth != "Bottom")
 Ver.st <- subset_samples(Ver.st, Depth != "DCM")
 Vst <- deSEQ(data=Ver.st, valuetest= ~Lake_Type+Season+Depth, alpha=0.05)
@@ -4289,7 +4287,7 @@ st.top.otus <- rownames(Vst[st.top,])
 # Plot
 # deseq.Vst <- ggplot(Vst, aes(x=Species, y=log2FoldChange, color=Class)) + geom_point() +
 #   scale_color_brewer(palette="Set1") +
-#   ggtitle("Top (Top) vs. Sediment (Bottom)")
+#   ggtitle("Surface (Top) vs. Sediment (Bottom)")
 
 
 sed.otus1 <- intersect(water.bot.otus, bs.sed.otus)
