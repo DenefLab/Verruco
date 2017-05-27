@@ -21,7 +21,7 @@ COLOR,#ff0000
 #3: star
 #4: right pointing triangle
 #5: left pointing triangle
-FIELD_LABELS,Top,Bottom,Sediment,Laurentian,Estuary,Inland,Particle,Free,Spring,Summer,Fall
+FIELD_LABELS,Surface,Bottom,Sediment,Laurentian,Estuary,Inland,Particle,Free,Spring,Summer,Fall
 FIELD_COLORS,#66ddff,#3366ee,#5F2B7F,#d73027,#fc8d59,#fee08b,#404040,#bababa,#d9ef8b,#41ab5d,#00441b
 FIELD_SHAPES,1,1,1,1,1,1,1,1,1,1,1
 # Rectangle = depth

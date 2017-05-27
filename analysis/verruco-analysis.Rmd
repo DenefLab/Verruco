@@ -9,7 +9,6 @@ output: html_document
 ### Load Libraries
 ```{r}
 library(phyloseq)
-packageVersion("phyloseq")
 library(ggplot2)
 library(ape)
 library(vegan)
@@ -1496,30 +1495,23 @@ final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "
 inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
 
 
-# ### Fraction ###
-# # This is the annotation text for the plot below (seas.box)
-# # Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
-# ann.frac <- data.frame(lab=c(" ", "*", ""),
-#                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
-#                                           levels = c("Laurentian", "Estuary",
-#                                                      "Inland")),
-#                        Fraction = factor(c("Particle", "Free", "Sediment")))
-# inv.simp.frac.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Fraction)) +
-#   geom_boxplot(position=position_dodge(1)) +
-#   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
-#   xlab("Lake Type") + ylab("Inverse Simpson") +
-#   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-#   theme(axis.title.x = element_text(face="bold", size=10),
-#         axis.text.x = element_text(angle=0, colour="black", size=8),
-#         axis.text.y = element_text(colour="black", size=8),
-#         axis.title.y = element_text(face="bold", size=10),
-#         plot.title = element_text(face="bold", size=10),
-#         legend.title = element_text(size=10, face="bold"),
-#         legend.text = element_text(size = 9),
-#         strip.text.x = element_blank(),
-#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-#   geom_text(data = ann.frac, aes(x = c(1,1,1), y=c(16.5, 16.2, 16.5), label = lab), size = 6, color="red")
-#  
+### Fraction ###
+inv.simp.water <- inv.simp[which(inv.simp$Depth != "Sediment"),]
+inv.simp.frac.plot <- ggplot(inv.simp.water, aes(x=Lake_Type, y=mean, fill=Fraction)) +
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("rosybrown","gold")) +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
+
 
 ### Season ###
 
@@ -1734,7 +1726,8 @@ invsimp.kw.vals$BenH <- p.adjust(invsimp.kw.vals$pvals, method="BH")
 ### RelAbun + Inverse Simpson Plot
 ```{r}
 # Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-tiff("boxplot.invsimp.tiff", width = 17.8, height = 10, units = "cm", res = 600)
+dev.new()
+png("boxplot.invsimp.png", width = 17.8, height = 10, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
 print(depth.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -1742,6 +1735,7 @@ print(seas.box, vp=viewport(layout.pos.row=1, layout.pos.col=2))
 print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=3))
 print(inv.simp.depth.plot, vp=viewport(layout.pos.row=2, layout.pos.col=1))
 print(inv.simp.seas.plot, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+print(inv.simp.frac.plot, vp=viewport(layout.pos.row=2, layout.pos.col=3))
 dev.off()
 
 ```
@@ -2658,6 +2652,7 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
   scale_shape_manual(values = c(21, 24, 22)) +
   scale_fill_discrete(na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
+  scale_y_reverse() +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
         axis.title.x = element_text(face="bold", size=9),
@@ -2670,8 +2665,8 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
   annotate("text", x= -0.31, y=0.41, label = "B", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-   #      shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-    #     alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
+  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
 
 
 # The function below is to save a legend from a plot, that can then later be called upon and printed
@@ -2679,12 +2674,12 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
 # Then perform the g_legend(plot) function to steal the legend
 # Go back to your plot and now remove the legend (guide)
  ##### Let's steal the legend 
-  g_legend <- function(a.gplot){
+g_legend <- function(a.gplot){
    tmp <- ggplot_gtable(ggplot_build(a.gplot))
    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
    legend <- tmp$grobs[[leg]]
    return(legend)}
-  legend <- g_legend(Ver.est.ord)
+legend <- g_legend(Ver.est.ord)
 
   
 ##### Inland #####
@@ -3318,10 +3313,11 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 ### Big PCoA Figure
 ```{r}
+dev.new()
 tiff("pcoa.tiff", width = 17.8, height = 11, units = "cm", res = 600)
 #pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,7.5), heights=c(1,14,14)))))
+pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,8), heights=c(1,14,14)))))
 grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=10,fontface="bold"))
 grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=10,fontface="bold"))
 grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=10,fontface="bold"))
