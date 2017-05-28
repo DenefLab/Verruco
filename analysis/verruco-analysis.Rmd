@@ -1401,19 +1401,19 @@ summary(inl.model)
 lau.y <- as.vector(lau.df$Abundance)
 # Model uses SiO2, which is unavailable for 2 of the data (1 & 8)
 # Remove these 2 data points
-lau.y <- lau.y[-1]
-lau.y <- lau.y[-7]
-lau.res <- plot_residuals(lau.model, lau.y, "Laurentian")
+#lau.y <- lau.y[-1]
+#lau.y <- lau.y[-7]
+plot_residuals(lau.model, lau.y, "Laurentian")
 
 
 ### Estuary ###
 est.y <- as.vector(est.df$Abundance)
-est.res <- plot_residuals(est.model, est.y, "Estuary")
+plot_residuals(est.model, est.y, "Estuary")
 
 
 ### Inland ###
 inl.y <- as.vector(inl.df$Abundance)
-inl.res <- plot_residuals(inl.model, inl.y, "Inland")
+plot_residuals(inl.model, inl.y, "Inland")
 
 
 
@@ -2038,6 +2038,7 @@ colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
 
 ##### Isolate PD #####
 pd.all <- rbind(pd.stats, pd.w.stats)
+  # This has the unweighted PD
 s <- data.frame(sample_data(Ver)) 
 pd.ready <- merge(pd.all, s, by="SampleID")
 
@@ -2293,6 +2294,20 @@ pd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "L", "E", "E", "E", 
 pd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
 pd.kw.vals$Bonf <- p.adjust(pd.kw.vals$pvals, method="bonferroni")
 pd.kw.vals$BenH <- p.adjust(pd.kw.vals$pvals, method="BH")
+
+
+###### SES MPD ######
+# http://kembellab.ca/r-workshop/biodivR/SK_Biodiversity_R.html
+
+# Convert tree into distance matrix
+phy.dist <- cophenetic(ver.tree)
+
+# Calculate SES.MPD
+comm.sesmpd <- ses.mpd(picante.com,phy.dist, null.model = "taxa.labels", 
+                       abundance.weighted = F, runs = 999)
+head(comm.sesmpd)
+
+
 ```
 
 
@@ -6115,4 +6130,3 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
 
 
 ```
-
