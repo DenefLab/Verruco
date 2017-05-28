@@ -1813,18 +1813,19 @@ picante.com <- data.frame(otu_table(pre.picante))
 pd.result <- pd(picante.com, picante.phy, include.root=T)
 pd <- data.frame(pd.result)
 
-## Convert Verruco tree to a distance matrix
-# This distance matrix is used to calculate MDP & MNTD
-# phydist <- cophenetic(picante.phy)
-#
-## Calculate MDP (Mean Pairwise Distance)
-# ses.mpd.result <- ses.mpd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
+# Convert Verruco tree to a distance matrix
+#This distance matrix is used to calculate MDP & MNTD
+phydist <- cophenetic(picante.phy)
+
+# Calculate MDP (Mean Pairwise Distance)
+ses.mpd.result <- ses.mpd(picante.com, phydist, null.model = "taxa.labels", 
+                          abundance.weighted=F, runs=100)
 #
 ## Calculate MNTD (Mean Nearest Taxon Distance)
 # ses.mntd.result <- ses.mntd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
 # 
 ## Pull out MDP and MNTD results
-# mpd <- data.frame(ses.mpd.result)
+mpd <- data.frame(ses.mpd.result)
 # mntd <- data.frame (ses.mntd.result)
 
 
@@ -1841,23 +1842,24 @@ com <- data.frame(otu_table(pre.picante))
 # Calculate Faith's Phylogenetic Diversity
 pd.result.weigh <- pd(com, phy, include.root=T)
 
-## Convert Verruco tree to a distance matrix
-# phydist.weigh <- cophenetic(phy)
-#
-## Calculate MDP (Mean Pairwise Distance)
-# ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
+# Convert Verruco tree to a distance matrix
+phydist.weigh <- cophenetic(phy)
+
+# Calculate MDP (Mean Pairwise Distance)
+ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", 
+                                abundance.weighted=T, runs=100)
 #
 ## Calculate MNTD (Mean Nearest Taxon Distance)
 # ses.mntd.result.weigh <- ses.mntd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
 # 
 ## Pull out MDP and MNTD results
-# mpd.weigh <- data.frame(ses.mpd.result.weigh)
+mpd.weigh <- data.frame(ses.mpd.result.weigh)
 # mntd.weigh <- data.frame (ses.mntd.result.weigh)
 
 
 ##### Unweigh: Preparing to plot #####
 
-# mpd$SampleID <- row.names(mpd)
+mpd$SampleID <- row.names(mpd)
 # mntd$SampleID <- row.names(mntd)
 pd$SampleID <- row.names(pd)
   # Make sure all SampleID's match!
@@ -1869,47 +1871,50 @@ pd$SampleID <- row.names(pd)
 pd.stats <- data.frame(pd$SampleID, pd$PD)
 pd.stats$Measure <- rep("PD", 226)
 colnames(pd.stats) <- c("SampleID", "Stat", "Measure")
-# mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.z)
-# mpd.stats$Measure <- rep("MPD SES",226)
-# colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
+mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.z)
+mpd.stats$Measure <- rep("MPD SES",226)
+colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.stats <- data.frame(mntd$SampleID, mntd$mntd.obs.z)
 # mntd.stats$Measure <- rep("MNTD SES", 226)
 # colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
 
 ## Let's combine those initial stats into one big dataframe
-# unweigh.stats <- rbind(pd.stats, mpd.stats, mntd.stats)
+#unweigh.stats <- rbind(pd.stats, mpd.stats, mntd.stats)
+unweigh.stats <- rbind(pd.stats, mpd.stats)
 
 ## Now let's pull out the second stat in the mpd and mntd stats test
 ## MDP test = p-value
 ## MNTD test = p-value
-# mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.p)
-# mpd.stats$Measure <- rep("MPD p-value",226)
-# colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
+#mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.p)
+#mpd.stats$Measure <- rep("MPD p-value",226)
+#colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.stats <- data.frame(mntd$SampleID, mntd$mntd.obs.p)
 # mntd.stats$Measure <- rep("MNTD p-value", 226)
 # colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
 
 ## Making the final dataframe to use!
 # unweigh.stats <- rbind(unweigh.stats, mpd.stats, mntd.stats)
+unweigh.stats <- rbind(unweigh.stats, mpd.stats)
 
 ## Pull out sample data
 s <- data.frame(sample_data(Ver))
 ## Combine sample data with unweighted stats data
-# unweigh.stats <- merge(unweigh.stats, s, by="SampleID")
+unweigh.stats <- merge(unweigh.stats, s, by="SampleID")
 
 
 ## Group samples together by Lake_Type and Fraction & calculate stats summaries
-# sum.unweigh <- unweigh.stats %>%
-#   group_by(Lake_Type, Fraction, Measure) %>%
-#   summarize(Mean = mean(Stat),
-#             SE = se(Stat),
-#             SD = sd(Stat),
-#             Median = median(Stat))
+sum.unweigh <- unweigh.stats %>%
+  group_by(Lake_Type, Fraction, Measure) %>%
+  summarize(Mean = mean(Stat),
+            SE = se(Stat),
+            SD = sd(Stat),
+            Median = median(Stat))
 
 ## Combine the raw stats with the summarized stats
-#final.unweigh <- left_join(unweigh.stats, sum.unweigh, by=c("Lake_Type", "Fraction", "Measure"))
+final.unweigh <- left_join(unweigh.stats, sum.unweigh, 
+                           by=c("Lake_Type", "Fraction", "Measure"))
 #final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
-
+final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value"))
 
 
 ##### UNWEIGH: PLOT IT! #####
@@ -1938,10 +1943,9 @@ s <- data.frame(sample_data(Ver))
 
 
 
-
 ##### Weigh: Preparing to plot #####
 
-# mpd.weigh$SampleID <- row.names(mpd.weigh)
+mpd.weigh$SampleID <- row.names(mpd.weigh)
 # mntd.weigh$SampleID <- row.names(mntd.weigh)
 pd.result.weigh$SampleID <- row.names(pd.result.weigh)
   # Make sure all SampleID's match!
@@ -1953,48 +1957,50 @@ pd.result.weigh$SampleID <- row.names(pd.result.weigh)
 pd.w.stats <- data.frame(pd.result.weigh$SampleID, pd.result.weigh$PD)
 pd.w.stats$Measure <- rep("PD", 226)
 colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
-# mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.z)
-# mpd.w.stats$Measure <- rep("MPD SES",226)
-# colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
+mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.z)
+mpd.w.stats$Measure <- rep("MPD SES",226)
+colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.z)
 # mntd.w.stats$Measure <- rep("MNTD SES", 226)
 # colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
 
 ## Let's combine those initial stats into one big dataframe
 # weigh.stats <- rbind(pd.w.stats, mpd.w.stats, mntd.w.stats)
+weigh.stats <- rbind(pd.w.stats, mpd.w.stats)
 
 ## Now let's pull out the second stat in the mpd and mntd stats test
 ## MDP test = p-value
 ## MNTD test = p-value
-# mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.p)
-# mpd.w.stats$Measure <- rep("MPD p-value",226)
-# colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
+#mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.p)
+#mpd.w.stats$Measure <- rep("MPD p-value",226)
+#colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.p)
 # mntd.w.stats$Measure <- rep("MNTD p-value", 226)
 # colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
 
 ## Making the final dataframe to use!
 # weigh.stats <- rbind(weigh.stats, mpd.w.stats, mntd.w.stats)
+weigh.stats <- rbind(weigh.stats, mpd.w.stats)
 
 ## Pull out sample data
-# s <- data.frame(sample_data(Ver))
+s <- data.frame(sample_data(Ver))
 ## Combine sample data with unweighted stats data
-# weigh.stats <- merge(weigh.stats, s, by="SampleID")
+weigh.stats <- merge(weigh.stats, s, by="SampleID")
 
 
 
 ## Group samples together by Lake_Type and Fraction
-# sum.weigh <- weigh.stats %>%
-#   group_by(Lake_Type, Fraction, Measure) %>%
-#   summarize(Mean = mean(Stat),
-#             SE = se(Stat),
-#             SD = sd(Stat),
-#             Median = median(Stat))
+sum.weigh <- weigh.stats %>%
+  group_by(Lake_Type, Fraction, Measure) %>%
+  summarize(Mean = mean(Stat),
+            SE = se(Stat),
+            SD = sd(Stat),
+            Median = median(Stat))
 
 ## Combine the raw stats with the summarized stats
-#final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
+final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
 #final.weigh$Measure <- factor(final.weigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
-
+final.weigh$Measure <- factor(final.weigh$Measure, levels = c("PD", "MPD SES", "MPD p-value"))
 
 
 ##### WEIGH: PLOT IT! #####
@@ -2037,10 +2043,10 @@ colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
 
 
 ##### Isolate PD #####
-pd.all <- rbind(pd.stats, pd.w.stats)
+#pd.all <- rbind(pd.stats, pd.w.stats)
   # This has the unweighted PD
-s <- data.frame(sample_data(Ver)) 
-pd.ready <- merge(pd.all, s, by="SampleID")
+#s <- data.frame(sample_data(Ver)) 
+pd.ready <- merge(pd.stats, s, by="SampleID")
 
 # Group samples together by Lake_Type and Fraction
 sum.pd <- pd.ready %>%
@@ -2058,7 +2064,7 @@ final.pd <- left_join (pd.ready, sum.pd, by=c("Lake_Type", "Fraction", "Measure"
 
 
 ### Fraction ###
-ann.pd.frac <- data.frame(lab=c("*", "*", ""),
+ann.pd.frac <- data.frame(lab=c("", "+", ""),
                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
                                           levels = c("Laurentian", "Estuary",
                                                      "Inland")),
@@ -2079,12 +2085,12 @@ pd.frac.plot <- ggplot(final.pd, aes(x=Lake_Type, y=Stat, fill=Fraction)) +
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.pd.frac, aes(x = c(1,1,1), y=c(5, 5, 5), label = lab), size = 6, color="red")
+  geom_text(data = ann.pd.frac, aes(x = c(1,1.35,1), y=c(5, 5, 5), label = lab), size = 6, color="red")
 
 
 
 ### Season ###
-ann.pd.seas <- data.frame(lab=c("+", " ", "a", "a"),
+ann.pd.seas <- data.frame(lab=c("+", " ", "", ""),
                        Lake_Type = factor(c("Laurentian", "Estuary", "Inland",
                                             "Inland"),
                                           levels = c("Laurentian", "Estuary",
@@ -2142,24 +2148,105 @@ dev.off()
 #         legend.position="none")
 # dev.off()
 
-##### Kruskal-Wallis #####
+
+
+
+##### ISOLATE MPD #####
+#mpd.all <- rbind(mpd.stats, mpd.w.stats)
+#s <- data.frame(sample_data(Ver))
+mpd.ready <- merge(mpd.stats, s, by="SampleID")
+
+
+# Group samples together by Lake_Type and Fraction
+sum.mpd <- mpd.ready %>%
+  group_by(Lake_Type, Fraction, Measure) %>%
+  summarize(Mean = mean(Stat),
+            SE = se(Stat),
+            SD = sd(Stat),
+            Median = median(Stat))
+
+
+# Combine the raw stats with the summarized stats
+final.mpd <- left_join(mpd.ready, sum.mpd, by=c("Lake_Type", "Fraction", "Measure"))
+
+##### Fraction #####
+ann.mpd.frac <- data.frame(lab=c("*", "+", "*"),
+                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Fraction = factor(c("Particle", "Free", "Sediment")))
+mpd.frac.plot <- ggplot(final.mpd, aes(x = Lake_Type, y = Stat, fill = Fraction)) + 
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
+  xlab("Lake Type") + ylab("Mean") +
+  ggtitle("Mean Pairwise Distance") +
+  facet_grid(~Lake_Type, space = "free_x", scale = "free") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
+  geom_text(data = ann.mpd.frac, aes(x = c(1,1.35,1), y=c(5, 5, 5), label = lab), size = 6, color="red")
+
+##### Season #####
+ann.mpd.seas <- data.frame(lab=c("a", "a", "", "+"),
+                       Lake_Type = factor(c("Laurentian", "Laurentian", "Estuary",
+                                            "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Season = factor(c("Spring", "Summer", "Fall", "Spring"),
+                                         levels = c("Spring", "Summer", "Fall")))
+mpd.seas.plot <- ggplot(final.mpd, aes(x=Lake_Type, y=Stat, fill=Season)) +
+  geom_boxplot(position=position_dodge(1)) +
+  xlab("Lake Type") + ylab("Mean") +
+  ggtitle("Mean Pairwise Distance") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=10),
+        axis.text.x = element_text(angle=0, colour="black", size=8),
+        axis.text.y = element_text(colour="black", size=8),
+        axis.title.y = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10),
+        legend.title = element_text(size=10, face="bold"),
+        legend.text = element_text(size = 9),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  geom_text(data = ann.mpd.seas, aes(x = c(0.65,1.35,1,0.65), y=c(5.15,5.15,5.15,5.15), label = lab), size = 4, color="red")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### PD Kruskal-Wallis #####
 
 ### Lake Type
 kruskal.test(formula = Stat ~ Lake_Type, data = final.pd)
   # All Lake Types
-  # p-value = 2.616e-05
+  # p-value = 0.1137
 kruskalmc(resp = Stat ~ Lake_Type, data = final.pd)
-  # L-E, L-I = Sig
-  # E-Inl = nonsig
+  # No sig
 kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Laurentian")
   # Estuary vs Inland
-  # p-value = 0.9906
+  # p-value = 0.1192
 kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Estuary")
   # Laurentian vs. Inland
-  # p-value = 2.539e-06
+  # p-value = 0.07596
 kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Inland")
   # Laurentian vs. Estuary
-  # p-value = 0.0004496
+  # p-value = 0.7314
 
 
 
@@ -2168,127 +2255,129 @@ kruskal.test(formula = Stat ~ Fraction, data = final.pd)
   # All Fraction
   # p-value = 3.932e-09
 kruskalmc(resp = Stat ~ Fraction, data = final.pd)
-  # All sig
+  # P-F = nonsig
+  # Water vs. sed = sig
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Fraction != "Sediment")
   # All Part vs Free
-  # p-value = 2.558e-05
+  # p-value = 0.03951
 
 # Laurentian
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Laurentian")
   # Fraction
-  # p-value = 0.0001398
+  # p-value = 0.09885
 
 # Estuary
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary")
   # Fraction
-  # p-value = 1.231e-06
+  # p-value = 1.308e-06
 kruskalmc(resp = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary")
-  # All sig
+  # P-F = nonsig
+  # Water vs. sed = sig
 kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
   # Source
-  # p-value = 4.635e-05
+  # p-value = 1.374e-06
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Sediment")
   # Free vs Part
-  # p-value = 0.002038
+  # p-value = 0.02507
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Particle")
   # Free vs Sediment
-  # p-value = 1.067e-07
+  # p-value = 3.859e-06
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Free")
   # Particle vs Sediment
-  # p-value = 0.02786
+  # p-value = 1.999e-05
 
 # Inland
 kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Inland")
   # Fraction
-  # p-value = 0.06875
+  # p-value = 0.4808
 
 
 
 ### Season
 kruskal.test(formula = Stat ~ Season, data = final.pd)
   # All Season
-  # p-value = 0.3741
+  # p-value = 0.8721
 
 # Laurentian
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian")
   # Season
-  # p-value = 6.1e-05
+  # p-value = 3.045e-05
 kruskalmc(resp = Stat ~ Season, data = final.pd, subset = Lake_Type=="Laurentian")
   # No diff?
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian" & Season != "Spring")
   # Summer vs Fall
-  # p-value = 2.389e-05
+  # p-value = 0.0001352
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian" & Season != "Summer")
   # Spring vs Fall
-  # p-value = 0.0007715
+  # p-value = 8.607e-05
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian" & Season != "Fall")
   # Spring vs Summer
-  # p-value = 1
+  # p-value = 0.3557
 
 # Estuary
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Estuary")
   # Season
-  # p-value = 0.9316
+  # p-value = 0.822
 
 # Inland
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland")
   # Season
-  # p-value = 0.06256
+  # p-value = 0.08661
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland" & Season != "Spring")
   # Summer vs Fall
-  # p-value = 0.5188
+  # p-value = 0.2661
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland" & Season != "Summer")
   # Spring vs Fall
-  # p-value = 0.2539
+  # p-value = 0.02478
 kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland" & Season != "Fall")
   # Spring vs Summer
-  # p-value = 0.01932
+  # p-value = 0.08827
 
 
 
 ### Depth
 kruskal.test(formula = Stat ~ Depth, data = final.pd)
   # All Depth
-  # p-value = 7.962e-06
+  # p-value = 2.332e-05
 kruskalmc(resp = Stat ~ Depth, data = final.pd)
   # Sur-Sed, Bot-Sed = Sig
   # Sur-Bot = nonsig
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Depth != "Sediment")
   # All Sur vs Bottom
-  # p-value = 0.0987
+  # p-value = 0.6679
 
 # Laurentian
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Laurentian")
   # Depth
-  # p-value = 0.1273
+  # p-value = 0.3743
 
 # Estuary
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary")
   # Depth
-  # p-value = 0.0001166
+  # p-value = 7.646e-06
 kruskalmc(resp = Stat ~ Depth, data = final.pd, subset = Lake_Type=="Estuary")
   # Sur-Sed, Bot-Sed = Sig
   # Sur-Bot = Nonsig
 kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
   # Source
-  # p-value = 4.635e-05
+  # p-value = 1.374e-06
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Sediment")
   # Sur vs Bottom
-  # p-value = 0.2154
+  # p-value = 0.5619
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Surface")
   # Bottom vs Sediment
-  # p-value = 0.001097
+  # p-value = 1.153e-05
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Bottom")
   # Sur vs Sediment
-  # p-value =2.445e-05
+  # p-value = 6.985e-06
 
 # Inland
 kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Inland")
   # Depth
-  # p-value = 0.3926
+  # p-value = 0.5098
 
 ##### Adjust P-Values #####
-pd.kw.vals <- data.frame(c(2.616e-05, 0.9906, 2.539e-06, 0.0004496, 3.932e-09, 2.558e-05, 0.0001398, 1.231e-06, 4.635e-05, 0.002038, 1.067e-07, 0.02786, 0.06875, 0.3741, 6.1e-05, 2.389e-05, 0.0007715, 1, 0.9316,  0.06256, 0.5188, 0.2539, 0.01932, 7.962e-06, 0.0987, 0.1273, 0.0001166, 4.635e-05, 0.2154, 0.001097, 2.445e-05, 0.3926))
+pd.kw.vals <- data.frame(c(0.1137, 0.1192, 0.07596, 0.7314, 3.932e-09, 0.03951, 0.09885, 1.308e-06, 1.374e-06, 0.02507, 3.859e-06, 1.999e-05, 0.4808, 0.8721, 3.045e-05, 0.0001352, 8.607e-05, 0.3557, 0.822, 0.08661, 0.2661, 0.02478, 0.08827, 2.332e-05, 0.6679, 0.3743, 7.646e-06, 1.374e-06, 0.5619, 1.153e-05, 6.985e-06, 0.5098))
 colnames(pd.kw.vals) <- "pvals"
 pd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
 pd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
@@ -2297,6 +2386,162 @@ pd.kw.vals$BenH <- p.adjust(pd.kw.vals$pvals, method="BH")
 
 
 
+
+
+
+
+########## MPD Kruskal-Wallis ##########
+### Lake Type
+kruskal.test(formula = Stat ~ Lake_Type, data = final.mpd)
+  # All Lake Types
+  # p-value = 3.611e-06
+kruskalmc(resp = Stat ~ Lake_Type, data = final.mpd)
+  # All sig
+kruskal.test(formula = Stat ~ Lake_Type, data = final.mpd, subset = Lake_Type != "Laurentian")
+  # Estuary vs Inland
+  # p-value = 0.001532
+kruskal.test(formula = Stat ~ Lake_Type, data = final.mpd, subset = Lake_Type != "Estuary")
+  # Laurentian vs. Inland
+  # p-value = 0.005122
+kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Inland")
+  # Laurentian vs. Estuary
+  # p-value = 0.7314
+
+
+
+### Fraction
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd)
+  # All Fraction
+  # p-value = 6.903e-14
+kruskalmc(resp = Stat ~ Fraction, data = final.mpd)
+  # All sig
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Fraction != "Sediment")
+  # All Part vs Free
+  # p-value = 5.05e-09
+
+# Laurentian
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Laurentian")
+  # Fraction
+  # p-value = 0.02699
+
+# Estuary
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Estuary")
+  # Fraction
+  # p-value = 1.543e-06
+kruskalmc(resp = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Estuary")
+  # All sig
+kruskal.test(formula = Stat ~ Source, data = final.mpd, subset = Lake_Type == "Estuary")
+  # Source
+  # p-value = 5.134e-07
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Estuary" & Fraction != "Sediment")
+  # Free vs Part
+  # p-value = 0.1585
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Estuary" & Fraction != "Particle")
+  # Free vs Sediment
+  # p-value = 1.755e-06
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Estuary" & Fraction != "Free")
+  # Particle vs Sediment
+  # p-value = 8.267e-06
+
+# Inland
+kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Lake_Type == "Inland")
+  # Fraction
+  # p-value = 1.72e-08
+
+
+
+### Season
+kruskal.test(formula = Stat ~ Season, data = final.mpd)
+  # All Season
+  # p-value = 0.7346
+
+# Laurentian
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Laurentian")
+  # Season
+  # p-value = 0.003229
+kruskalmc(resp = Stat ~ Season, data = final.mpd, subset = Lake_Type=="Laurentian")
+  # No diff?
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Laurentian" & Season != "Spring")
+  # Summer vs Fall
+  # p-value = 0.05634
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Laurentian" & Season != "Summer")
+  # Spring vs Fall
+  # p-value = 0.001819
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Laurentian" & Season != "Fall")
+  # Spring vs Summer
+  # p-value = 0.05628
+
+# Estuary
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Estuary")
+  # Season
+  # p-value = 0.8828
+
+# Inland
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Inland")
+  # Season
+  # p-value = 0.02586
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Inland" & Season != "Spring")
+  # Summer vs Fall
+  # p-value = 0.5843
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Inland" & Season != "Summer")
+  # Spring vs Fall
+  # p-value = 0.03064
+kruskal.test(formula = Stat ~ Season, data = final.mpd, subset = Lake_Type == "Inland" & Season != "Fall")
+  # Spring vs Summer
+  # p-value = 0.009947
+
+
+
+### Depth
+kruskal.test(formula = Stat ~ Depth, data = final.mpd)
+  # All Depth
+  # p-value = 4.23e-07
+kruskalmc(resp = Stat ~ Depth, data = final.mpd)
+  # Sur-Sed, Bot-Sed = Sig
+  # Sur-Bot = nonsig
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Depth != "Sediment")
+  # All Sur vs Bottom
+  # p-value = 0.7764
+
+# Laurentian
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "Laurentian")
+  # Depth
+  # p-value = 0.1021
+
+# Estuary
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "Estuary")
+  # Depth
+  # p-value = 2.083e-06
+kruskalmc(resp = Stat ~ Depth, data = final.mpd, subset = Lake_Type=="Estuary")
+  # Sur-Sed, Bot-Sed = Sig
+  # Sur-Bot = Nonsig
+kruskal.test(formula = Stat ~ Source, data = final.mpd, subset = Lake_Type == "Estuary")
+  # Source
+  # p-value = 5.134e-07
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "Estuary" & Depth != "Sediment")
+  # Sur vs Bottom
+  # p-value = 0.2426
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "Estuary" & Depth != "Surface")
+  # Bottom vs Sediment
+  # p-value = 4.527e-06
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "Estuary" & Depth != "Bottom")
+  # Sur vs Sediment
+  # p-value = 3.316e-06
+
+# Inland
+kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "Inland")
+  # Depth
+  # p-value = 0.1965
+
+
+
+##### Adjust P-Values #####
+mpd.kw.vals <- data.frame(c(3.611e-06, 0.001532, 0.005122, 0.7314, 6.903e-14, 5.05e-09, 0.02699, 1.543e-06, 5.134e-07, 0.1585, 1.755e-06, 8.267e-06, 1.72e-08, 0.7346, 0.003229, 0.05634, 0.001819, 0.05628, 0.8828, 0.02586, 0.5843, 0.03064, 0.009947, 4.23e-07, 0.7764, 0.1021, 2.083e-06, 5.134e-07, 0.2426, 4.527e-06, 3.316e-06, 0.1965))
+colnames(mpd.kw.vals) <- "pvals"
+mpd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
+mpd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
+mpd.kw.vals$Bonf <- p.adjust(mpd.kw.vals$pvals, method="bonferroni")
+mpd.kw.vals$BenH <- p.adjust(mpd.kw.vals$pvals, method="BH")
 ```
 
 
