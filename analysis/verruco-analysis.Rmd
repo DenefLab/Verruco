@@ -2085,7 +2085,7 @@ pd.frac.plot <- ggplot(final.pd, aes(x=Lake_Type, y=Stat, fill=Fraction)) +
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.pd.frac, aes(x = c(1,1.35,1), y=c(5, 5, 5), label = lab), size = 6, color="red")
+  geom_text(data = ann.pd.frac, aes(x = c(1,1.35,1), y=c(5, 5, 5), label = lab), size = 4, color="red")
 
 
 
