@@ -2296,17 +2296,6 @@ pd.kw.vals$Bonf <- p.adjust(pd.kw.vals$pvals, method="bonferroni")
 pd.kw.vals$BenH <- p.adjust(pd.kw.vals$pvals, method="BH")
 
 
-###### SES MPD ######
-# http://kembellab.ca/r-workshop/biodivR/SK_Biodiversity_R.html
-
-# Convert tree into distance matrix
-phy.dist <- cophenetic(ver.tree)
-
-# Calculate SES.MPD
-comm.sesmpd <- ses.mpd(picante.com,phy.dist, null.model = "taxa.labels", 
-                       abundance.weighted = F, runs = 999)
-head(comm.sesmpd)
-
 
 ```
 
