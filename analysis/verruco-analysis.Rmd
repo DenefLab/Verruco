@@ -29,6 +29,7 @@ library(sciplot)
 library(picante)
 library(leaps)
 library(pgirmess)
+library(car)
 theme_set(theme_bw())
 set.seed(1)
 setwd("~/Verruco/analysis")
@@ -1396,11 +1397,52 @@ summary(inl.model)
 
 ### Plot Residuals
 ```{r}
+### Laurentian ###
+lau.y <- as.vector(lau.df$Abundance)
+# Model uses SiO2, which is unavailable for 2 of the data (1 & 8)
+# Remove these 2 data points
+lau.y <- lau.y[-1]
+lau.y <- lau.y[-7]
+lau.res <- plot_residuals(lau.model, lau.y, "Laurentian")
+
+
+### Estuary ###
+est.y <- as.vector(est.df$Abundance)
+est.res <- plot_residuals(est.model, est.y, "Estuary")
+
+
+### Inland ###
+inl.y <- as.vector(inl.df$Abundance)
+inl.res <- plot_residuals(inl.model, inl.y, "Inland")
+
+
+
+
+##### PLOT!!! #####
+dev.new()
+tiff("residuals.tiff", width = 15, height = 10, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(3,3))))
+print(plot_residuals(lau.model, lau.y, "Laurentian"), vp=viewport(layout.pos.row=1, 
+                                                                  layout.pos.col=1:3))
+print(plot_residuals(est.model, est.y, "Estuary"), vp=viewport(layout.pos.row=2, 
+                                                                  layout.pos.col=1:3))
+print(plot_residuals(inl.model, inl.y, "Inland"), vp=viewport(layout.pos.row=3, 
+                                                                  layout.pos.col=1:3))
+dev.off()
 
 
 
 
 
+
+#tiff("ver.pcoa.tiff", width = 15, height = 10, units = "cm", res = 500)
+#grid.newpage()
+#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
+#print(Ver.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+#print(Ver.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+#print(Ver.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+#dev.off()
 
 ```
 
