@@ -4049,13 +4049,35 @@ plot <- ggplot(pro.df) +
   legend <- g_legend(plot)
 
 
-png("procrustes.png", width = 17.8, height = 10, units = "cm", res = 600)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,0.9), heights=c(1)))))
-print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
-grid.draw(legend)
-dev.off()
+# png("procrustes.png", width = 17.8, height = 10, units = "cm", res = 600)
+# grid.newpage()
+# pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,0.9), heights=c(1)))))
+# print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+# legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
+# grid.draw(legend)
+# dev.off()
+
+  
+  
+  
+### Check Community with Verrucos removed
+
+# Remove Verrucos
+no.ver <- subset_taxa(scaled, Phylum != "Verrucomicrobia")
+  
+# Calculate bray-curtis dissimilarity
+no.ver.bray <- phyloseq::distance(physeq=no.ver, method="bray")
+
+# Perform PCoA ordination
+no.ver.pcoa <- ordinate(physeq = no.ver, method = "PCoA", distance="bray")
+
+procrust.no.ver <- procrustes(no.ver.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2],
+                              scale=F, symmetric=F)
+  # Sum of squares = 10.06
+pro.no.ver <- protest(no.ver.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.4105
+  # correlation = 0.7678
 
 ```
 
@@ -4173,6 +4195,74 @@ ggplot(pro.inl.df) +
   geom_point(aes(x=xrda1, y=xrda2)) +
   geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
                color="burlywood", alpha=0.5)
+
+
+
+
+
+########## Check Community w/ Verrucos Removed ##########
+
+##### Laurentian #####
+# Remove Verrucos
+no.ver.all.lau <- subset_taxa(scaled.lau, Phylum != "Verrucomicrobia")
+
+# Calculate bray-curtis dissimilarity
+no.ver.all.lau.bray <- phyloseq::distance(physeq=no.ver.all.lau, method="bray")
+
+# Perform PCoA ordination
+no.ver.lau.pcoa <- ordinate(physeq = no.ver.all.lau, method = "PCoA", distance="bray")
+
+# Perform Procrustes 
+procrust.no.ver.lau <- procrustes(no.ver.lau.pcoa$vectors[,1:2], 
+                                  Ver.lau.pcoa$vectors[,1:2], scale=F, symmetric=F)
+  # Sum of squares = 1.976
+pro.no.ver.lau <- protest(no.ver.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3601
+  # correlation = 0.7999
+
+
+##### Estuary #####
+# Remove Verrucos
+no.ver.all.est <- subset_taxa(scaled.est, Phylum != "Verrucomicrobia")
+
+# Calculate bray-curtis dissimilarity
+no.ver.all.est.bray <- phyloseq::distance(physeq=no.ver.all.est, method="bray")
+
+# Perform PCoA ordination
+no.ver.est.pcoa <- ordinate(physeq = no.ver.all.est, method = "PCoA", distance="bray")
+
+# Perform Procrustes 
+procrust.no.ver.est <- procrustes(no.ver.est.pcoa$vectors[,1:2], 
+                                  Ver.est.pcoa$vectors[,1:2], scale=F, symmetric=F)
+  # Sum of squares = 1.215
+pro.no.ver.est <- protest(no.ver.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.1144
+  # correlation = 0.9411
+
+
+##### Inland #####
+# Remove Verrucos
+no.ver.all.inl <- subset_taxa(scaled.inl, Phylum != "Verrucomicrobia")
+
+# Calculate bray-curtis dissimilarity
+no.ver.all.inl.bray <- phyloseq::distance(physeq=no.ver.all.inl, method="bray")
+
+# Perform PCoA ordination
+no.ver.inl.pcoa <- ordinate(physeq = no.ver.all.inl, method = "PCoA", distance="bray")
+
+# Perform Procrustes 
+procrust.no.ver.inl <- procrustes(no.ver.inl.pcoa$vectors[,1:2], 
+                                  Ver.inl.pcoa$vectors[,1:2], scale=F, symmetric=F)
+  # Sum of squares = 5.801
+pro.no.ver.inl <- protest(no.ver.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
+  # p-value = 0.001
+  # m12^2 (sum of squares) = 0.3839
+  # correlation = 0.7849
+
+
+
 
 
 ```
