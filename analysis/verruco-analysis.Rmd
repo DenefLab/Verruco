@@ -1833,27 +1833,27 @@ mpd <- data.frame(ses.mpd.result)
 #ver.tree <- read.newick(file="ver.tre")
 
 # Create objects that you'll use with the picante package
-pre.picante <- merge_phyloseq(Ver, ver.tree)
-phy <- phy_tree(pre.picante)
+#pre.picante <- merge_phyloseq(Ver, ver.tree)
+#phy <- phy_tree(pre.picante)
   # Phylogenetic tree to be used
-com <- data.frame(otu_table(pre.picante))
+#com <- data.frame(otu_table(pre.picante))
   # Community data (otu table) to be used
 
 # Calculate Faith's Phylogenetic Diversity
-pd.result.weigh <- pd(com, phy, include.root=T)
+#pd.result.weigh <- pd(com, phy, include.root=T)
 
 # Convert Verruco tree to a distance matrix
-phydist.weigh <- cophenetic(phy)
+#phydist.weigh <- cophenetic(phy)
 
 # Calculate MDP (Mean Pairwise Distance)
-ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", 
-                                abundance.weighted=T, runs=100)
+#ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", 
+ #                               abundance.weighted=T, runs=100)
 #
 ## Calculate MNTD (Mean Nearest Taxon Distance)
 # ses.mntd.result.weigh <- ses.mntd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
 # 
 ## Pull out MDP and MNTD results
-mpd.weigh <- data.frame(ses.mpd.result.weigh)
+#mpd.weigh <- data.frame(ses.mpd.result.weigh)
 # mntd.weigh <- data.frame (ses.mntd.result.weigh)
 
 
@@ -1945,28 +1945,28 @@ final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES",
 
 ##### Weigh: Preparing to plot #####
 
-mpd.weigh$SampleID <- row.names(mpd.weigh)
+#mpd.weigh$SampleID <- row.names(mpd.weigh)
 # mntd.weigh$SampleID <- row.names(mntd.weigh)
-pd.result.weigh$SampleID <- row.names(pd.result.weigh)
+#pd.result.weigh$SampleID <- row.names(pd.result.weigh)
   # Make sure all SampleID's match!
 
 # Let's pull out the first Stat in each of the 3 tests I ran
 # PD test = PD
 # MPD test = SES (Standardized Effect Size)
 # MNTD test = SES (Standardized Effect Size)
-pd.w.stats <- data.frame(pd.result.weigh$SampleID, pd.result.weigh$PD)
-pd.w.stats$Measure <- rep("PD", 226)
-colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
-mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.z)
-mpd.w.stats$Measure <- rep("MPD SES",226)
-colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
+#pd.w.stats <- data.frame(pd.result.weigh$SampleID, pd.result.weigh$PD)
+#pd.w.stats$Measure <- rep("PD", 226)
+#colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
+#mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.z)
+#mpd.w.stats$Measure <- rep("MPD SES",226)
+#colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
 # mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.z)
 # mntd.w.stats$Measure <- rep("MNTD SES", 226)
 # colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
 
 ## Let's combine those initial stats into one big dataframe
 # weigh.stats <- rbind(pd.w.stats, mpd.w.stats, mntd.w.stats)
-weigh.stats <- rbind(pd.w.stats, mpd.w.stats)
+#weigh.stats <- rbind(pd.w.stats, mpd.w.stats)
 
 ## Now let's pull out the second stat in the mpd and mntd stats test
 ## MDP test = p-value
@@ -1980,27 +1980,27 @@ weigh.stats <- rbind(pd.w.stats, mpd.w.stats)
 
 ## Making the final dataframe to use!
 # weigh.stats <- rbind(weigh.stats, mpd.w.stats, mntd.w.stats)
-weigh.stats <- rbind(weigh.stats, mpd.w.stats)
+#weigh.stats <- rbind(weigh.stats, mpd.w.stats)
 
 ## Pull out sample data
-s <- data.frame(sample_data(Ver))
+#s <- data.frame(sample_data(Ver))
 ## Combine sample data with unweighted stats data
-weigh.stats <- merge(weigh.stats, s, by="SampleID")
+#weigh.stats <- merge(weigh.stats, s, by="SampleID")
 
 
 
 ## Group samples together by Lake_Type and Fraction
-sum.weigh <- weigh.stats %>%
-  group_by(Lake_Type, Fraction, Measure) %>%
-  summarize(Mean = mean(Stat),
-            SE = se(Stat),
-            SD = sd(Stat),
-            Median = median(Stat))
+# sum.weigh <- weigh.stats %>%
+#   group_by(Lake_Type, Fraction, Measure) %>%
+#   summarize(Mean = mean(Stat),
+#             SE = se(Stat),
+#             SD = sd(Stat),
+#             Median = median(Stat))
 
 ## Combine the raw stats with the summarized stats
-final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
+#final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
 #final.weigh$Measure <- factor(final.weigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
-final.weigh$Measure <- factor(final.weigh$Measure, levels = c("PD", "MPD SES", "MPD p-value"))
+#final.weigh$Measure <- factor(final.weigh$Measure, levels = c("PD", "MPD SES", "MPD p-value"))
 
 
 ##### WEIGH: PLOT IT! #####
@@ -2254,6 +2254,10 @@ kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != 
 kruskal.test(formula = Stat ~ Fraction, data = final.pd)
   # All Fraction
   # p-value = 3.932e-09
+# Source
+kruskal.test(formula = Stat ~ Source, data=final.pd)
+  # All Source
+  # p-value = 4.269e-06
 kruskalmc(resp = Stat ~ Fraction, data = final.pd)
   # P-F = nonsig
   # Water vs. sed = sig
@@ -2377,10 +2381,10 @@ kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Inl
   # p-value = 0.5098
 
 ##### Adjust P-Values #####
-pd.kw.vals <- data.frame(c(0.1137, 0.1192, 0.07596, 0.7314, 3.932e-09, 0.03951, 0.09885, 1.308e-06, 1.374e-06, 0.02507, 3.859e-06, 1.999e-05, 0.4808, 0.8721, 3.045e-05, 0.0001352, 8.607e-05, 0.3557, 0.822, 0.08661, 0.2661, 0.02478, 0.08827, 2.332e-05, 0.6679, 0.3743, 7.646e-06, 1.374e-06, 0.5619, 1.153e-05, 6.985e-06, 0.5098))
+pd.kw.vals <- data.frame(c(0.1137, 0.1192, 0.07596, 0.7314, 3.932e-09, 4.269e-06, 0.03951, 0.09885, 1.308e-06, 1.374e-06, 0.02507, 3.859e-06, 1.999e-05, 0.4808, 0.8721, 3.045e-05, 0.0001352, 8.607e-05, 0.3557, 0.822, 0.08661, 0.2661, 0.02478, 0.08827, 2.332e-05, 0.6679, 0.3743, 7.646e-06, 1.374e-06, 0.5619, 1.153e-05, 6.985e-06, 0.5098))
 colnames(pd.kw.vals) <- "pvals"
-pd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
-pd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
+pd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
+pd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "Source", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
 pd.kw.vals$Bonf <- p.adjust(pd.kw.vals$pvals, method="bonferroni")
 pd.kw.vals$BenH <- p.adjust(pd.kw.vals$pvals, method="BH")
 
@@ -2396,7 +2400,7 @@ kruskal.test(formula = Stat ~ Lake_Type, data = final.mpd)
   # All Lake Types
   # p-value = 3.611e-06
 kruskalmc(resp = Stat ~ Lake_Type, data = final.mpd)
-  # All sig
+  # E & I nonsig
 kruskal.test(formula = Stat ~ Lake_Type, data = final.mpd, subset = Lake_Type != "Laurentian")
   # Estuary vs Inland
   # p-value = 0.001532
@@ -2413,6 +2417,9 @@ kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != 
 kruskal.test(formula = Stat ~ Fraction, data = final.mpd)
   # All Fraction
   # p-value = 6.903e-14
+# Source
+kruskal.test(formula = Stat ~ Source, data = final.mpd)
+  # p-value = 7.149e-08
 kruskalmc(resp = Stat ~ Fraction, data = final.mpd)
   # All sig
 kruskal.test(formula = Stat ~ Fraction, data = final.mpd, subset = Fraction != "Sediment")
@@ -2536,10 +2543,10 @@ kruskal.test(formula = Stat ~ Depth, data = final.mpd, subset = Lake_Type == "In
 
 
 ##### Adjust P-Values #####
-mpd.kw.vals <- data.frame(c(3.611e-06, 0.001532, 0.005122, 0.7314, 6.903e-14, 5.05e-09, 0.02699, 1.543e-06, 5.134e-07, 0.1585, 1.755e-06, 8.267e-06, 1.72e-08, 0.7346, 0.003229, 0.05634, 0.001819, 0.05628, 0.8828, 0.02586, 0.5843, 0.03064, 0.009947, 4.23e-07, 0.7764, 0.1021, 2.083e-06, 5.134e-07, 0.2426, 4.527e-06, 3.316e-06, 0.1965))
+mpd.kw.vals <- data.frame(c(3.611e-06, 0.001532, 0.005122, 0.7314, 6.903e-14, 7.149e-08, 5.05e-09, 0.02699, 1.543e-06, 5.134e-07, 0.1585, 1.755e-06, 8.267e-06, 1.72e-08, 0.7346, 0.003229, 0.05634, 0.001819, 0.05628, 0.8828, 0.02586, 0.5843, 0.03064, 0.009947, 4.23e-07, 0.7764, 0.1021, 2.083e-06, 5.134e-07, 0.2426, 4.527e-06, 3.316e-06, 0.1965))
 colnames(mpd.kw.vals) <- "pvals"
-mpd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
-mpd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
+mpd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
+mpd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "Source", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
 mpd.kw.vals$Bonf <- p.adjust(mpd.kw.vals$pvals, method="bonferroni")
 mpd.kw.vals$BenH <- p.adjust(mpd.kw.vals$pvals, method="BH")
 ```
