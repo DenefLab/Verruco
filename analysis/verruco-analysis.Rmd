@@ -1705,7 +1705,7 @@ rich.seas.plot <- ggplot(rich, aes(x=Lake_Type, y=mean, fill=Season)) +
         legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size = 7),
         strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) #+ # top, right, bottom, left
   geom_text(data = ann.seas, aes(x = c(1.33,1,0.67,1), y=c(5.15,14,14,5.15), label = lab), size = 3, color="red")
 
 
@@ -2297,18 +2297,18 @@ pd.frac.plot <- ggplot(final.pd, aes(x=Lake_Type, y=Stat, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
   xlab("Lake Type") + ylab("Mean") +
-  ggtitle("Faith's Index of Phylogenetic Diversity") +
+  ggtitle("Faith's Index") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
         axis.text.y = element_text(colour="black", size=8),
         axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10, hjust=0.5),
         legend.title = element_text(size=10, face="bold"),
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.pd.frac, aes(x = c(1,1.35,1), y=c(5, 5, 5), label = lab), size = 4, color="red")
+  geom_text(data = ann.pd.frac, aes(x = c(1,1.33,1), y=c(2.5, 2.5, 2.5), label = lab), size = 4, color="red")
 
 
 
@@ -2324,18 +2324,18 @@ ann.pd.seas <- data.frame(lab=c("+", " ", "", ""),
 pd.seas.plot <- ggplot(final.pd, aes(x=Lake_Type, y=Stat, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
   xlab("Lake Type") + ylab("Mean") +
-  ggtitle("Faith's Index of Phylogenetic Diversity") +
+  ggtitle("Faith's Index") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
         axis.text.y = element_text(colour="black", size=8),
         axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10, hjust=0.5),
         legend.title = element_text(size=10, face="bold"),
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.pd.seas, aes(x = c(1.33,1,0.67,1), y=c(5.15,5.15,5.15,5.15), label = lab), size = 4, color="red")
+  geom_text(data = ann.pd.seas, aes(x = c(1.33,1,0.67,1), y=c(2.5,2.5,2.5,2.5), label = lab), size = 4, color="red")
 
 
 ##### Combine PD Plots #####
@@ -2402,18 +2402,18 @@ mpd.frac.plot <- ggplot(final.mpd, aes(x = Lake_Type, y = Stat, fill = Fraction)
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
   xlab("Lake Type") + ylab("Mean") +
-  ggtitle("Mean Pairwise Distance") +
+  ggtitle("SES MPD") +
   facet_grid(~Lake_Type, space = "free_x", scale = "free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
         axis.text.y = element_text(colour="black", size=8),
         axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10, hjust=0.5),
         legend.title = element_text(size=10, face="bold"),
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
-  geom_text(data = ann.mpd.frac, aes(x = c(1,1.35,1), y=c(5, 5, 5), label = lab), size = 6, color="red")
+  geom_text(data = ann.mpd.frac, aes(x = c(1,1.35,1), y=c(4.5, 4.5, 4.5), label = lab), size = 4, color="red")
 
 ##### Season #####
 ann.mpd.seas <- data.frame(lab=c("a", "a", "", "+"),
@@ -2426,22 +2426,31 @@ ann.mpd.seas <- data.frame(lab=c("a", "a", "", "+"),
 mpd.seas.plot <- ggplot(final.mpd, aes(x=Lake_Type, y=Stat, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
   xlab("Lake Type") + ylab("Mean") +
-  ggtitle("Mean Pairwise Distance") +
+  ggtitle("SES MPD") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", size=10),
         axis.text.x = element_text(angle=0, colour="black", size=8),
         axis.text.y = element_text(colour="black", size=8),
         axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10),
+        plot.title = element_text(face="bold", size=10, hjust=0.5),
         legend.title = element_text(size=10, face="bold"),
         legend.text = element_text(size = 9),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.mpd.seas, aes(x = c(0.65,1.35,1,0.65), y=c(5.15,5.15,5.15,5.15), label = lab), size = 4, color="red")
+  geom_text(data = ann.mpd.seas, aes(x = c(0.65,1.35,1,0.65), y=c(4.5,4.5,4.5,4.5), label = lab), size = 4, color="red")
 
 
 
 
+######## Plot PD & MPD ########
+tiff("pd.mpd.tiff", width = 17.8, height = 14, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(0.5,0.5))))) 
+print(pd.frac.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(pd.seas.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(mpd.frac.plot, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+print(mpd.seas.plot, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+dev.off()
 
 
 
