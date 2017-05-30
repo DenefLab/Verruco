@@ -974,6 +974,54 @@ boxplot.kw.vals$Comp <- c("Lake", "Lake", "Lake", "Frac", "Source", "PF", "PS", 
 boxplot.kw.vals$Bonf <- p.adjust(boxplot.kw.vals$pvals, method="bonferroni")
 boxplot.kw.vals$BenH <- p.adjust(boxplot.kw.vals$pvals, method="BH")
 
+
+
+##### Check all Lake Michigan Cruise Samples #####
+Ver.box.LM <- Ver.box[which(Ver.box$Study == "LakeMichigan"),]
+Ver.box.LM$Station <- ordered(Ver.box.LM$Station, levels = c("Buoy", "Shore", "Far"))
+Ver.box.LM.plot <- ggplot(Ver.box.LM, aes(x=Lake_Type, y= Relative_Abundance, 
+                                          fill = Lake_Type)) +
+  geom_boxplot(position=position_dodge(1))
+
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM)
+  # p-value = 0.004545
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM, 
+             subset=Station!="Buoy")
+  # Near vs. Far (AlL LM)
+  # p-value = 0.004086
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM,
+             subset=Station!="Near")
+  # Buoy vs. Far (Muskegon vs. LM)
+  # p-value = 0.004545
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM,
+             subset=Station!="Far")
+  # Buoy vs. Near (Muskegon vs. LM)
+  # p-value = 0.3881
+t.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
+  # p-value = 0.06987
+t.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM, 
+       alternative = "less")
+  # Lau < Est
+  # p-value = 0.03493
+Ver.box.LM.pval <- data.frame(c(0.06987, 0.03493))
+colnames(Ver.box.LM.pval) <- "pvals"
+Ver.box.LM.pval$Bonf <- p.adjust(Ver.box.LM.pval$pvals, method="bonferroni")
+Ver.box.LM.pval$BenH <- p.adjust(Ver.box.LM.pval$pvals, method="BH")
+
+
+### Compare MLB to other Estuary samples ###
+Ver.box.est <- Ver.box[which(Ver.box$Lake_Type == "Estuary"),]
+Ver.box.est <- Ver.box.est[which(Ver.box.est$Depth != "Sediment"),]
+Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Study, y=Relative_Abundance,
+                                            fill = Study)) +
+  geom_boxplot(position=position_dodge(1))
+t.test(formula = Relative_Abundance ~ Study, data = Ver.box.est)
+  # p-value = 0.01307
+t.test(formula = Relative_Abundance ~ Study, data = Ver.box.est, alternative = "less")
+  # p-value = 0.006535
+
+
+
 ```
 
 
@@ -1086,36 +1134,69 @@ lau.DOC <- lm(DOC.mg.L~log(Abundance), lau.df)
 summary(lau.DOC)
 confint(lau.DOC, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ DOC.mg.L, lau.df)
+lau.DOC.sin <- lm(DOC.mg.L~sin(Abundance), lau.df)
+summary(lau.DOC.sin)
+confint(lau.DOC.sin, level=0.95)
+  # R2 = 0.2554
 
 xyplot(log(Abundance) ~ TP.ug.L, lau.df)
 lau.TP <- lm(TP.ug.L~log(Abundance), lau.df)
 summary(lau.TP)
 confint(lau.TP, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ TP.ug.L, lau.df)
+lau.TP.sin <- lm(TP.ug.L~sin(Abundance), lau.df)
+summary(lau.TP,sin)
+confint(lau.TP.sin, level=0.95)
+  # Still not linear
 
 xyplot(log(Abundance) ~ PON.mg.L, lau.df)
 lau.PON <- lm(PON.mg.L~log(Abundance), lau.df)
 summary(lau.PON)
 confint(lau.PON, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ PON.mg.L, lau.df)
+lau.PON.sin <- lm(PON.mg.L~sin(Abundance), lau.df)
+summary(lau.PON.sin)
+confint(lau.PON.sin, level=0.95)
+  # Still not linear
 
 xyplot(log(Abundance) ~ PAR, lau.df)
 lau.PAR <- lm(PAR~log(Abundance), lau.df)
 summary(lau.PAR)
 confint(lau.PAR, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ PAR, lau.df)
+lau.PAR.sin <- lm(PAR~sin(Abundance), lau.df)
+summary(lau.PAR.sin)
+confint(lau.PAR.sin, level=0.95)
+  # R2 = 0.0342
+  # Not linear
 
 xyplot(log(Abundance) ~ Chl.Probe...g.L., lau.df)
 lau.Chl.p <- lm(Chl.Probe...g.L.~log(Abundance), lau.df)
 summary(lau.Chl.p)
 confint(lau.Chl.p, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ Chl.Probe...g.L., lau.df)
+lau.Chl.p.sin <- lm(Chl.Probe...g.L.~sin(Abundance), lau.df)
+summary(lau.Chl.p.sin)
+confint(lau.Chl.p.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ Chl.Lab..ug.L., lau.df)
 lau.Chl.l <- lm(Chl.Lab..ug.L.~log(Abundance), lau.df)
 summary(lau.Chl.l)
 confint(lau.Chl.l, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ Chl.Lab..ug.L., lau.df)
+lau.Chl.l.sin <- lm(Chl.Lab..ug.L.~sin(Abundance), lau.df)
+summary(lau.Chl.l.sin)
+confint(lau.Chl.l.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ PP.ug.L, lau.df)
 lau.PP <- lm(PP.ug.L~log(Abundance), lau.df)
@@ -1128,17 +1209,34 @@ lau.TDP <- lm(TDP.ug.L~log(Abundance), lau.df)
 summary(lau.TDP)
 confint(lau.TDP, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ TDP.ug.L, lau.df)
+lau.TDP.sin <- lm(TDP.ug.L~sin(Abundance), lau.df)
+summary(lau.TDP.sin)
+confint(lau.TDP.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ TDP.SRP, lau.df)
 lau.TDP.SRP <- lm(TDP.SRP~log(Abundance), lau.df)
 summary(lau.TDP.SRP)
 confint(lau.TDP.SRP, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ TDP.SRP, lau.df)
+lau.TDP.SRP.sin <- lm(TDP.SRP~sin(Abundance), lau.df)
+summary(lau.TDP.SRP.sin)
+confint(lau.TDP.SRP.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ POC.mg.L, lau.df)
 lau.POC <- lm(POC.mg.L~log(Abundance), lau.df)
 summary(lau.POC)
 confint(lau.POC, level=0.95)
+  # Not linear
+xyplot(sin(Abundance) ~ POC.mg.L, lau.df)
+lau.POC.sin <- lm(POC.mg.L~sin(Abundance), lau.df)
+summary(lau.POC.sin)
+confint(lau.POC.sin, level=0.95)
   # Not linear
 
 xyplot(log(Abundance) ~ TSS.mg.L, lau.df)
@@ -1146,12 +1244,23 @@ lau.TSS <- lm(TSS.mg.L~log(Abundance), lau.df)
 summary(lau.TSS)
 confint(lau.TSS, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ TSS.mg.L, lau.df)
+lau.TSS.sin <- lm(TSS.mg.L~sin(Abundance), lau.df)
+summary(lau.TSS.sin)
+confint(lau.TSS.sin, level=0.95)
+  # Not linear
 
 xyplot(log(Abundance) ~ Fluorescence.mg.m3., lau.df)
 lau.fluor <- lm(Fluorescence.mg.m3.~log(Abundance), lau.df)
 summary(lau.fluor)
 confint(lau.fluor, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ Fluorescence.mg.m3., lau.df)
+lau.fluor.sin <- lm(Fluorescence.mg.m3.~sin(Abundance), lau.df)
+summary(lau.fluor.sin)
+confint(lau.fluor.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 
 
@@ -1161,25 +1270,46 @@ est.ORP <- lm(ORP..mV.~log(Abundance), est.df)
 summary(est.ORP)
 confint(est.ORP, level=0.95)
   # Linear
+xyplot(sin(Abundance) ~ ORP..mV., est.df)
+est.ORP.sin <- lm(ORP..mV.~sin(Abundance), est.df)
+summary(est.ORP.sin)
+confint(est.ORP.sin, level=0.95)
+  # Horrendous R2
 
 xyplot(log(Abundance) ~ Temperature..C., est.df)
 est.temp <- lm(Temperature..C.~log(Abundance), est.df)
 summary(est.temp)
 confint(est.temp, level=0.95)
   # LINEARRRRR
+xyplot(sin(Abundance) ~ Temperature..C., est.df)
+est.temp.sin <- lm(Temperature..C.~sin(Abundance), est.df)
+summary(est.temp.sin)
+confint(est.temp.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ TDS..mg.L., est.df)
 est.TDS <- lm(TDS..mg.L.~log(Abundance), est.df)
 summary(est.TDS)
 confint(est.TDS, level=0.95)
   # LINEARRRRRR
+xyplot(sin(Abundance) ~ TDS..mg.L., est.df)
+est.TDS.sin <- lm(TDS..mg.L.~sin(Abundance), est.df)
+summary(est.TDS.sin)
+confint(est.TDS.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ NO3.mg.L, est.df)
 est.NO3 <- lm(NO3.mg.L~log(Abundance), est.df)
 summary(est.NO3)
 confint(est.NO3, level=0.95)
   # LINEARRRRRR
-
+xyplot(sin(Abundance) ~ NO3.mg.L, est.df)
+est.NO3.sin <- lm(NO3.mg.L~sin(Abundance), est.df)
+summary(est.NO3.sin)
+confint(est.NO3.sin, level=0.95)
+  # Neg R2
 
 ### Unused environmental factors
 xyplot(log(Abundance) ~ pH, est.df)
@@ -1187,17 +1317,34 @@ est.pH <- lm(pH~log(Abundance), est.df)
 summary(est.pH)
 confint(est.pH, level=0.95)
   # LINEARRRRRR
+xyplot(sin(Abundance) ~ pH, est.df)
+est.pH.sin <- lm(pH~sin(Abundance), est.df)
+summary(est.pH.sin)
+confint(est.pH.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ Cl.mg.L, est.df)
 est.Cl <- lm(Cl.mg.L~log(Abundance), est.df)
 summary(est.Cl)
 confint(est.Cl, level=0.95)
   # LINEARRRRRR
+xyplot(sin(Abundance) ~ Cl.mg.L, est.df)
+est.Cl.sin <- lm(Cl.mg.L~sin(Abundance), est.df)
+summary(est.Cl.sin)
+confint(est.Cl.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ SRP.ug.L, est.df)
 est.SRP <- lm(SRP.ug.L~log(Abundance), est.df)
 summary(est.SRP)
 confint(est.SRP, level=0.95)
+  # Not linear
+xyplot(sin(Abundance) ~ SRP.ug.L, est.df)
+est.SRP.sin <- lm(SRP.ug.L~sin(Abundance), est.df)
+summary(est.SRP.sin)
+confint(est.SRP.sin, level=0.95)
   # Not linear
 
 xyplot(log(Abundance) ~ Alk.mg.L, est.df)
@@ -1205,61 +1352,118 @@ est.Alk <- lm(Alk.mg.L~log(Abundance), est.df)
 summary(est.Alk)
 confint(est.Alk, level=0.95)
   # LINEARRRRR
+xyplot(sin(Abundance) ~ Alk.mg.L, est.df)
+est.Alk.sin <- lm(Alk.mg.L~sin(Abundance), est.df)
+summary(est.Alk.sin)
+confint(est.Alk.sin, level=0.95)
+  # Not Linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ Turb.NTU, est.df)
 est.Turb <- lm(Turb.NTU~log(Abundance), est.df)
 summary(est.Turb)
 confint(est.Turb, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ Turb.NTU, est.df)
+est.Turb.sin <- lm(Turb.NTU~sin(Abundance), est.df)
+summary(est.Turb.sin)
+confint(est.Turb.sin, level=0.95)
+  # R2 essentially 0
 
 xyplot(log(Abundance) ~ SpCond...S.cm., est.df)
 est.SpCond <- lm(SpCond...S.cm.~log(Abundance), est.df)
 summary(est.SpCond)
 confint(est.SpCond, level=0.95)
   # LINEARRRRR
+xyplot(sin(Abundance) ~ SpCond...S.cm., est.df)
+est.SpCond.sin <- lm(SpCond...S.cm.~sin(Abundance), est.df)
+summary(est.SpCond.sin)
+confint(est.SpCond.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ Chl.Lab..ug.L., est.df)
 est.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), est.df)
 summary(est.Chl)
 confint(est.Chl, level=0.95)
   # Linear
+xyplot(sin(Abundance) ~ Chl.Lab..ug.L., est.df)
+est.Chl.sin <- lm(Chl.Lab..ug.L.~sin(Abundance), est.df)
+summary(est.Chl.sin)
+confint(est.Chl.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ BGA.cells.mL, est.df)
 est.BGA <- lm(BGA.cells.mL~log(Abundance), est.df)
 summary(est.BGA)
 confint(est.BGA, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ BGA.cells.mL, est.df)
+est.BGA.sin <- lm(BGA.cells.mL~sin(Abundance), est.df)
+summary(est.BGA.sin)
+confint(est.BGA.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ SO4.mg.L, est.df)
 est.SO4 <- lm(SO4.mg.L~log(Abundance), est.df)
 summary(est.SO4)
 confint(est.SO4, level=0.95)
   # Linear
+xyplot(sin(Abundance) ~ SO4.mg.L, est.df)
+est.SO4.sin <- lm(SO4.mg.L~sin(Abundance), est.df)
+summary(est.SO4.sin)
+confint(est.SO4.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ NH3.mg.L, est.df)
 est.NH3 <- lm(NH3.mg.L~log(Abundance), est.df)
 summary(est.NH3)
 confint(est.NH3, level=0.95)
   # Not linear
+xyplot(sin(Abundance) ~ NH3.mg.L, est.df)
+est.NH3.sin <- lm(NH3.mg.L~sin(Abundance), est.df)
+summary(est.NH3.sin)
+confint(est.NH3.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ TKN.mg.L, est.df)
 est.TKN <- lm(TKN.mg.L~log(Abundance), est.df)
 summary(est.TKN)
 confint(est.TKN, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ TKN.mg.L, est.df)
+est.TKN.sin <- lm(TKN.mg.L~sin(Abundance), est.df)
+summary(est.TKN.sin)
+confint(est.TKN.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ TP.ug.L, est.df)
 est.TP <- lm(TP.ug.L~log(Abundance), est.df)
 summary(est.TP)
 confint(est.TP, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ TP.ug.L, est.df)
+est.TP.sin <- lm(TP.ug.L~sin(Abundance), est.df)
+summary(est.TP.sin)
+confint(est.TP.sin, level=0.95)
+  # Not linear
 
 xyplot(log(Abundance) ~ DO.probe.mg.L, est.df)
 est.DO <- lm(DO.probe.mg.L~log(Abundance), est.df)
 summary(est.DO)
 confint(est.DO, level=0.95)
   # Negative R2
-
+xyplot(sin(Abundance) ~ DO.probe.mg.L, est.df)
+est.DO.sin <- lm(DO.probe.mg.L~sin(Abundance), est.df)
+summary(est.DO.sin)
+confint(est.DO.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 
 ##### Inland #####
