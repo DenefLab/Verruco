@@ -335,7 +335,7 @@ Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est)
   # All Stations
   # p-value = 0.008687
-kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est)
+mc.test <- kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est)
   # Only sig = Buoy-Bottom
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
              subset=Station!="Buoy")
@@ -357,10 +357,7 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
              subset=Station!="Outlet")
   # All minus Outlet
   # p-value = 0.01521
-#t.test(formula = Relative_Abundance ~ Study, data = Ver.box.est)
-  # p-value = 0.01307
-#t.test(formula = Relative_Abundance ~ Study, data = Ver.box.est, alternative = "less")
-  # p-value = 0.006535
+
 
 ## Pairwise Comparisons ##
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
@@ -368,12 +365,17 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
   # Buoy vs. Inlet
   # p-value = 0.3613
 
+test.buoy <- which(Ver.box.est$Station == "Buoy")
+test.out <- which(Ver.box.est$Station == "Outlet")
+test.df <- Ver.box.est[c(test.buoy, test.out),]
+test.pair <- kruskal.test(formula = Relative_Abundance ~ Station, data = test.df)
+
 test <- kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station != c("Inlet", "Outlet", "Bottom"))
+             subset = Station != c("Inlet", "Bear", "Bottom"))
 
 test2 <- kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station == c("Buoy", "Bear"))
-  # Buoy vs. Bear
+             subset = Station == c("Buoy", "Outlet"))
+  # Buoy vs. Outlet
   # p-value = 0.6242
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
              subset = Station == c("Buoy", "Outlet"))
