@@ -296,12 +296,7 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM,
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
   # Musk vs. LM
   # p-value = 0.0596
-#t.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
-  # p-value = 0.06987
-#t.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM, 
-#       alternative = "less")
-  # Lau < Est
-  # p-value = 0.03493
+
 Ver.box.LM.pval <- data.frame(c(0.004545, 0.004086, 0.01045, 0.3881, 0.0596))
 colnames(Ver.box.LM.pval) <- "pvals"
 Ver.box.LM.pval$Comp <- c("All.Station", "Shore.Far", "Buoy.Far", "Buoy.Shore", "Lake.Type")
@@ -320,7 +315,7 @@ Ver.box.est$Station <- ordered(Ver.box.est$Station,
                                levels = c("Buoy", "Inlet", "Bear", "Outlet", "Deep"))
 
 
-### Plot !!! ###
+### Plot!!! ###
 Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
                                             fill = Study)) +
   geom_boxplot(position=position_dodge(1)) +
@@ -390,27 +385,6 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
   # p-value = 0.1441
 
 
-subset.buoy <- which(Ver.box.est$Station == "Buoy")
-subset.inl <- which(Ver.box.est$Station == "Inlet")
-subset.bear <- which(Ver.box.est$Station == "Bear")
-subset.deep <- which(Ver.box.est$Station == "Deep")
-subset.out <- which(Ver.box.est$Station == "Outlet")
-subset.bu.in <- c(subset.buoy, subset.inl)
-subset.bu.be <- c(subset.buoy, subset.bear)
-subset.bu.de <- c(subset.buoy, subset.deep)
-subset.bu.ou <- c(subset.buoy, subset.out)
-t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.in,])
-  # Buoy vs. Inlet
-  # p-value = 0.4145
-t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.be,])
-  # Buoy vs. Bear
-  # p-value = 0.1947
-t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.de,])
-  # Buoy vs. Deep
-  # p-value = 0.007237
-t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.ou,])
-  # Buoy vs. Outlet
-  # p-value = 0.01051
 
 ### Plot Comparisons ###
 png("LM.comp.png", width = 23, height = 5, units = "cm", res = 500)
