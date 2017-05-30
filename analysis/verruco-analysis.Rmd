@@ -1036,7 +1036,7 @@ Ver.box.LM.pval$BenH <- p.adjust(Ver.box.LM.pval$pvals, method="BH")
 ### Compare MLB to other Estuary samples ###
 Ver.box.est <- Ver.box[which(Ver.box$Lake_Type == "Estuary"),]
 Ver.box.est <- Ver.box.est[which(Ver.box.est$Depth != "Sediment"),]
-Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Study, y=Relative_Abundance,
+Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
                                             fill = Study)) +
   geom_boxplot(position=position_dodge(1)) +
   ggtitle("LM MLB 2013 vs. Muskegon Lake") +
@@ -1044,20 +1044,56 @@ Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Study, y=Relative_Abundance,
         axis.text.x = element_text(angle=0, colour="black", size=6),
         axis.text.y = element_text(colour="black", size=6),
         axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold", hjust = 0.5),
+        plot.title = element_text(face="bold", size=8, hjust = 0.5),
+        legend.title = element_text(size=8, face="bold"),
         legend.text = element_text(size = 7),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"))
+
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est)
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
+             subset=Station!="Buoy")
+  # p-value = 0.03217
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
+             subset=Station!="Bear")
+    # p-value = 0.00492
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
+             subset=Station!="Bottom")
+  # p-value = 0.03475
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
+             subset=Station!="Inlet")
+  # p-value = 0.01844
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
+             subset=Station!="Outlet")
+  # p-value = 0.01521
 t.test(formula = Relative_Abundance ~ Study, data = Ver.box.est)
   # p-value = 0.01307
 t.test(formula = Relative_Abundance ~ Study, data = Ver.box.est, alternative = "less")
   # p-value = 0.006535
-
-
+subset.buoy <- which(Ver.box.est$Station == "Buoy")
+subset.inl <- which(Ver.box.est$Station == "Inlet")
+subset.bear <- which(Ver.box.est$Station == "Bear")
+subset.deep <- which(Ver.box.est$Station == "Deep")
+subset.out <- which(Ver.box.est$Station == "Outlet")
+subset.bu.in <- c(subset.buoy, subset.inl)
+subset.bu.be <- c(subset.buoy, subset.bear)
+subset.bu.de <- c(subset.buoy, subset.deep)
+subset.bu.ou <- c(subset.buoy, subset.out)
+t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.in,])
+  # Buoy vs. Inlet
+  # p-value = 0.4145
+t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.be,])
+  # Buoy vs. Bear
+  # p-value = 0.1947
+t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.de,])
+  # Buoy vs. Deep
+  # p-value = 0.007237
+t.test(formula = Relative_Abundance ~ Station, data = Ver.box.est[subset.bu.ou,])
+  # Buoy vs. Outlet
+  # p-value = 0.01051
 
 ### Plot Comparisons ###
-png("2013.comp.png", width = 17, height = 5, units = "cm", res = 500)
+png("2013.comp.png", width = 23, height = 5, units = "cm", res = 500)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
 print(Ver.box.LM.plot1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
