@@ -1551,24 +1551,44 @@ inl.SRP <- lm(SRP.ug.L~log(Abundance), inl.df)
 summary(inl.SRP)
 confint(inl.SRP, level=0.95)
   # Linear, but super low R2
+xyplot(sin(Abundance) ~ SRP.ug.L, inl.df)
+inl.SRP.sin <- lm(SRP.ug.L~sin(Abundance), inl.df)
+summary(inl.SRP.sin)
+confint(inl.SRP.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ Chl.Lab..ug.L., inl.df)
 inl.Chl <- lm(Chl.Lab..ug.L.~log(Abundance), inl.df)
 summary(inl.Chl)
 confint(inl.Chl, level=0.95)
   # Linear, but R2 is essentially 0
+xyplot(sin(Abundance) ~ Chl.Lab..ug.L., inl.df)
+inl.Chl.sin <- lm(Chl.Lab..ug.L.~sin(Abundance), inl.df)
+summary(inl.Chl.sin)
+confint(inl.Chl.sin, level=0.95)
+  # Not linear
+  # Neg R2
 
 xyplot(log(Abundance) ~ TP.ug.L, inl.df)
 inl.TP <- lm(TP.ug.L~log(Abundance), inl.df)
 summary(inl.TP)
 confint(inl.TP, level=0.95)
   # Linear
+xyplot(sin(Abundance) ~ TP.ug.L, inl.df)
+inl.TP.sin <- lm(TP.ug.L~sin(Abundance), inl.df)
+summary(inl.TP.sin)
+confint(inl.TP.sin, level=0.95)
 
 xyplot(log(Abundance) ~ NH4.ug.L, inl.df)
 inl.NH4 <- lm(NH4.ug.L~log(Abundance), inl.df)
 summary(inl.NH4)
 confint(inl.NH4, level=0.95)
   # Linear
+xyplot(sin(Abundance) ~ NH4.ug.L, inl.df)
+inl.NH4.sin <- lm(NH4.ug.L~sin(Abundance), inl.df)
+summary(inl.NH4.sin)
+confint(inl.NH4.sin, level=0.95)
 
 ### Unused environmental factors
 xyplot(log(Abundance) ~ NO3.mg.L, inl.df)
@@ -1576,14 +1596,21 @@ inl.NO3 <- lm(NO3.mg.L~log(Abundance), inl.df)
 summary(inl.NO3)
 confint(inl.NO3, level=0.95)
   # Negative R2
+xyplot(sin(Abundance) ~ NO3.mg.L, inl.df)
+inl.NO3.sin <- lm(NO3.mg.L~sin(Abundance), inl.df)
+summary(inl.NO3.sin)
+confint(inl.NO3.sin, level=0.95)
 
 xyplot(log(Abundance) ~ TDP.ug.L, inl.df)
 inl.TDP <- lm(TDP.ug.L~log(Abundance), inl.df)
 summary(inl.TDP)
 confint(inl.TDP, level=0.95)
   # Imma say no because too many points are near 0 for TDP
-
-
+xyplot(sin(Abundance) ~ TDP.ug.L, inl.df)
+inl.TDP.sin <- lm(TDP.ug.L~sin(Abundance), inl.df)
+summary(inl.TDP.sin)
+confint(inl.TDP.sin, level=0.95)
+  # Neg R2
 
 ##### MODELLING TIME #####  
 
