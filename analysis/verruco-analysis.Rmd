@@ -246,13 +246,14 @@ Ver.box.LM <- Ver.box.buoy[which(Ver.box.buoy$Study == "LakeMichigan"),]
 Ver.box.LM$Station <- ordered(Ver.box.LM$Station, levels = c("Buoy", "Shore", "Far"))
 
 ### Plot! ###
-ann_LM <- data.frame(lab=c(" ", " ", "+"),
-                       Station = factor(c("Buoy", "Shore", "Far"),
-                                          levels = c("Buoy", "Shore", "Far")))
+ann_LM <- data.frame(lab=c(" ", "+"),
+                       Lake_Type = factor(c("Estuary", "Laurentian"),
+                                          levels = c("Estuary", "Laurentian")))
 Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance, 
-                                           fill = Station)) +
+                                           fill = Lake_Type)) +
   geom_boxplot(position=position_dodge(1)) +
   ggtitle("Lake Michigan Cruise Samples") +
+  scale_fill_manual(values = c("salmon","turquoise3")) +
   theme(axis.title.x = element_text(face="bold", size=8),
         axis.text.x = element_text(angle=0, colour="black", size=6),
         axis.text.y = element_text(colour="black", size=6),
@@ -262,7 +263,7 @@ Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance,
         legend.text = element_text(size = 7),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
-  geom_text(data = ann_LM, aes(label=lab), x=c(1,1,3), y=c(16,16,18), size=4, color="red")
+  geom_text(data = ann_LM, aes(label=lab), x=c(1,3), y=c(16,18), size=4, color="red")
 
 ### Kruskal-Wallis LM 2013 Samples ###
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM)
@@ -283,17 +284,21 @@ kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
 Ver.box.est <- Ver.box.buoy[which(Ver.box.buoy$Lake_Type == "Estuary"),]
 Ver.box.est <- Ver.box.est[which(Ver.box.est$Depth != "Sediment"),]
 Ver.box.est$Station <- ordered(Ver.box.est$Station, 
-                               levels = c("Buoy", "Inlet", "Bear", "Outlet", "Deep"))
+                               levels = c("Inlet", "Bear", "Outlet", "Deep", "Buoy"))
+Ver.box.est$Cruise <- "Laurentian"
+Ver.box.est[which(Ver.box.est$Study == "Muskegon"), 14] <- "Estuary"
+Ver.box.est$Cruise <- ordered(Ver.box.est$Cruise, levels = c("Estuary", "Laurentian"))
 
 
 ### Plot!!! ###
 ann_est <- data.frame(lab=c("a", "a"),
-                       Study = factor(c("LakeMichigan", "Muskegon"),
-                                          levels = c("LakeMichigan", "Muskegon")))
+                       Cruise = factor(c("Estuary", "Laurentian"),
+                                          levels = c("Estuary", "Laurentian")))
 Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
-                                            fill = Study)) +
+                                            fill = Cruise)) +
   geom_boxplot(position=position_dodge(1)) + ylim(0,44) +
   ggtitle("Muskegon Lake Samples") +
+  scale_fill_manual(values = c("turquoise3","salmon")) +
   theme(axis.title.x = element_text(face="bold", size=8),
         axis.text.x = element_text(angle=0, colour="black", size=6),
         axis.text.y = element_text(colour="black", size=6),
