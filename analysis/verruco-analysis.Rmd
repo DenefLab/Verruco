@@ -2252,113 +2252,6 @@ Ver.pcoa <- ordinate(physeq = Ver.rel, method = "PCoA", distance = "bray")
 #To determine approximately how much variation the axes should explain:
 #Ver.pcoa$values
 #look for broken stick value
-
-### Plot
-## Depth
-# plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = Ver.pcoa, 
-#   color = "Depth",
-#   axes = c(1, 2),
-#   title = "Bray-Curtis Dissimilarity") +
-#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold")) +
-#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
-#          shape = guide_legend(order=2, override.aes=list(size=3)))
-
-### Plot
-## Lake_Type
-# plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = Ver.pcoa, 
-#   color = "Lake_Type",
-#   axes = c(2,3),
-#   title = "Bray-Curtis Dissimilarity") +
-#   scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold")) +
-#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
-#          shape = guide_legend(order=2, override.aes=list(size=3)))
-
-### Plot
-## Color = Lake_Type, Shape = Depth
-bray.pcoa.Lake_Type.depth <- plot_ordination(
-  physeq = Ver.rel, 
-  ordination = Ver.pcoa, 
-  color = "Lake_Type",
-  shape = "Depth",
-  axes = c(2,3),
-  title = "Bray-Curtis Dissimilarity") +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-# Fraction PCoA
-# plot_ordination(
-#   physeq = Ver.rel, 
-#   ordination = Ver.pcoa, 
-#   color = "Fraction",
-#   shape = "Season",
-#   axes = c(1, 3),
-#   title = "Bray-Curtis Dissimilarity") +
-#   facet_wrap(facets = ~Lake_Type) +
-#   theme(axis.text.x = element_blank(), 
-#         axis.text.y = element_blank(),
-#         axis.title.x = element_text(face="bold", size=14),
-#         axis.title.y = element_text(face="bold", size=14),
-#         legend.title = element_text(size=12, face="bold"),
-#         legend.text = element_text(size=12),
-#         axis.ticks = element_blank(),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         plot.title = element_text(size = 16, face="bold")) +
-#   guides(color = guide_legend(order=1, override.aes=list(size=3)),
-#          shape = guide_legend(order=2, override.aes=list(size=3)))
-
-# Season PCoA
-bray.pcoa.facet <- plot_ordination(
-  physeq = Ver.rel, 
-  ordination = Ver.pcoa, 
-  color = "Season",
-  shape = "Fraction",
-  axes = c(1,2),
-  title = "Bray-Curtis Dissimilarity") +
-  facet_wrap(facets = ~Lake_Type) +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
 ```
 
 
@@ -2620,10 +2513,6 @@ Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes
         plot.title = element_text(size = 9, face="bold")) +
   annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE)
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-  
 # Particle = fill, Free = empty
 # Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25; You also can't set colors manually
 
@@ -2664,7 +2553,6 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
   #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-
 
 # The function below is to save a legend from a plot, that can then later be called upon and printed
 # To use the function, first save a plot as an object
@@ -2710,22 +2598,6 @@ Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes
         plot.title = element_text(size = 9, face="bold")) +
   annotate("text", x= -0.46, y=0.66, label = "C", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-
-
-
-
-#tiff("ver.pcoa.tiff", width = 15, height = 10, units = "cm", res = 500)
-#grid.newpage()
-#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
-#print(Ver.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-#print(Ver.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-#print(Ver.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-#dev.off()
-
-
 
 ```
 
@@ -3103,76 +2975,6 @@ scaled.bray <- phyloseq::distance(physeq=scaled, method="bray")
 
 # Perform PCoA ordination
 scaled.pcoa <- ordinate(physeq = scaled, method = "PCoA", distance="bray")
-
-### Plot
-## Color = Depth, Shape = Lake_Type
-plot_ordination(
-  physeq = scaled, 
-  ordination = scaled.pcoa, 
-  color = "Depth",
-  shape = "Lake_Type",
-  axes = c(1, 2),
-  title = "Bray-Curtis Dissimilarity") +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-### Plot
-## Color = Lake_Type, Shape = Depth
-bcc.pcoa.Lake_Type.depth <- plot_ordination(
-  physeq = scaled, 
-  ordination = scaled.pcoa, 
-  color = "Lake_Type",
-  shape = "Depth",
-  axes = c(2, 3),
-  title = "Bray-Curtis Dissimilarity") +
-  scale_y_reverse()+
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-### Plot
-## Facet = Lake_Type, Color = Season, Shape = Fraction
-bcc.pcoa.facet <- plot_ordination(
-  physeq = scaled, 
-  ordination = scaled.pcoa, 
-  color = "Season",
-  shape = "Fraction",
-  axes = c(1,2),
-  title = "Bray-Curtis Dissimilarity") +
-  facet_wrap(facets = ~Lake_Type) +
-  scale_color_manual(values = c("indianred1","deepskyblue","mediumpurple2")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=14),
-        axis.title.y = element_text(face="bold", size=14),
-        legend.title = element_text(size=12, face="bold"),
-        legend.text = element_text(size=12),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 16, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-
-
 ```
 
 
@@ -3213,10 +3015,6 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
   scale_y_reverse() + scale_x_reverse() +
   annotate("text", x= 0.42, y=-0.44, label = "D", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-# Particle = fill, Free = empty
 # Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25
 #        You also can't set colors manually
 
@@ -3253,9 +3051,7 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
   scale_y_reverse() +
   annotate("text", x= -0.63, y=-0.25, label = "E", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
+
 
 
 
@@ -3291,20 +3087,6 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
         plot.title = element_text(size = 9, face="bold")) +
   annotate("text", x= -0.37, y=0.55, label = "F", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
-  #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
-  #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
-  #       alpha = guide_legend(order=3, title="Fraction",override.aes=list(size=3)))
-
-
-
-
-# tiff("bcc.pcoa.tiff", width = 15, height = 10, units = "cm", res = 500)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
-# print(scaled.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# print(scaled.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-# print(scaled.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-# dev.off()
 ```
 
 
@@ -3330,19 +3112,6 @@ grid.draw(legend)
 dev.off()
 ```
 
-
-### (More PCoAs)
-```{r}
-# tiff("bcc.ver.compare2.tiff", width = 14, height = 10, units = "in", res = 500)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(2,2, widths=c(1,1), heights=c(1.5,1.5)))))
-# print(bray.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# print(bray.pcoa.facet, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-# print(bcc.pcoa.Lake_Type.depth, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-# print(bcc.pcoa.facet, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-# dev.off()
-
-```
 
 ### Whole Com PERMANOVA
 ```{r}
