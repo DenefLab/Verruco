@@ -1913,41 +1913,11 @@ phydist <- cophenetic(picante.phy)
 # Calculate MDP (Mean Pairwise Distance)
 ses.mpd.result <- ses.mpd(picante.com, phydist, null.model = "taxa.labels", 
                           abundance.weighted=F, runs=999)
-#
-## Calculate MNTD (Mean Nearest Taxon Distance)
-# ses.mntd.result <- ses.mntd(picante.com, phydist, null.model = "taxa.labels", abundance.weighted=F, runs=100)
-# 
-## Pull out MDP and MNTD results
+
+## Pull out MDP results
 mpd <- data.frame(ses.mpd.result)
-# mntd <- data.frame (ses.mntd.result)
 
 
-### Weighted ###
-#ver.tree <- read.newick(file="ver.tre")
-
-# Create objects that you'll use with the picante package
-#pre.picante <- merge_phyloseq(Ver, ver.tree)
-#phy <- phy_tree(pre.picante)
-  # Phylogenetic tree to be used
-#com <- data.frame(otu_table(pre.picante))
-  # Community data (otu table) to be used
-
-# Calculate Faith's Phylogenetic Diversity
-#pd.result.weigh <- pd(com, phy, include.root=T)
-
-# Convert Verruco tree to a distance matrix
-#phydist.weigh <- cophenetic(phy)
-
-# Calculate MDP (Mean Pairwise Distance)
-#ses.mpd.result.weigh <- ses.mpd(com, phydist.weigh, null.model = "taxa.labels", 
- #                               abundance.weighted=T, runs=100)
-#
-## Calculate MNTD (Mean Nearest Taxon Distance)
-# ses.mntd.result.weigh <- ses.mntd(com, phydist.weigh, null.model = "taxa.labels", abundance.weighted=T, runs=100)
-# 
-## Pull out MDP and MNTD results
-#mpd.weigh <- data.frame(ses.mpd.result.weigh)
-# mntd.weigh <- data.frame (ses.mntd.result.weigh)
 
 
 ##### Unweigh: Preparing to plot #####
@@ -1957,36 +1927,20 @@ mpd$SampleID <- row.names(mpd)
 pd$SampleID <- row.names(pd)
   # Make sure all SampleID's match!
 
-# Let's pull out the first Stat in each of the 3 tests I ran
+# Let's pull out the first Stat of each test
 # PD test = PD
 # MPD test = SES (Standardized Effect Size)
-# MNTD test = SES (Standardized Effect Size)
 pd.stats <- data.frame(pd$SampleID, pd$PD)
 pd.stats$Measure <- rep("PD", 216)
 colnames(pd.stats) <- c("SampleID", "Stat", "Measure")
 mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.z)
 mpd.stats$Measure <- rep("MPD SES",216)
 colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
-# mntd.stats <- data.frame(mntd$SampleID, mntd$mntd.obs.z)
-# mntd.stats$Measure <- rep("MNTD SES", 226)
-# colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
 
 ## Let's combine those initial stats into one big dataframe
-#unweigh.stats <- rbind(pd.stats, mpd.stats, mntd.stats)
 unweigh.stats <- rbind(pd.stats, mpd.stats)
 
-## Now let's pull out the second stat in the mpd and mntd stats test
-## MDP test = p-value
-## MNTD test = p-value
-#mpd.stats <- data.frame(mpd$SampleID, mpd$mpd.obs.p)
-#mpd.stats$Measure <- rep("MPD p-value",226)
-#colnames(mpd.stats) <- c("SampleID", "Stat", "Measure")
-# mntd.stats <- data.frame(mntd$SampleID, mntd$mntd.obs.p)
-# mntd.stats$Measure <- rep("MNTD p-value", 226)
-# colnames(mntd.stats) <- c("SampleID", "Stat", "Measure")
-
 ## Making the final dataframe to use!
-# unweigh.stats <- rbind(unweigh.stats, mpd.stats, mntd.stats)
 unweigh.stats <- rbind(unweigh.stats, mpd.stats)
 
 ## Pull out sample data
@@ -2006,247 +1960,12 @@ sum.unweigh <- unweigh.stats %>%
 ## Combine the raw stats with the summarized stats
 final.unweigh <- left_join(unweigh.stats, sum.unweigh, 
                            by=c("Lake_Type", "Fraction", "Measure"))
-#final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
 final.unweigh$Measure <- factor(final.unweigh$Measure, levels=c("PD", "MPD SES", "MPD p-value"))
-
-
-##### UNWEIGH: PLOT IT! #####
-#png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
-# unweigh.plot <- ggplot(final.unweigh, aes(x = Fraction, y = Stat)) +
-#   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-#                 position=position_dodge(1)) +
-#   geom_point(data=final.unweigh, aes(x=Fraction, y=Median), pch=95, size=7) +
-#   geom_point(data=final.unweigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
-#   facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
-#   ylab("Mean") + ggtitle("Unweighted") +
-#   theme(axis.title.x = element_text(face="bold", size=10),
-#         axis.text.x = element_text(colour = "black", size=7),
-#         axis.text.y = element_text(colour = "black", size=10),
-#         axis.title.y = element_text(face="bold", size=10),
-#         plot.title = element_text(face="bold", size = 10),
-#         strip.text.x = element_text(size=10, face="bold"),
-#         strip.text.y = element_text(size=10, face="bold"),
-#         #legend.title = element_text(size=8, face="bold"),
-#         #legend.text = element_text(size = 8),
-#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         strip.background = element_blank(),
-#         legend.position="none")
-#dev.off()
-
-
-
-
-##### Weigh: Preparing to plot #####
-
-#mpd.weigh$SampleID <- row.names(mpd.weigh)
-# mntd.weigh$SampleID <- row.names(mntd.weigh)
-#pd.result.weigh$SampleID <- row.names(pd.result.weigh)
-  # Make sure all SampleID's match!
-
-# Let's pull out the first Stat in each of the 3 tests I ran
-# PD test = PD
-# MPD test = SES (Standardized Effect Size)
-# MNTD test = SES (Standardized Effect Size)
-#pd.w.stats <- data.frame(pd.result.weigh$SampleID, pd.result.weigh$PD)
-#pd.w.stats$Measure <- rep("PD", 226)
-#colnames(pd.w.stats) <- c("SampleID", "Stat", "Measure")
-#mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.z)
-#mpd.w.stats$Measure <- rep("MPD SES",226)
-#colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
-# mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.z)
-# mntd.w.stats$Measure <- rep("MNTD SES", 226)
-# colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
-
-## Let's combine those initial stats into one big dataframe
-# weigh.stats <- rbind(pd.w.stats, mpd.w.stats, mntd.w.stats)
-#weigh.stats <- rbind(pd.w.stats, mpd.w.stats)
-
-## Now let's pull out the second stat in the mpd and mntd stats test
-## MDP test = p-value
-## MNTD test = p-value
-#mpd.w.stats <- data.frame(mpd.weigh$SampleID, mpd.weigh$mpd.obs.p)
-#mpd.w.stats$Measure <- rep("MPD p-value",226)
-#colnames(mpd.w.stats) <- c("SampleID", "Stat", "Measure")
-# mntd.w.stats <- data.frame(mntd.weigh$SampleID, mntd.weigh$mntd.obs.p)
-# mntd.w.stats$Measure <- rep("MNTD p-value", 226)
-# colnames(mntd.w.stats) <- c("SampleID", "Stat", "Measure")
-
-## Making the final dataframe to use!
-# weigh.stats <- rbind(weigh.stats, mpd.w.stats, mntd.w.stats)
-#weigh.stats <- rbind(weigh.stats, mpd.w.stats)
-
-## Pull out sample data
-#s <- data.frame(sample_data(Ver))
-## Combine sample data with unweighted stats data
-#weigh.stats <- merge(weigh.stats, s, by="SampleID")
-
-
-
-## Group samples together by Lake_Type and Fraction
-# sum.weigh <- weigh.stats %>%
-#   group_by(Lake_Type, Fraction, Measure) %>%
-#   summarize(Mean = mean(Stat),
-#             SE = se(Stat),
-#             SD = sd(Stat),
-#             Median = median(Stat))
-
-## Combine the raw stats with the summarized stats
-#final.weigh <- left_join(weigh.stats, sum.weigh, by=c("Lake_Type", "Fraction", "Measure"))
-#final.weigh$Measure <- factor(final.weigh$Measure, levels=c("PD", "MPD SES", "MPD p-value", "MNTD SES", "MNTD p-value"))
-#final.weigh$Measure <- factor(final.weigh$Measure, levels = c("PD", "MPD SES", "MPD p-value"))
-
-
-##### WEIGH: PLOT IT! #####
-#png("alphadiv.png", width = 8.7, height = 13, units = "cm", res = 600)
-# weigh.plot <- ggplot(final.weigh, aes(x = Fraction, y = Stat)) +
-#   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-#                 position=position_dodge(1)) +
-#   geom_point(data=final.weigh, aes(x=Fraction, y=Median), pch=95, size=7) +
-#   geom_point(data=final.weigh, aes(x=Fraction, y=Mean), pch=126, size=7) +
-#   facet_grid(Measure ~ Lake_Type, scales = "free", space = "free_x") +
-#   ylab("Mean") + ggtitle("Weighted") +
-#   theme(axis.title.x = element_text(face="bold", size=10),
-#         axis.text.x = element_text(colour = "black", size=7),
-#         axis.text.y = element_text(colour = "black", size=10),
-#         axis.title.y = element_text(face="bold", size=10),
-#         plot.title = element_text(face="bold", size = 10),
-#         strip.text.x = element_text(size=10, face="bold"),
-#         strip.text.y = element_text(size=10, face="bold"),
-#         #legend.title = element_text(size=8, face="bold"),
-#         #legend.text = element_text(size = 8),
-#         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         strip.background = element_blank(),
-#         legend.position="none")
-#dev.off()
-
-
-##### COMBINE PLOTS #####
-# tiff("phylodiv.tiff", width = 17, height = 17, units = "cm", res = 600)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(1,2, widths=c(1,1), heights=c(1.5,1.5)))))
-# print(unweigh.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# print(weigh.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-# dev.off()
-
-
-
-
-
-
-
-
-##### Isolate PD #####
-#pd.all <- rbind(pd.stats, pd.w.stats)
-  # This has the unweighted PD
-#s <- data.frame(sample_data(Ver)) 
-pd.ready <- merge(pd.stats, s, by="SampleID")
-
-# Group samples together by Lake_Type and Fraction
-sum.pd <- pd.ready %>%
-  group_by(Lake_Type, Fraction, Measure) %>%
-  summarize(Mean = mean(Stat),
-            SE = se(Stat),
-            SD = sd(Stat),
-            Median = median(Stat))
-
-
-# Combine the raw stats with the summarized stats
-final.pd <- left_join (pd.ready, sum.pd, by=c("Lake_Type", "Fraction", "Measure"))
-
-### PLOT PD ONLY ###
-
-
-### Fraction ###
-ann.pd.frac <- data.frame(lab=c("", "+", ""),
-                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
-                                          levels = c("Laurentian", "Estuary",
-                                                     "Inland")),
-                       Fraction = factor(c("Particle", "Free", "Sediment")))
-
-pd.frac.plot <- ggplot(final.pd, aes(x=Lake_Type, y=Stat, fill=Fraction)) +
-  geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
-  xlab("Lake Type") + ylab("Mean") +
-  ggtitle("Faith's Index") +
-  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=8),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10, hjust=0.5),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
-        strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.pd.frac, aes(x = c(1,1.33,1), y=c(2.5, 2.5, 2.5), label = lab), size = 4, color="red")
-
-
-
-### Season ###
-ann.pd.seas <- data.frame(lab=c("+", " ", "", ""),
-                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland",
-                                            "Inland"),
-                                          levels = c("Laurentian", "Estuary",
-                                                     "Inland")),
-                       Season = factor(c("Spring", "Summer", "Fall", "Spring"),
-                                         levels = c("Spring", "Summer", "Fall")))
-    
-pd.seas.plot <- ggplot(final.pd, aes(x=Lake_Type, y=Stat, fill=Season)) +
-  geom_boxplot(position=position_dodge(1)) +
-  xlab("Lake Type") + ylab("Mean") +
-  ggtitle("Faith's Index") +
-  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=8),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10, hjust=0.5),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
-        strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.pd.seas, aes(x = c(1.33,1,0.67,1), y=c(2.5,2.5,2.5,2.5), label = lab), size = 4, color="red")
-
-
-##### Combine PD Plots #####
-tiff("pd.tiff", width = 17.8, height = 7, units = "cm", res = 600)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(1,2, widths=c(1,1), heights=c(0.5,5))))) 
-print(pd.frac.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-print(pd.seas.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-dev.off()
-
-
-### Plot using Mean & Median
-# png("pd.png", width = 8.7, height = 8, units = "cm", res = 600)
-# ggplot(final.pd, aes(x = Fraction, y = Stat)) +
-#   geom_errorbar(aes(ymin= Mean-SD, ymax=Mean+SD), color = "black", width=.1,
-#                 position=position_dodge(1)) +
-#   geom_point(data=final.pd, aes(x=Fraction, y=Median), pch=95, size=7) +
-#   geom_point(data=final.pd, aes(x=Fraction, y=Mean), pch=126, size=7) +
-#   facet_grid(~Lake_Type, scales = "free", space = "free_x") +
-#   ylab("Mean") + ggtitle("Faith's Index of Phylogenetic Diversity") +
-#   ylim(0,2.5) +
-#   theme(axis.title.x = element_text(face="bold", size=10),
-#         axis.text.x = element_text(colour = "black", size=7),
-#         axis.text.y = element_text(colour = "black", size=10),
-#         axis.title.y = element_text(face="bold", size=10),
-#         plot.title = element_text(face="bold", size = 10),
-#         strip.text.x = element_text(size=10, face="bold"),
-#         strip.text.y = element_text(size=10, face="bold"),
-#         #legend.title = element_text(size=8, face="bold"),
-#         #legend.text = element_text(size = 8),
-#         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-#         strip.background = element_blank(),
-#         legend.position="none")
-# dev.off()
 
 
 
 
 ##### ISOLATE MPD #####
-#mpd.all <- rbind(mpd.stats, mpd.w.stats)
-#s <- data.frame(sample_data(Ver))
 mpd.ready <- merge(mpd.stats, s, by="SampleID")
 
 
@@ -2340,172 +2059,6 @@ print(mpd.seas.plot, vp=viewport(layout.pos.row=1, layout.pos.col=3))
 dev.off()
 
 
-
-
-
-
-
-
-
-
-
-##### PD Kruskal-Wallis #####
-
-### Lake Type
-kruskal.test(formula = Stat ~ Lake_Type, data = final.pd)
-  # All Lake Types
-  # p-value = 0.1137
-kruskalmc(resp = Stat ~ Lake_Type, data = final.pd)
-  # No sig
-kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Laurentian")
-  # Estuary vs Inland
-  # p-value = 0.1192
-kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Estuary")
-  # Laurentian vs. Inland
-  # p-value = 0.07596
-kruskal.test(formula = Stat ~ Lake_Type, data = final.pd, subset = Lake_Type != "Inland")
-  # Laurentian vs. Estuary
-  # p-value = 0.7314
-
-
-
-### Fraction
-kruskal.test(formula = Stat ~ Fraction, data = final.pd)
-  # All Fraction
-  # p-value = 3.932e-09
-# Source
-kruskal.test(formula = Stat ~ Source, data=final.pd)
-  # All Source
-  # p-value = 4.269e-06
-kruskalmc(resp = Stat ~ Fraction, data = final.pd)
-  # P-F = nonsig
-  # Water vs. sed = sig
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Fraction != "Sediment")
-  # All Part vs Free
-  # p-value = 0.03951
-
-# Laurentian
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Laurentian")
-  # Fraction
-  # p-value = 0.09885
-
-# Estuary
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary")
-  # Fraction
-  # p-value = 1.308e-06
-kruskalmc(resp = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary")
-  # P-F = nonsig
-  # Water vs. sed = sig
-kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
-  # Source
-  # p-value = 1.374e-06
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Sediment")
-  # Free vs Part
-  # p-value = 0.02507
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Particle")
-  # Free vs Sediment
-  # p-value = 3.859e-06
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Estuary" & Fraction != "Free")
-  # Particle vs Sediment
-  # p-value = 1.999e-05
-
-# Inland
-kruskal.test(formula = Stat ~ Fraction, data = final.pd, subset = Lake_Type == "Inland")
-  # Fraction
-  # p-value = 0.4808
-
-
-
-### Season
-kruskal.test(formula = Stat ~ Season, data = final.pd)
-  # All Season
-  # p-value = 0.8721
-
-# Laurentian
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian")
-  # Season
-  # p-value = 3.045e-05
-kruskalmc(resp = Stat ~ Season, data = final.pd, subset = Lake_Type=="Laurentian")
-  # No diff?
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian" & Season != "Spring")
-  # Summer vs Fall
-  # p-value = 0.0001352
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian" & Season != "Summer")
-  # Spring vs Fall
-  # p-value = 8.607e-05
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Laurentian" & Season != "Fall")
-  # Spring vs Summer
-  # p-value = 0.3557
-
-# Estuary
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Estuary")
-  # Season
-  # p-value = 0.822
-
-# Inland
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland")
-  # Season
-  # p-value = 0.08661
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland" & Season != "Spring")
-  # Summer vs Fall
-  # p-value = 0.2661
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland" & Season != "Summer")
-  # Spring vs Fall
-  # p-value = 0.02478
-kruskal.test(formula = Stat ~ Season, data = final.pd, subset = Lake_Type == "Inland" & Season != "Fall")
-  # Spring vs Summer
-  # p-value = 0.08827
-
-
-
-### Depth
-kruskal.test(formula = Stat ~ Depth, data = final.pd)
-  # All Depth
-  # p-value = 2.332e-05
-kruskalmc(resp = Stat ~ Depth, data = final.pd)
-  # Sur-Sed, Bot-Sed = Sig
-  # Sur-Bot = nonsig
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Depth != "Sediment")
-  # All Sur vs Bottom
-  # p-value = 0.6679
-
-# Laurentian
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Laurentian")
-  # Depth
-  # p-value = 0.3743
-
-# Estuary
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary")
-  # Depth
-  # p-value = 7.646e-06
-kruskalmc(resp = Stat ~ Depth, data = final.pd, subset = Lake_Type=="Estuary")
-  # Sur-Sed, Bot-Sed = Sig
-  # Sur-Bot = Nonsig
-kruskal.test(formula = Stat ~ Source, data = final.pd, subset = Lake_Type == "Estuary")
-  # Source
-  # p-value = 1.374e-06
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Sediment")
-  # Sur vs Bottom
-  # p-value = 0.5619
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Surface")
-  # Bottom vs Sediment
-  # p-value = 1.153e-05
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Estuary" & Depth != "Bottom")
-  # Sur vs Sediment
-  # p-value = 6.985e-06
-
-# Inland
-kruskal.test(formula = Stat ~ Depth, data = final.pd, subset = Lake_Type == "Inland")
-  # Depth
-  # p-value = 0.5098
-
-##### Adjust P-Values #####
-pd.kw.vals <- data.frame(c(0.1137, 0.1192, 0.07596, 0.7314, 3.932e-09, 4.269e-06, 0.03951, 0.09885, 1.308e-06, 1.374e-06, 0.02507, 3.859e-06, 1.999e-05, 0.4808, 0.8721, 3.045e-05, 0.0001352, 8.607e-05, 0.3557, 0.822, 0.08661, 0.2661, 0.02478, 0.08827, 2.332e-05, 0.6679, 0.3743, 7.646e-06, 1.374e-06, 0.5619, 1.153e-05, 6.985e-06, 0.5098))
-colnames(pd.kw.vals) <- "pvals"
-pd.kw.vals$Lake <- c("All", "EI", "LI", "LE", "All", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "L", "L", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
-pd.kw.vals$Comp <- c("Lake", "EI", "LI", "LE", "Frac", "Source", "PF", "Frac", "Frac", "Source", "PF", "FS", "PS", "Frac", "Seas", "Seas", "SuFa", "SpFa", "Spsu", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "Source", "TB", "BS", "TS", "Depth")
-pd.kw.vals$Bonf <- p.adjust(pd.kw.vals$pvals, method="bonferroni")
-pd.kw.vals$BenH <- p.adjust(pd.kw.vals$pvals, method="BH")
 
 
 
