@@ -3351,13 +3351,13 @@ bcc.sampledf <- data.frame(sample_data(scaled))
 
 ##### Depth #####
 adonis(scaled.bray ~ Depth, data=bcc.sampledf)
-  ## R2 = 0.09531
+  ## R2 = 0.12446
   ## p-value = 0.001
 beta.tax = betadisper(d=scaled.bray, group=bcc.sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 18.0238 
+  # F = 16.52378 
 
 # Surface vs. Bottom
 adonis.scaled.tb <- subset_samples(physeq = scaled, Depth != "DCM")
@@ -3370,8 +3370,8 @@ adonis(adonis.scaled.tb.bray ~ Depth, data=adonis.scaled.tb)
 beta.tax = betadisper(d=adonis.scaled.tb.bray, group=adonis.scaled.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.003
-  # F = 9.793284
+  # p-value = 0.001
+  # F = 0.05024
 
 # Surface vs. Sediment
 adonis.scaled.ts <- subset_samples(physeq = scaled, Depth != "DCM")
@@ -3380,12 +3380,12 @@ adonis.scaled.ts.bray <- phyloseq::distance(physeq = adonis.scaled.ts, method = 
 adonis.scaled.ts <- data.frame(sample_data(adonis.scaled.ts))
 adonis(adonis.scaled.ts.bray ~ Depth, data=adonis.scaled.ts)
   # p-value = 0.001
-  # R2 = 0.14538
+  # R2 = 0.13178
 beta.tax = betadisper(d=adonis.scaled.ts.bray, group=adonis.scaled.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 19.84845 
+  # F = 20.53398
 
 # Bottom vs. Sediment
 adonis.scaled.bs <- subset_samples(physeq = scaled, Depth != "DCM")
@@ -3394,23 +3394,23 @@ adonis.scaled.bs.bray <- phyloseq::distance(physeq = adonis.scaled.bs, method = 
 adonis.scaled.bs <- data.frame(sample_data(adonis.scaled.bs))
 adonis(adonis.scaled.bs.bray ~ Depth, data=adonis.scaled.bs)
   # p-value = 0.001
-  # R2 = 0.12809
+  # R2 = 0.16174
 beta.tax = betadisper(d=adonis.scaled.bs.bray, group=adonis.scaled.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 31.08996 
+  # F = 29.07199
 
 
 ##### Lake_Type #####
 adonis(scaled.bray ~ Lake_Type, data=bcc.sampledf)
-  ## R2 = 0.09902
+  ## R2 = 0.10228
   ## p-value = 0.001
 beta.tax = betadisper(scaled.bray, bcc.sampledf$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  ## p-value = 0.003
-  ## F = 5.292305
+  ## p-value = 0.005
+  ## F = 5.282899  
 
 # Laurentian vs. Estuary
 adonis.scaled.le <- subset_samples(physeq = scaled, Lake_Type != "Inland")
@@ -3418,12 +3418,12 @@ adonis.scaled.le.bray <- phyloseq::distance(physeq = adonis.scaled.le, method = 
 adonis.scaled.le <- data.frame(sample_data(adonis.scaled.le))
 adonis(adonis.scaled.le.bray ~ Lake_Type, data=adonis.scaled.le)
   # p-value = 0.001
-  # R2 = 0.09594
+  # R2 = 0.11055
 beta.tax = betadisper(d=adonis.scaled.le.bray, group=adonis.scaled.le$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.082
-  # F = 3.061581
+  # p-value = 0.094
+  # F = 3.033354
 
 # Laurentian vs. Inland
 adonis.scaled.li <- subset_samples(physeq = Ver.rel, Lake_Type != "Estuary")
@@ -3435,7 +3435,7 @@ adonis(adonis.scaled.li.bray ~ Lake_Type, data=adonis.scaled.li)
 beta.tax = betadisper(d=adonis.scaled.li.bray, group=adonis.scaled.li$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.481
+  # p-value = 0.493
   # F = 0.4470369
 
 # Estuary vs. Inland
@@ -3444,12 +3444,12 @@ adonis.ei.bray <- phyloseq::distance(physeq = adonis.ei, method = "bray")
 adonis.ei <- data.frame(sample_data(adonis.ei))
 adonis(adonis.ei.bray ~ Lake_Type, data=adonis.ei)
   # p-value = 0.001
-  # R2 = 0.07186
+  # R2 = 0.06846
 beta.tax = betadisper(d=adonis.ei.bray, group=adonis.ei$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.763
-  # F = 0.09847275 
+  # p-value = 0.812
+  # F = 0.05272026 
 
 
 
@@ -3457,12 +3457,12 @@ p$tab
 ##### Fraction #####
 adonis(scaled.bray ~ Fraction, data=bcc.sampledf)
   ## p-value = 0.001
-  ## R2 = 0.21101
+  ## R2 = 0.21318
 beta.tax = betadisper(scaled.bray, bcc.sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   ## P-value = 0.001
-  ## F = 60.67025
+  ## F = 57.06025
 
 # Particle vs. Free
 adonis.scaled.pf <- subset_samples(physeq = scaled, Fraction != "Sediment")
@@ -3470,12 +3470,12 @@ adonis.scaled.pf.bray <- phyloseq::distance(physeq = adonis.scaled.pf, method = 
 adonis.scaled.pf <- data.frame(sample_data(adonis.scaled.pf))
 adonis(adonis.scaled.pf.bray ~ Fraction, data=adonis.scaled.pf)
   # p-value = 0.001
-  # R2 = 0.14928
+  # R2 = 0.14923
 beta.tax = betadisper(d=adonis.scaled.pf.bray, group=adonis.scaled.pf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 105.9411
+  # F = 98.37893
 
 # Particle vs. Sediment
 adonis.scaled.ps <- subset_samples(physeq = scaled, Fraction != "Free")
@@ -3483,12 +3483,12 @@ adonis.scaled.ps.bray <- phyloseq::distance(physeq = adonis.scaled.ps, method = 
 adonis.scaled.ps <- data.frame(sample_data(adonis.scaled.ps))
 adonis(adonis.scaled.ps.bray ~ Fraction, data=adonis.scaled.ps)
   # p-value = 0.001
-  # R2 = 0.12068
+  # R2 = 0.12488
 beta.tax = betadisper(d=adonis.scaled.ps.bray, group=adonis.scaled.ps$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 45.63044
+  # F = 45.03515
 
 # Free vs. Sediment
 adonis.scaled.fs <- subset_samples(physeq = scaled, Fraction != "Particle")
@@ -3496,23 +3496,23 @@ adonis.scaled.fs.bray <- phyloseq::distance(physeq = adonis.scaled.fs, method = 
 adonis.scaled.fs <- data.frame(sample_data(adonis.scaled.fs))
 adonis(adonis.scaled.fs.bray ~ Fraction, data=adonis.scaled.fs)
   # p-value = 0.001
-  # R2 = 0.22202
+  # R2 = 0.2272
 beta.tax = betadisper(d=adonis.scaled.fs.bray, group=adonis.scaled.fs$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.106
-  # F = 2.668599
+  # p-value = 0.085
+  # F = 2.889795
 
 
 ##### Season #####
 adonis(scaled.bray ~ Season, data=bcc.sampledf)
   ## p-value = 0.001
-  ## R2 = 0.0832
+  ## R2 = 0.08031
 beta.tax = betadisper(scaled.bray, bcc.sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  ## P-value = 0.025
-  ## F = 4.260132
+  ## P-value = 0.026
+  ## F = 3.831441
 
 # Spring vs. Summer
 adonis.scaled.ss <- subset_samples(physeq = scaled, Season != "Fall")
@@ -3520,12 +3520,12 @@ adonis.scaled.ss.bray <- phyloseq::distance(physeq = adonis.scaled.ss, method = 
 adonis.scaled.ss <- data.frame(sample_data(adonis.scaled.ss))
 adonis(adonis.scaled.ss.bray ~ Season, data=adonis.scaled.ss)
   # p-value = 0.001
-  # R2 = 0.07992
+  # R2 = 0.07771
 beta.tax = betadisper(d=adonis.scaled.ss.bray, group=adonis.scaled.ss$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 50.16244
+  # F = 47.36667  
 
 # Spring vs. Fall
 adonis.scaled.sf <- subset_samples(physeq = scaled, Season != "Summer")
@@ -3533,12 +3533,12 @@ adonis.scaled.sf.bray <- phyloseq::distance(physeq = adonis.scaled.sf, method = 
 adonis.scaled.sf <- data.frame(sample_data(adonis.scaled.sf))
 adonis(adonis.scaled.sf.bray ~ Season, data=adonis.scaled.sf)
   # p-value = 0.001
-  # R2 = 0.10023 
+  # R2 = 0.0946
 beta.tax = betadisper(d=adonis.scaled.sf.bray, group=adonis.scaled.sf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 30.20449 
+  # F = 26.21886  
 
 # Summer vs. Fall
 adonis.scaled.suf <- subset_samples(physeq = scaled, Season != "Spring")
@@ -3546,27 +3546,27 @@ adonis.scaled.suf.bray <- phyloseq::distance(physeq = adonis.scaled.suf, method 
 adonis.scaled.suf <- data.frame(sample_data(adonis.scaled.suf))
 adonis(adonis.scaled.suf.bray ~ Season, data=adonis.scaled.suf)
   # p-value = 0.001
-  # R2 = 0.02862
+  # R2 = 0.02709
 beta.tax = betadisper(d=adonis.scaled.suf.bray, group=adonis.scaled.suf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 32.70444
+  # F = 30.21236
 
 
 ##### Nested adonis #####
 adonis(scaled.bray ~ Lake_Type + Depth + Fraction + Season, data = bcc.sampledf)
-  ## Lake Type R2 = 0.09902
-  ## Depth R2 = 0.09387
-  ## Fraction R2 = 0.13366
-  ## Season = 0.06705
+  ## Lake Type R2 = 0.10228
+  ## Depth R2 = 0.11807
+  ## Fraction R2 = 0.13296
+  ## Season = 0.06093
   ## All p-values = 0.001
 
 # if you rearrange the variables (and include sed as part of frac)....
-  ## Fraction R2 = 0.21101
-  ## Lake_Type R2 = 0.09730
-  ## Season R2 = 0.06683
-  ## Depth R2 = 0.01848
+  ## Fraction R2 = 0.21318
+  ## Lake_Type R2 = 0.09883
+  ## Season R2 = 0.06407
+  ## Depth R2 = 0.03816
   ## All p-values = 0.001
 
 ```
