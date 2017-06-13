@@ -3935,268 +3935,8 @@ adonis(scaled.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
 
 
 
-### Procrustes (Ver vs Whole Community)
-```{r}
-# Calculate procrustes based on specified axes of Bray-Curtis PCoA
-# The 2nd object is rotated to fit the 1st object
-# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
-procrust <- procrustes(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2],
-                       scale=FALSE, symmetric=FALSE)
-  # Sum of squares = 9.923
-plot(procrust)
-plot(procrust,kind=2)
-# Test significance between your 2 configurations
-pro <- protest(scaled.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.4007
-  # correlation = 0.7741
-plot(pro)
-
-
-
-### Prepare to make a prettier Procrustes plot
-# http://stackoverflow.com/questions/30325739/ggplot2-for-procrustes-rotation-in-vegan
-# Create dataframe for plotting
-pro.df <- data.frame(rda1=procrust$Yrot[,1], rda2=procrust$Yrot[,2],
-                         xrda1=procrust$X[,1], xrda2=procrust$X[,2])
-  # rda1 = Verruco x coordinate
-  # rda2 = Verruco y coordinate
-  # xrda1 = Whole Community x coordinate
-  # xrda2 = Whole community y coordinate
-pro.df$Depth <- sample_data(Ver)$Depth
-pro.df$Lake_Type <- sample_data(Ver)$Lake_Type
-pro.df$Fraction <- sample_data(Ver)$Fraction
-pro.df$Season <- sample_data(Ver)$Season
-
-### Plot!
-# Basic
-ggplot(pro.df) + 
-  #geom_point(aes(x=rda1,y=rda2)) + 
-  geom_point(aes(x=xrda1, y=xrda2)) +
-  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
-               color="burlywood", alpha=0.5) + facet_grid(~Lake_Type)
-
-
-### Facet = Lake_Type, Color = Depth, Shape = Fraction
-ggplot(pro.df) +
-  #geom_point(aes(x=rda1, y=rda2, color=Depth, shape=Fraction)) +
-  geom_point(aes(x=xrda1, y=xrda2, color=Depth, shape=Fraction)) +
-  geom_segment(aes(x=rda2, y=rda2, xend=xrda1, yend=xrda2),
-               arrow=arrow(length=unit(0.2,"cm")), color="burlywood", alpha=0.5) +
-  facet_grid(~Lake_Type) +
-  scale_color_manual(values = c("indianred1","green3","mediumpurple2", "skyblue")) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=12),
-        axis.title.y = element_text(face="bold", size=12),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size=10),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 12, face="bold")) +
-  guides(color = guide_legend(order=1, override.aes=list(size=3)),
-         shape = guide_legend(order=2, override.aes=list(size=3)))
-
-
-### Facet = Lake_Type, Color = Fraction, Shape = Season
-
-# This is the annotation text for the plot below (plot)
-# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
-ann_text <- data.frame(lab=c("correlation=0.813","correlation=0.953","correlation=0.797"), Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),levels = c("Laurentian","Estuary","Inland")))
-
-plot <- ggplot(pro.df) +
-  #geom_point(aes(x=rda1, y=rda2, color=Fraction, shape=Season)) +
-  geom_point(size=1, aes(x=xrda1, y=xrda2, fill=Fraction, shape=Season), color="black") +
-  geom_segment(aes(x=rda2, y=rda2, xend=xrda1, yend=xrda2, color=Fraction),
-               arrow=arrow(length=unit(0.2,"cm")), alpha=0.4, show.legend=FALSE) +
-  facet_grid(~Lake_Type) +
-  theme(strip.text.x = element_text(size = 8)) +
-  scale_fill_manual(values = c("indianred1","skyblue","mediumpurple2")) +
-  scale_color_manual(values = c("indianred1","skyblue","mediumpurple2")) +
-  scale_shape_manual(values = c(21,24,22)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=10),
-        axis.title.y = element_text(face="bold", size=10),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 10, face="bold")) +
-  xlab("Axis.1") + ylab("Axis.2") + 
-  annotate("text", x= -0.25, y=0.38, label = "p-value=0.001", size=3,
-           colour="black") +
-  geom_text(data = ann_text,aes(label=lab), x=c(-0.21,-0.21,-0.21),
-            y=c(0.34,0.34,0.34), size=3) +
-  guides(color = F, shape = F, fill=F)
-  #guides(color = guide_legend(order=1, override.aes=list(size=2)),
-  #       shape = guide_legend(order=2, override.aes=list(size=2)))
-
-
-# The function below is to save a legend from a plot, that can then later be called upon and printed
-# To use the function, first save a plot as an object
-# Then perform the g_legend(plot) function to steal the legend
-# Go back to your plot and now remove the legend (guide)
- ##### Let's steal the legend 
-  g_legend <- function(a.gplot){
-    tmp <- ggplot_gtable(ggplot_build(a.gplot))
-    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-    legend <- tmp$grobs[[leg]]
-    return(legend)}
-  legend <- g_legend(plot)
-
-
-# png("procrustes.png", width = 17.8, height = 10, units = "cm", res = 600)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,0.9), heights=c(1)))))
-# print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
-# grid.draw(legend)
-# dev.off()
-
-  
-  
-  
-### Check Community with Verrucos removed
-
-# Remove Verrucos
-no.ver <- subset_taxa(scaled, Phylum != "Verrucomicrobia")
-  
-# Calculate bray-curtis dissimilarity
-no.ver.bray <- phyloseq::distance(physeq=no.ver, method="bray")
-
-# Perform PCoA ordination
-no.ver.pcoa <- ordinate(physeq = no.ver, method = "PCoA", distance="bray")
-
-procrust.no.ver <- procrustes(no.ver.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2],
-                              scale=F, symmetric=F)
-  # Sum of squares = 10.06
-pro.no.ver <- protest(no.ver.pcoa$vectors[,1:2], Ver.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.4105
-  # correlation = 0.7678
-
-```
-
-
-
 ### Lake Procrustes Analyses (Verruco vs. Whole Community)
 ```{r}
-##### Laurentian #####
-# Calculate procrustes based on specified axes of Bray-Curtis PCoA
-# The 2nd object is rotated to fit the 1st object
-# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
-procrust.lau <- procrustes(scaled.lau.pcoa$vectors[,1:2],
-                           Ver.lau.pcoa$vectors[,1:2], scale=FALSE, symmetric=FALSE)
-  # Sum of squares = 1.901
-plot(procrust.lau)
-plot(procrust.lau,kind=2)
-pro.lau <- protest(scaled.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3399
-  # correlation = 0.8125
-plot(pro.lau)
-
-# Create dataframe for plotting
-pro.lau.df <- data.frame(rda1=procrust.lau$Yrot[,1], rda2=procrust.lau$Yrot[,2],
-                         xrda1=procrust.lau$X[,1], xrda2=procrust.lau$X[,2])
-  # rda1 = Verruco x coordinate
-  # rda2 = Verruco y coordinate
-  # xrda1 = Whole Community x coordinate
-  # xrda2 = Whole community y coordinate
-pro.lau.df$Depth <- sample_data(Ver.lau)$Depth
-pro.lau.df$Lake_Type <- sample_data(Ver.lau)$Lake_Type
-pro.lau.df$Fraction <- sample_data(Ver.lau)$Fraction
-pro.lau.df$Season <- sample_data(Ver.lau)$Season
-
-### Plot!
-# Basic
-ggplot(pro.lau.df) + 
-  #geom_point(aes(x=rda1,y=rda2)) + 
-  geom_point(aes(x=xrda1, y=xrda2)) +
-  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
-               color="burlywood", alpha=0.5)
-
-
-
-
-##### Estuary #####
-# Calculate procrustes based on specified axes of Bray-Curtis PCoA
-# The 2nd object is rotated to fit the 1st object
-# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
-procrust.est <- procrustes(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Sum of squares = 1.05
-plot(procrust.est)
-plot(procrust.est,kind=2)
-pro.est <- protest(scaled.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.092233
-  # correlation = 0.9528
-plot(pro.est)
-
-# Create dataframe for plotting
-pro.est.df <- data.frame(rda1=procrust.est$Yrot[,1], rda2=procrust.est$Yrot[,2],
-                         xrda1=procrust.est$X[,1], xrda2=procrust.est$X[,2])
-  # rda1 = Verruco x coordinate
-  # rda2 = Verruco y coordinate
-  # xrda1 = Whole Community x coordinate
-  # xrda2 = Whole community y coordinate
-pro.est.df$Depth <- sample_data(Ver.est)$Depth
-pro.est.df$Lake_Type <- sample_data(Ver.est)$Lake_Type
-pro.est.df$Fraction <- sample_data(Ver.est)$Fraction
-pro.est.df$Season <- sample_data(Ver.est)$Season
-
-
-### Plot!
-# Basic
-ggplot(pro.est.df) + 
-  #geom_point(aes(x=rda1,y=rda2)) + 
-  geom_point(aes(x=xrda1, y=xrda2)) +
-  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
-               color="burlywood", alpha=0.5)
-
-
-
-##### Inland #####
-# Calculate procrustes based on specified axes of Bray-Curtis PCoA
-# The 2nd object is rotated to fit the 1st object
-# In this case, I'm rotating the Verruco ordination to fit the Whole Com ordination
-procrust.inl <- procrustes(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2], scale=FALSE,
-                       symmetric=FALSE)
-  # Sum of squares = 5.545
-plot(procrust.inl)
-plot(procrust.inl,kind=2)
-pro.inl <- protest(scaled.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
-  # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3649
-  # correlation = 0.7969
-plot(pro.inl)
-
-# Create dataframe for plotting
-pro.inl.df <- data.frame(rda1=procrust.inl$Yrot[,1], rda2=procrust.inl$Yrot[,2],
-                         xrda1=procrust.inl$X[,1], xrda2=procrust.inl$X[,2])
-  # rda1 = Verruco x coordinate
-  # rda2 = Verruco y coordinate
-  # xrda1 = Whole Community x coordinate
-  # xrda2 = Whole community y coordinate
-pro.inl.df$Depth <- sample_data(Ver.inl)$Depth
-pro.inl.df$Lake_Type <- sample_data(Ver.inl)$Lake_Type
-pro.inl.df$Fraction <- sample_data(Ver.inl)$Fraction
-pro.inl.df$Season <- sample_data(Ver.inl)$Season
-
-### Plot!
-# Basic
-ggplot(pro.inl.df) + 
-  #geom_point(aes(x=rda1,y=rda2)) + 
-  geom_point(aes(x=xrda1, y=xrda2)) +
-  geom_segment(aes(x=rda1, y=rda2, xend=xrda1, yend=xrda2), arrow=arrow(length=unit(0.2,"cm")),
-               color="burlywood", alpha=0.5)
-
-
-
-
-
 ########## Check Community w/ Verrucos Removed ##########
 
 ##### Laurentian #####
@@ -4212,11 +3952,11 @@ no.ver.lau.pcoa <- ordinate(physeq = no.ver.all.lau, method = "PCoA", distance="
 # Perform Procrustes 
 procrust.no.ver.lau <- procrustes(no.ver.lau.pcoa$vectors[,1:2], 
                                   Ver.lau.pcoa$vectors[,1:2], scale=F, symmetric=F)
-  # Sum of squares = 1.976
+  # Sum of squares = 2.065
 pro.no.ver.lau <- protest(no.ver.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3601
-  # correlation = 0.7999
+  # m12^2 (sum of squares) = 0.3668
+  # correlation = 0.7957
 
 
 ##### Estuary #####
@@ -4232,11 +3972,11 @@ no.ver.est.pcoa <- ordinate(physeq = no.ver.all.est, method = "PCoA", distance="
 # Perform Procrustes 
 procrust.no.ver.est <- procrustes(no.ver.est.pcoa$vectors[,1:2], 
                                   Ver.est.pcoa$vectors[,1:2], scale=F, symmetric=F)
-  # Sum of squares = 1.215
+  # Sum of squares = 0.8018
 pro.no.ver.est <- protest(no.ver.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.1144
-  # correlation = 0.9411
+  # m12^2 (sum of squares) = 0.0811
+  # correlation = 0.9586
 
 
 ##### Inland #####
@@ -4252,15 +3992,11 @@ no.ver.inl.pcoa <- ordinate(physeq = no.ver.all.inl, method = "PCoA", distance="
 # Perform Procrustes 
 procrust.no.ver.inl <- procrustes(no.ver.inl.pcoa$vectors[,1:2], 
                                   Ver.inl.pcoa$vectors[,1:2], scale=F, symmetric=F)
-  # Sum of squares = 5.801
+  # Sum of squares = 6.328
 pro.no.ver.inl <- protest(no.ver.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
   # p-value = 0.001
-  # m12^2 (sum of squares) = 0.3839
-  # correlation = 0.7849
-
-
-
-
+  # m12^2 (sum of squares) = 0.4054
+  # correlation = 0.7711
 
 ```
 
