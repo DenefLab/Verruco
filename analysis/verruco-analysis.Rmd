@@ -784,15 +784,6 @@ depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth))
 kruskalmc(resp = Relative_Abundance ~ Lake_Type, data = Ver.box)
   # Laur vs Est, Laur vs Inl = sig
   # Est vs Inl = nonsig
-kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Estuary")
-  # Laurentian vs Estuary
-  # p-value = 4.219e-8
-kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Laurentian" | Lake_Type=="Inland")
-  # Laurentian vs Inland
-  # p-value = 1.206e-10
-kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box, subset=Lake_Type=="Estuary" | Lake_Type=="Inland")
-  # Estuary vs Inland
-  # p-value = 0.8792
 
 
 ### Test Fraction  ###
@@ -805,15 +796,7 @@ kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box)
 kruskalmc(resp = Relative_Abundance ~ Fraction, data = Ver.box)
   # Part-Sed, Free-Sed = Sig
   # Part-Free = nonsig
-kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Sediment")
-  # All Free vs Part
-  # p-value = 0.1491
-kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Free")
-  # All Part vs Sed
-  # p-value = 0.0005459
-kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset = Fraction != "Particle")
-  # All Free vs Sed
-  # p-value = 0.0001081
+
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Laurentian")
@@ -827,15 +810,7 @@ kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_
 kruskalmc(resp = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary")
   # Part-Sed, Free-Sed = Sig
   # Part-Free = Nonsig
-kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
-  # Free vs Part
-  # p-value = 0.02291
-kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Free")
-  # Part vs Sed
-  # p-value = 3.859e-06
-kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Estuary" & Fraction != "Particle")
-  # Free vs Sed
-  # p-value = 0.000259
+
 
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Fraction, data = Ver.box, subset=Lake_Type=="Inland")
@@ -869,7 +844,6 @@ kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_
   # Season
   # p-value = 0.0009751
 kruskalmc(resp = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland")
-  # Nonsig
 kruskal.test(formula = Relative_Abundance ~ Season, data = Ver.box, subset=Lake_Type=="Inland" & Season != "Spring")
   # Summer vs Fall
   # p-value = 0.0005545
@@ -886,9 +860,6 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box)
   # p-value = 0.000829
 kruskalmc(resp = Relative_Abundance ~ Depth, data = Ver.box)
   # Water sig from sed
-kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset = Depth !="Sediment")
-  # All Sur vs Bot
-  # p-value = 0.8748
 
 # Laurentian
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Laurentian")
@@ -901,37 +872,11 @@ kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_T
   # p-value = 1.348e-05
 kruskalmc(resp = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary")
   # Water sig from sed
-kruskal.test(formula = Relative_Abundance ~ Source, data = Ver.box, subset=Lake_Type=="Estuary")
-  # Water vs Sediment
-  # p-value = 6.914e-06
-kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Source == "Water")
-  # Sur vs Bot
-  # p-value = 0.1037
-kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Surface")
-  # Bot vs Sed
-  # p-value = 9.896e-06
-kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Estuary" & Depth != "Bottom")
-  # Sur vs Sed
-  # p-value = 0.0001089
 
 # Inland
 kruskal.test(formula = Relative_Abundance ~ Depth, data = Ver.box, subset=Lake_Type=="Inland")
   # Depth
   # p-value = 0.02212
-
-
-##### Adjust P-Values #####
-pvals <- c(4.219e-8, 1.206e-10, 0.8792, 0.0003097, 0.0001692, 0.1491,
-           0.0005459, 0.0001081, 0.01748, 6.914e-06, 0.02291, 3.859e-06,
-           0.000259, 3.624e-05, 0.6103, 0.241, 0.2177, 0.0009751,
-           0.0005545, 0.0007583, 0.3826, 0.000829, 0.8748, 0.07562,
-           1.348e-05, 6.914e-06, 0.1037, 9.896e-06, 0.0001089, 0.02212)
-boxplot.kw.vals <- data.frame(pvals)
-boxplot.kw.vals$Lake <- c("LE", "LI", "EI", "All", "All", "All", "All", "All", "L", "E", "E", "E", "E", "I", "All", "L", "E", "I", "I", "I", "I", "All", "All", "L", "E", "E", "E", "E", "E", "I")
-boxplot.kw.vals$Comp <- c("Lake", "Lake", "Lake", "Frac", "Source", "PF", "PS", "FS", "Frac", "Source", "PF", "PS", "FS", "Frac", "Seas", "Seas", "Est", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "WS", "TB", "BS", "TS", "Depth")
-boxplot.kw.vals$Bonf <- p.adjust(boxplot.kw.vals$pvals, method="bonferroni")
-boxplot.kw.vals$BenH <- p.adjust(boxplot.kw.vals$pvals, method="BH")
-
 
 ```
 
