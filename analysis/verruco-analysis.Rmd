@@ -2659,7 +2659,7 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         plot.title = element_text(size = 9, face="bold")) +
-  annotate("text", x= -0.31, y=0.41, label = "B", fontface = "bold", size=5, colour="black") +
+  annotate("text", x= -0.62, y=-0.31, label = "B", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -3251,7 +3251,7 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         plot.title = element_text(size = 9, face="bold")) +
   scale_y_reverse() +
-  annotate("text", x= -0.26, y=-0.26, label = "E", fontface = "bold", size=5, colour="black") +
+  annotate("text", x= -0.63, y=-0.25, label = "E", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -3310,7 +3310,6 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
 
 ### Big PCoA Figure
 ```{r}
-dev.new()
 tiff("pcoa.tiff", width = 17.8, height = 11, units = "cm", res = 600)
 #pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
