@@ -136,16 +136,6 @@ scale_reads <- function(physeq,n){
 dupmerge.subset <- subset_samples(physeq = verr.dupmerge, SampleID != "Z14.051.P")
 dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.051.F")
 
-# The samples below are roughly <10k reads; however, removing or keeping them makes no significant difference in my downstream analyses so I chose to keep them
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.016.P")
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "MINE.P.514")
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.047.P")
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.DD")
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Z14.048.P")
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SN")
-#dupmerge.subset <- subset_samples(physeq = dupmerge.subset, SampleID != "Sp13.ED.MM110.SD")
-
-
 # Normalize our dataset!
 scaled.buoy <- scale_reads(dupmerge.subset,min(sample_sums(dupmerge.subset)))
   ### Scaled to 2,072 (min sample)
