@@ -274,7 +274,8 @@ kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.LM)
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
   # Musk vs. LM
   # p-value = 0.0596
-
+summary(Ver.box.LM[which(Ver.box.LM$Lake_Type == "Estuary"), 13])
+summary(Ver.box.LM[which(Ver.box.LM$Lake_Type == "Laurentian"), 13])
 
 
 
@@ -326,6 +327,8 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est.out)
   # p-value = 0.01431
 kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est.out)
   # No sig
+kruskal.test(formula = Relative_Abundance ~ Cruise, data = Ver.box.est.out)
+  # p-value = 0.01699
 
 
 ### Plot Comparisons ###
