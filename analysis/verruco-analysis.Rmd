@@ -252,7 +252,7 @@ ann_LM <- data.frame(lab=c(" ", "+"),
 Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance, 
                                            fill = Lake_Type)) +
   geom_boxplot(position=position_dodge(1)) +
-  ggtitle("Lake Michigan Cruise Samples") +
+  ggtitle("Laurentian Cruise Samples") +
   scale_fill_manual(values = c("salmon","turquoise3")) +
   theme(axis.title.x = element_text(face="bold", size=8),
         axis.text.x = element_text(angle=0, colour="black", size=6),
@@ -297,7 +297,7 @@ ann_est <- data.frame(lab=c("a", "a"),
 Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
                                             fill = Cruise)) +
   geom_boxplot(position=position_dodge(1)) + ylim(0,44) +
-  ggtitle("Muskegon Lake Samples") +
+  ggtitle("Estuary Samples") +
   scale_fill_manual(values = c("turquoise3","salmon")) +
   theme(axis.title.x = element_text(face="bold", size=8),
         axis.text.x = element_text(angle=0, colour="black", size=6),
