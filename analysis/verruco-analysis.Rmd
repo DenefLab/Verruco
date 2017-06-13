@@ -284,7 +284,7 @@ kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
 Ver.box.est <- Ver.box.buoy[which(Ver.box.buoy$Lake_Type == "Estuary"),]
 Ver.box.est <- Ver.box.est[which(Ver.box.est$Depth != "Sediment"),]
 Ver.box.est$Station <- ordered(Ver.box.est$Station, 
-                               levels = c("Inlet", "Bear", "Outlet", "Deep", "Buoy"))
+                               levels = c("Buoy","Inlet", "Bear", "Outlet", "Deep"))
 Ver.box.est$Cruise <- "Laurentian"
 Ver.box.est[which(Ver.box.est$Study == "Muskegon"), 14] <- "Estuary"
 Ver.box.est$Cruise <- ordered(Ver.box.est$Cruise, levels = c("Estuary", "Laurentian"))
