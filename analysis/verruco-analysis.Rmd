@@ -281,29 +281,14 @@ Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance,
 ### Kruskal-Wallis LM 2013 Samples ###
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM)
   # p-value = 0.004545
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM, 
-             subset=Station!="Buoy")
-  # Near vs. Far (AlL LM)
-  # p-value = 0.004086
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM,
-             subset=Station!="Shore")
-  # Buoy vs. Far (Muskegon vs. LM)
-  # p-value = 0.01045
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM,
-             subset=Station!="Far")
-  # Buoy vs. Near (Muskegon vs. LM)
-  # p-value = 0.3881
+kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.LM)
+  # Sig = Buoy-Far, Shore-Far
+  # Nonsig = Buoy-Shore
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
   # Musk vs. LM
   # p-value = 0.0596
 
-Ver.box.LM.pval <- data.frame(c(0.004545, 0.004086, 0.01045, 0.3881, 0.0596))
-colnames(Ver.box.LM.pval) <- "pvals"
-Ver.box.LM.pval$Comp <- c("All.Station", "Shore.Far", "Buoy.Far", "Buoy.Shore", "Lake.Type")
-Ver.box.LM.pval$Bonf <- p.adjust(Ver.box.LM.pval$pvals, method="bonferroni")
-Ver.box.LM.pval$BenH <- p.adjust(Ver.box.LM.pval$pvals, method="BH")
-# Sig = All.Station, Shore.Far, Buoy.Far
-# Nonsig = Buoy.Shore, Lake.Type
+
 
 
 
@@ -319,7 +304,7 @@ Ver.box.est$Station <- ordered(Ver.box.est$Station,
 Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
                                             fill = Study)) +
   geom_boxplot(position=position_dodge(1)) +
-  ggtitle("Lake Michigan Cruise vs. Muskegon Lake") +
+  ggtitle("Muskegon Lake Samples") +
   theme(axis.title.x = element_text(face="bold", size=8),
         axis.text.x = element_text(angle=0, colour="black", size=6),
         axis.text.y = element_text(colour="black", size=6),
@@ -335,66 +320,25 @@ Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est)
   # All Stations
   # p-value = 0.008687
-mc.test <- kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est)
-  # Only sig = Buoy-Bottom
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset=Station!="Buoy")
-  # All minus Buoy
-  # p-value = 0.03217
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset=Station!="Bear")
-  # All minus Bear  
-  # p-value = 0.00492
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset=Station!="Deep")
-  # All minus Deep
-  # p-value = 0.03475
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset=Station!="Inlet")
-  # All minus Inlet
-  # p-value = 0.01844
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset=Station!="Outlet")
-  # All minus Outlet
-  # p-value = 0.01521
+kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est)
+  # Only sig = Buoy-Deep
 
-
-## Pairwise Comparisons ##
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station == c("Buoy", "Inlet"))
-  # Buoy vs. Inlet
-  # p-value = 0.3613
-
-test.buoy <- which(Ver.box.est$Station == "Buoy")
-test.out <- which(Ver.box.est$Station == "Outlet")
-test.df <- Ver.box.est[c(test.buoy, test.out),]
-test.pair <- kruskal.test(formula = Relative_Abundance ~ Station, data = test.df)
-
-test <- kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station != c("Inlet", "Bear", "Bottom"))
-
-test2 <- kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station == c("Buoy", "Outlet"))
-  # Buoy vs. Outlet
-  # p-value = 0.6242
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station == c("Buoy", "Outlet"))
-  # Buoy vs. Outlet
-  # p-value = 0.1003
-kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est,
-             subset = Station == c("Buoy", "Deep"))
-  # Buoy vs. Deep
-  # p-value = 0.1441
-
+# There's an outlier in Deep where Verruco rel abund > 40%
+# Test when removing outlier
+Ver.box.est.out <- Ver.box.est[-which(Ver.box.est$Relative_Abundance > 40),]
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est.out)
+  # All Stations
+  # p-value = 0.01431
+kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est.out)
+  # No sig
 
 
 ### Plot Comparisons ###
-png("LM.comp.png", width = 23, height = 5, units = "cm", res = 500)
+tiff("LM.comp.tiff", width = 15, height = 5, units = "cm", res = 600)
 grid.newpage()
-pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
+pushViewport(viewport(layout=(grid.layout(1,2, widths=c(1,1), heights=c(1,1)))))
 print(Ver.box.LM.plot1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-print(Ver.box.LM.plot2, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-print(Ver.box.est.plot, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+print(Ver.box.est.plot, vp=viewport(layout.pos.row=1, layout.pos.col=2))
 dev.off()
 
 
