@@ -17,7 +17,7 @@
     - *VerrucoData.RData*: RData object created by `initial_processing/verruco-import.R`.
 2. **figures:** Manuscript figures created by `analysis/verruco-analysis.Rmd`
 3. **make_tree:** Files used to create IToL tree (an organized version of **analysis/tree_files**)
-4. **mothur_output** Raw output files from mothur pipeline
+4. **mothur_output:** Raw output files from mothur pipeline
 5. **raw_reads:** Original fastq files
 6. **tables:** Excel files of manuscript tables
 
