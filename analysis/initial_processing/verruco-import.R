@@ -4,9 +4,9 @@ library(dplyr)
 #setwd("~/git_repos/Verruco/analysis/")
 
 # files
-sharedfile = "verruco.shared"
-taxfile = "verruco.cons.taxonomy"
-mapfile = "verruco_metadata_duplicates.csv"
+sharedfile = "/initial_processing/mothur_output/verruco.shared"
+taxfile = "/initial_processing/mothur_output/verruco.cons.taxonomy"
+mapfile = "/initial_processing/verruco_metadata_duplicates.csv"
 
 # Import mothur data
 mothurdata = import_mothur(
