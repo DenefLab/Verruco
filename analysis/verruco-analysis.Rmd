@@ -4321,7 +4321,7 @@ zero <- fitDiscrete(phy.Lambda0, sig.depth)
 d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
 p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
 p.lambda
-  # p-value = 0.372226
+  # p-value = 0.1608328
 
 
 
@@ -4340,7 +4340,7 @@ zero <- fitDiscrete(phy.Lambda0, sig.lake)
 d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
 p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
 p.lambda
-  # p-value = 0.0286439
+  # p-value = 0.02747234
 
 
 # Pull out only OTUs with a Fraction preference
@@ -4358,7 +4358,7 @@ zero <- fitDiscrete(phy.Lambda0, sig.frac)
 d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
 p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
 p.lambda
-  # p-value = 7.514368e-11
+  # p-value = 4.751642e-10
 
 
 
@@ -4377,7 +4377,7 @@ zero <- fitDiscrete(phy.Lambda0, sig.season)
 d.lambda=2*(optimal$opt$lnL-zero$opt$lnL)
 p.lambda <- pchisq(d.lambda, 1, lower.tail=F)
 p.lambda
-  # p-value = 2.492829e-05
+  # p-value = 9.164478e-05
 
 ##### Lake Type, Fraction, & Season have significant phylogenetic signals
 ##### Depth does not have significant phylogenetic signals
