@@ -4143,6 +4143,9 @@ Lake_Type.split[5,] <- paste(Lake_Type.split[2,], Lake_Type.split[1,], Lake_Type
 
 ### Save our file!
 write.csv(Lake_Type.split[5,], file="Ecology_Otu_sig", row.names=FALSE, quote=FALSE)
+  # To-Do outside of R:
+        # Delete first row (OTU names)
+        # Delete all spaces
 ```
 
 ### Create updated phyloseq object with EcoID
@@ -4236,6 +4239,9 @@ color.all$Class <- all$Class
 color.all$color <- color.id(color.all$Class)
 color.all$label <- paste(color.all$all.Species,"range",color.all$color,color.all$Class)
 write.csv(color.all$label,file="sig.ver.color",row.names=FALSE,quote=FALSE)
+  # To-Do outside of R:
+        # Delete first row ("x")
+        # Replace spaces with ","
 
 ### Create IToL ECOID Labels
 ecoid.all <- data.frame(all$Species)
@@ -4251,6 +4257,10 @@ ecoid.all$season.label <- season.itol
 ecoid.all$itol.label <- paste(ecoid.all$all.Species, ecoid.all$depth.label, ecoid.all$Lake_Type.label,
                               ecoid.all$fraction.label, ecoid.all$season.label)
 write.csv(ecoid.all$itol.label,"EcoID.IToL.label.sig", row.names=FALSE, quote=FALSE)
+  # To-Do outside of R:
+        # Delete first row ("x")
+        # Replace spaces with ","
+        # Copy and paste into ../make_tree/itol_files/eco.shape.sig.txt
 ```
 
 
