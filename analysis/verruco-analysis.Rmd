@@ -4140,7 +4140,7 @@ cnet <- consensusNet(bs)
 
 ### Which nodes have a bootstrap value of < 50
 length(which(bs.tre$node.label < 50))
-  # 57 nodes
+  # 61 nodes
 
 ### Export tree with bootstrap values as node labels
 #write.tree(bs.tre, "tree_files/bootstrap.tre")
@@ -4168,6 +4168,8 @@ for (i in 1:125){
 # Write new tip names into csv file
 # I have to manually edit out the unclassified
 # Change ";" to "--- " (IToL doesn't recognize ";")
+# Leave in ""
+# Any OTUs that are completely unclassified, replace with _
 #write.csv(tax.name$Tip_Name, "tree_files/tip_name", row.names = F)
 
 # Read in the final tip names
