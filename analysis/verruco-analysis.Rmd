@@ -260,6 +260,15 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM)
 kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.LM)
   # Sig = Buoy-Far, Shore-Far
   # Nonsig = Buoy-Shore
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM, subset = Station != "Far")
+  # Buoy vs. Shore
+  # p-value = 0.3881
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM, subset = Station != "Shore")
+  # Buoy vs. Far
+  # p-value = 0.01045
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM, subset = Station != "Buoy")
+  # Far vs. Shore
+  # p-value = 0.004086
 kruskal.test(formula = Relative_Abundance ~ Lake_Type, data = Ver.box.LM)
   # Musk vs. LM
   # p-value = 0.0596
@@ -307,6 +316,10 @@ kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est)
   # p-value = 0.008687
 kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est)
   # Only sig = Buoy-Deep
+kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.est, subset = Station== "Buoy" | Station == "Deep")
+  # Buoy vs. Deep
+  # p-value = 0.006862
+
 
 # There's an outlier in Deep where Verruco rel abund > 40%
 # Test when removing outlier
@@ -318,6 +331,18 @@ kruskalmc(resp = Relative_Abundance ~ Station, data = Ver.box.est.out)
   # No sig
 kruskal.test(formula = Relative_Abundance ~ Cruise, data = Ver.box.est.out)
   # p-value = 0.01699
+
+
+
+### Adjust pvals ###
+pvals <- c(0.004545, 0.3881, 0.01045, 0.004086, 0.0596, 0.008687, 0.006862, 0.01431, 0.01699)
+comp.kw.vals <- data.frame(pvals)
+comp.kw.vals$Lake <- c(rep("LM",5), rep("Est",4))
+comp.kw.vals$Comp <- c("All", "BS", "BF", "SF", "LM vs Est", "All", "BD", "All (out)", "All (Cruise)")
+comp.kw.vals$Bonf <- p.adjust(comp.kw.vals$pvals, method="bonferroni")
+comp.kw.vals$BenH <- p.adjust(comp.kw.vals$pvals, method="BH")
+
+
 
 
 ### Plot Comparisons ###
