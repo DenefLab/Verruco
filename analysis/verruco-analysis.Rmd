@@ -2034,7 +2034,7 @@ mpd.kw.vals$BenH <- p.adjust(mpd.kw.vals$pvals, method="BH")
 ```
 
 
-### PCoA (Bray-Curtis)
+### Ver PCoA (Bray-Curtis)
 ```{r}
 # Calculate bray-curtis dissimilarity from phyloseq object
 Ver.bray <- phyloseq::distance(physeq = Ver.rel, method = "bray")
@@ -2304,7 +2304,7 @@ Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold")) +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
   annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE)
 # Particle = fill, Free = empty
@@ -2341,7 +2341,7 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold")) +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
   annotate("text", x= -0.62, y=-0.31, label = "B", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
@@ -2389,7 +2389,7 @@ Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold")) +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
   annotate("text", x= -0.46, y=0.66, label = "C", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 
@@ -2762,33 +2762,37 @@ adonis(Ver.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
 
 
 
-### Whole Com PCoA
+### Create Non-Ver Object
+```{r}
+nonver <- subset_taxa(scaled, Phylum != "Verrucomicrobia")
+```
+### Non-Ver PCoA
 ```{r}
 # Calculate bray-curtis dissimilarity
-scaled.bray <- phyloseq::distance(physeq=scaled, method="bray")
+nonver.bray <- phyloseq::distance(physeq=nonver, method="bray")
 
 # Perform PCoA ordination
-scaled.pcoa <- ordinate(physeq = scaled, method = "PCoA", distance="bray")
+nonver.pcoa <- ordinate(physeq = nonver, method = "PCoA", distance="bray")
 ```
 
 
 
 
-### Whole Com Lake PCoA
+### Non-Ver Lake PCoA
 ```{r}
 ### Laurentian ###
 
 # Pull out Laurentian samples
-scaled.lau <- subset_samples(scaled, Lake_Type == "Laurentian")
+nonver.lau <- subset_samples(nonver, Lake_Type == "Laurentian")
 
 # Calculate bray-curtis dissimilarity
-scaled.lau.bray <- phyloseq::distance(physeq = scaled.lau, method = "bray")
+nonver.lau.bray <- phyloseq::distance(physeq = nonver.lau, method = "bray")
 
 # Perform PCoA ordination
-scaled.lau.pcoa <- ordinate(physeq = scaled.lau, method = "PCoA", distance = "bray")
+nonver.lau.pcoa <- ordinate(physeq = nonver.lau, method = "PCoA", distance = "bray")
 
 ### Plot
-scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.pcoa, axes = c(1, 2),
+nonver.lau.ord <- plot_ordination(physeq = nonver.lau, ordination = nonver.lau.pcoa, axes = c(1, 2),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
@@ -2796,7 +2800,8 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
   scale_shape_manual(values = c(21, 24, 22)) +
   scale_fill_discrete(na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
-  #scale_y_reverse() + 
+  #scale_y_reverse() +
+  scale_x_reverse() +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
         axis.title.x = element_text(face="bold", size=9),
@@ -2805,9 +2810,8 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold")) +
-  scale_y_reverse() + scale_x_reverse() +
-  annotate("text", x= 0.42, y=-0.44, label = "D", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
+  annotate("text", x= 0.42, y=0.44, label = "D", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 # Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25
 #        You also can't set colors manually
@@ -2816,16 +2820,16 @@ scaled.lau.ord <- plot_ordination(physeq = scaled.lau, ordination = scaled.lau.p
 ### Estuary ###
 
 # Pull out Estuary samples
-scaled.est <- subset_samples(scaled, Lake_Type == "Estuary")
+nonver.est <- subset_samples(nonver, Lake_Type == "Estuary")
 
 # Calculate bray-curtis dissimilarity
-scaled.est.bray <- phyloseq::distance(physeq = scaled.est, method = "bray")
+nonver.est.bray <- phyloseq::distance(physeq = nonver.est, method = "bray")
 
 # Perform PCoA ordination
-scaled.est.pcoa <- ordinate(physeq = scaled.est, method = "PCoA", distance = "bray")
+nonver.est.pcoa <- ordinate(physeq = nonver.est, method = "PCoA", distance = "bray")
   
 ### Plot
-scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.pcoa, axes = c(1, 2),
+nonver.est.ord <- plot_ordination(physeq = nonver.est, ordination = nonver.est.pcoa, axes = c(1, 2),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
@@ -2841,9 +2845,9 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold")) +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
   scale_y_reverse() +
-  annotate("text", x= -0.63, y=-0.25, label = "E", fontface = "bold", size=5, colour="black") +
+  annotate("text", x= -0.63, y=-0.23, label = "E", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 
 
@@ -2853,16 +2857,16 @@ scaled.est.ord <- plot_ordination(physeq = scaled.est, ordination = scaled.est.p
 ### Inland ###
 
 # Pull out Inland samples
-scaled.inl <- subset_samples(scaled, Lake_Type == "Inland")
+nonver.inl <- subset_samples(nonver, Lake_Type == "Inland")
 
 # Calculate bray-curtis dissimilarity
-scaled.inl.bray <- phyloseq::distance(physeq = scaled.inl, method = "bray")
+nonver.inl.bray <- phyloseq::distance(physeq = nonver.inl, method = "bray")
 
 # Perform PCoA ordination
-scaled.inl.pcoa <- ordinate(physeq = scaled.inl, method = "PCoA", distance = "bray")
+nonver.inl.pcoa <- ordinate(physeq = nonver.inl, method = "PCoA", distance = "bray")
 
 ### Plot
-scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.pcoa, axes = c(1, 2),
+nonver.inl.ord <- plot_ordination(physeq = nonver.inl, ordination = nonver.inl.pcoa, axes = c(1, 2),
                 title= "Bray-Curtis Dissimilarity") + 
   geom_point(size=2, aes(color = Season, shape = Depth,
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
@@ -2870,6 +2874,7 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
   scale_shape_manual(values = c(21, 24, 22)) +
   scale_fill_discrete(na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  scale_y_reverse() + scale_x_reverse() +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
         axis.title.x = element_text(face="bold", size=9),
@@ -2878,8 +2883,8 @@ scaled.inl.ord <- plot_ordination(physeq = scaled.inl, ordination = scaled.inl.p
         legend.text = element_text(size=8),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold")) +
-  annotate("text", x= -0.37, y=0.55, label = "F", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
+  annotate("text", x= 0.37, y=-0.55, label = "F", fontface = "bold", size=5, colour="black") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 ```
 
@@ -2893,111 +2898,111 @@ pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,8), heights
 grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=10,fontface="bold"))
 grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=10,fontface="bold"))
 grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=10,fontface="bold"))
-grid.text("Verrucomicrobial Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
-grid.text("Whole Bacterial Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Non-Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
 print(Ver.lau.ord, vp=viewport(layout.pos.row=2, layout.pos.col=2))
 print(Ver.est.ord, vp=viewport(layout.pos.row=2, layout.pos.col=3))
 print(Ver.inl.ord, vp=viewport(layout.pos.row=2, layout.pos.col=4))
-print(scaled.lau.ord, vp=viewport(layout.pos.row=3, layout.pos.col=2))
-print(scaled.est.ord, vp=viewport(layout.pos.row=3, layout.pos.col=3))
-print(scaled.inl.ord, vp=viewport(layout.pos.row=3, layout.pos.col=4))
+print(nonver.lau.ord, vp=viewport(layout.pos.row=3, layout.pos.col=2))
+print(nonver.est.ord, vp=viewport(layout.pos.row=3, layout.pos.col=3))
+print(nonver.inl.ord, vp=viewport(layout.pos.row=3, layout.pos.col=4))
 legend$vp <- viewport(layout.pos.row = 1:3, layout.pos.col = 5)
 grid.draw(legend)
 dev.off()
 ```
 
 
-### Whole Com PERMANOVA
+### Non-Ver PERMANOVA
 ```{r}
-bcc.sampledf <- data.frame(sample_data(scaled))
+bcc.sampledf <- data.frame(sample_data(nonver))
 
 ##### Depth #####
-adonis(scaled.bray ~ Depth, data=bcc.sampledf)
-  ## R2 = 0.12446
+adonis(nonver.bray ~ Depth, data=bcc.sampledf)
+  ## R2 = 0.12722
   ## p-value = 0.001
-beta.tax = betadisper(d=scaled.bray, group=bcc.sampledf$Depth)
+beta.tax = betadisper(d=nonver.bray, group=bcc.sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 16.52378 
+  # F = 14.24141
 
 # Surface vs. Bottom
-adonis.scaled.tb <- subset_samples(physeq = scaled, Depth != "DCM")
-adonis.scaled.tb <- subset_samples(physeq = adonis.scaled.tb, Depth != "Sediment")
-adonis.scaled.tb.bray <- phyloseq::distance(physeq = adonis.scaled.tb, method = "bray")
-adonis.scaled.tb <- data.frame(sample_data(adonis.scaled.tb))
-adonis(adonis.scaled.tb.bray ~ Depth, data=adonis.scaled.tb)
+adonis.nonver.tb <- subset_samples(physeq = nonver, Depth != "DCM")
+adonis.nonver.tb <- subset_samples(physeq = adonis.nonver.tb, Depth != "Sediment")
+adonis.nonver.tb.bray <- phyloseq::distance(physeq = adonis.nonver.tb, method = "bray")
+adonis.nonver.tb <- data.frame(sample_data(adonis.nonver.tb))
+adonis(adonis.nonver.tb.bray ~ Depth, data=adonis.nonver.tb)
   # p-value = 0.001
-  # R2 = 0.05024
-beta.tax = betadisper(d=adonis.scaled.tb.bray, group=adonis.scaled.tb$Depth)
+  # R2 = 0.0525
+beta.tax = betadisper(d=adonis.nonver.tb.bray, group=adonis.nonver.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.006
-  # F = 8.154884 
+  # p-value = 0.007
+  # F = 8.148883 
 
 # Surface vs. Sediment
-adonis.scaled.ts <- subset_samples(physeq = scaled, Depth != "DCM")
-adonis.scaled.ts <- subset_samples(physeq = adonis.scaled.ts, Depth != "Bottom")
-adonis.scaled.ts.bray <- phyloseq::distance(physeq = adonis.scaled.ts, method = "bray")
-adonis.scaled.ts <- data.frame(sample_data(adonis.scaled.ts))
-adonis(adonis.scaled.ts.bray ~ Depth, data=adonis.scaled.ts)
+adonis.nonver.ts <- subset_samples(physeq = nonver, Depth != "DCM")
+adonis.nonver.ts <- subset_samples(physeq = adonis.nonver.ts, Depth != "Bottom")
+adonis.nonver.ts.bray <- phyloseq::distance(physeq = adonis.nonver.ts, method = "bray")
+adonis.nonver.ts <- data.frame(sample_data(adonis.nonver.ts))
+adonis(adonis.nonver.ts.bray ~ Depth, data=adonis.nonver.ts)
   # p-value = 0.001
-  # R2 = 0.13178
-beta.tax = betadisper(d=adonis.scaled.ts.bray, group=adonis.scaled.ts$Depth)
+  # R2 = 0.13377
+beta.tax = betadisper(d=adonis.nonver.ts.bray, group=adonis.nonver.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 20.53398
+  # F = 16.09327
 
 # Bottom vs. Sediment
-adonis.scaled.bs <- subset_samples(physeq = scaled, Depth != "DCM")
-adonis.scaled.bs <- subset_samples(physeq = adonis.scaled.bs, Depth != "Surface")
-adonis.scaled.bs.bray <- phyloseq::distance(physeq = adonis.scaled.bs, method = "bray")
-adonis.scaled.bs <- data.frame(sample_data(adonis.scaled.bs))
-adonis(adonis.scaled.bs.bray ~ Depth, data=adonis.scaled.bs)
+adonis.nonver.bs <- subset_samples(physeq = nonver, Depth != "DCM")
+adonis.nonver.bs <- subset_samples(physeq = adonis.nonver.bs, Depth != "Surface")
+adonis.nonver.bs.bray <- phyloseq::distance(physeq = adonis.nonver.bs, method = "bray")
+adonis.nonver.bs <- data.frame(sample_data(adonis.nonver.bs))
+adonis(adonis.nonver.bs.bray ~ Depth, data=adonis.nonver.bs)
   # p-value = 0.001
-  # R2 = 0.16174
-beta.tax = betadisper(d=adonis.scaled.bs.bray, group=adonis.scaled.bs$Depth)
+  # R2 = 0.16272
+beta.tax = betadisper(d=adonis.nonver.bs.bray, group=adonis.nonver.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 29.07199
+  # F = 25.42507 
 
 
 ##### Lake_Type #####
-adonis(scaled.bray ~ Lake_Type, data=bcc.sampledf)
-  ## R2 = 0.10228
+adonis(nonver.bray ~ Lake_Type, data=bcc.sampledf)
+  ## R2 = 0.10028
   ## p-value = 0.001
-beta.tax = betadisper(scaled.bray, bcc.sampledf$Lake_Type)
+beta.tax = betadisper(nonver.bray, bcc.sampledf$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
   ## p-value = 0.005
   ## F = 5.282899  
 
 # Laurentian vs. Estuary
-adonis.scaled.le <- subset_samples(physeq = scaled, Lake_Type != "Inland")
-adonis.scaled.le.bray <- phyloseq::distance(physeq = adonis.scaled.le, method = "bray")
-adonis.scaled.le <- data.frame(sample_data(adonis.scaled.le))
-adonis(adonis.scaled.le.bray ~ Lake_Type, data=adonis.scaled.le)
+adonis.nonver.le <- subset_samples(physeq = nonver, Lake_Type != "Inland")
+adonis.nonver.le.bray <- phyloseq::distance(physeq = adonis.nonver.le, method = "bray")
+adonis.nonver.le <- data.frame(sample_data(adonis.nonver.le))
+adonis(adonis.nonver.le.bray ~ Lake_Type, data=adonis.nonver.le)
   # p-value = 0.001
-  # R2 = 0.11055
-beta.tax = betadisper(d=adonis.scaled.le.bray, group=adonis.scaled.le$Lake_Type)
+  # R2 = 0.10735 
+beta.tax = betadisper(d=adonis.nonver.le.bray, group=adonis.nonver.le$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.094
-  # F = 3.033354
+  # p-value = 0.116
+  # F = 2.792295
 
 # Laurentian vs. Inland
-adonis.scaled.li <- subset_samples(physeq = Ver.rel, Lake_Type != "Estuary")
-adonis.scaled.li.bray <- phyloseq::distance(physeq = adonis.scaled.li, method = "bray")
-adonis.scaled.li <- data.frame(sample_data(adonis.scaled.li))
-adonis(adonis.scaled.li.bray ~ Lake_Type, data=adonis.scaled.li)
+adonis.nonver.li <- subset_samples(physeq = Ver.rel, Lake_Type != "Estuary")
+adonis.nonver.li.bray <- phyloseq::distance(physeq = adonis.nonver.li, method = "bray")
+adonis.nonver.li <- data.frame(sample_data(adonis.nonver.li))
+adonis(adonis.nonver.li.bray ~ Lake_Type, data=adonis.nonver.li)
   # p-value = 0.001
   # R2 = 0.08015
-beta.tax = betadisper(d=adonis.scaled.li.bray, group=adonis.scaled.li$Lake_Type)
+beta.tax = betadisper(d=adonis.nonver.li.bray, group=adonis.nonver.li$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.493
+  # p-value = 0.512
   # F = 0.4470369
 
 # Estuary vs. Inland
@@ -3010,552 +3015,535 @@ adonis(adonis.ei.bray ~ Lake_Type, data=adonis.ei)
 beta.tax = betadisper(d=adonis.ei.bray, group=adonis.ei$Lake_Type)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.812
-  # F = 0.05272026 
+  # p-value = 0.795
+  # F = 0.05272026
 
 
 
 
 ##### Fraction #####
-adonis(scaled.bray ~ Fraction, data=bcc.sampledf)
+adonis(nonver.bray ~ Fraction, data=bcc.sampledf)
   ## p-value = 0.001
-  ## R2 = 0.21318
-beta.tax = betadisper(scaled.bray, bcc.sampledf$Fraction)
+  ## R2 = 0.21922
+beta.tax = betadisper(nonver.bray, bcc.sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   ## P-value = 0.001
-  ## F = 57.06025
+  ## F = 59.27629
 
 # Particle vs. Free
-adonis.scaled.pf <- subset_samples(physeq = scaled, Fraction != "Sediment")
-adonis.scaled.pf.bray <- phyloseq::distance(physeq = adonis.scaled.pf, method = "bray")
-adonis.scaled.pf <- data.frame(sample_data(adonis.scaled.pf))
-adonis(adonis.scaled.pf.bray ~ Fraction, data=adonis.scaled.pf)
+adonis.nonver.pf <- subset_samples(physeq = nonver, Fraction != "Sediment")
+adonis.nonver.pf.bray <- phyloseq::distance(physeq = adonis.nonver.pf, method = "bray")
+adonis.nonver.pf <- data.frame(sample_data(adonis.nonver.pf))
+adonis(adonis.nonver.pf.bray ~ Fraction, data=adonis.nonver.pf)
   # p-value = 0.001
-  # R2 = 0.14923
-beta.tax = betadisper(d=adonis.scaled.pf.bray, group=adonis.scaled.pf$Fraction)
+  # R2 = 0.15531 
+beta.tax = betadisper(d=adonis.nonver.pf.bray, group=adonis.nonver.pf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 98.37893
+  # F = 105.8503
 
 # Particle vs. Sediment
-adonis.scaled.ps <- subset_samples(physeq = scaled, Fraction != "Free")
-adonis.scaled.ps.bray <- phyloseq::distance(physeq = adonis.scaled.ps, method = "bray")
-adonis.scaled.ps <- data.frame(sample_data(adonis.scaled.ps))
-adonis(adonis.scaled.ps.bray ~ Fraction, data=adonis.scaled.ps)
+adonis.nonver.ps <- subset_samples(physeq = nonver, Fraction != "Free")
+adonis.nonver.ps.bray <- phyloseq::distance(physeq = adonis.nonver.ps, method = "bray")
+adonis.nonver.ps <- data.frame(sample_data(adonis.nonver.ps))
+adonis(adonis.nonver.ps.bray ~ Fraction, data=adonis.nonver.ps)
   # p-value = 0.001
-  # R2 = 0.12488
-beta.tax = betadisper(d=adonis.scaled.ps.bray, group=adonis.scaled.ps$Fraction)
+  # R2 = 0.12517
+beta.tax = betadisper(d=adonis.nonver.ps.bray, group=adonis.nonver.ps$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 45.03515
+  # F = 41.64026 
 
 # Free vs. Sediment
-adonis.scaled.fs <- subset_samples(physeq = scaled, Fraction != "Particle")
-adonis.scaled.fs.bray <- phyloseq::distance(physeq = adonis.scaled.fs, method = "bray")
-adonis.scaled.fs <- data.frame(sample_data(adonis.scaled.fs))
-adonis(adonis.scaled.fs.bray ~ Fraction, data=adonis.scaled.fs)
+adonis.nonver.fs <- subset_samples(physeq = nonver, Fraction != "Particle")
+adonis.nonver.fs.bray <- phyloseq::distance(physeq = adonis.nonver.fs, method = "bray")
+adonis.nonver.fs <- data.frame(sample_data(adonis.nonver.fs))
+adonis(adonis.nonver.fs.bray ~ Fraction, data=adonis.nonver.fs)
   # p-value = 0.001
-  # R2 = 0.2272
-beta.tax = betadisper(d=adonis.scaled.fs.bray, group=adonis.scaled.fs$Fraction)
+  # R2 = 0.23463
+beta.tax = betadisper(d=adonis.nonver.fs.bray, group=adonis.nonver.fs$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.085
-  # F = 2.889795
+  # p-value = 0.195
+  # F = 1.558784 
 
 
 ##### Season #####
-adonis(scaled.bray ~ Season, data=bcc.sampledf)
+adonis(nonver.bray ~ Season, data=bcc.sampledf)
   ## p-value = 0.001
-  ## R2 = 0.08031
-beta.tax = betadisper(scaled.bray, bcc.sampledf$Season)
+  ## R2 = 0.08181
+beta.tax = betadisper(nonver.bray, bcc.sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  ## P-value = 0.026
-  ## F = 3.831441
+  ## P-value = 0.035
+  ## F = 3.799907
 
 # Spring vs. Summer
-adonis.scaled.ss <- subset_samples(physeq = scaled, Season != "Fall")
-adonis.scaled.ss.bray <- phyloseq::distance(physeq = adonis.scaled.ss, method = "bray")
-adonis.scaled.ss <- data.frame(sample_data(adonis.scaled.ss))
-adonis(adonis.scaled.ss.bray ~ Season, data=adonis.scaled.ss)
+adonis.nonver.ss <- subset_samples(physeq = nonver, Season != "Fall")
+adonis.nonver.ss.bray <- phyloseq::distance(physeq = adonis.nonver.ss, method = "bray")
+adonis.nonver.ss <- data.frame(sample_data(adonis.nonver.ss))
+adonis(adonis.nonver.ss.bray ~ Season, data=adonis.nonver.ss)
   # p-value = 0.001
-  # R2 = 0.07771
-beta.tax = betadisper(d=adonis.scaled.ss.bray, group=adonis.scaled.ss$Fraction)
+  # R2 = 0.07957
+beta.tax = betadisper(d=adonis.nonver.ss.bray, group=adonis.nonver.ss$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 47.36667  
+  # F = 49.52385  
 
 # Spring vs. Fall
-adonis.scaled.sf <- subset_samples(physeq = scaled, Season != "Summer")
-adonis.scaled.sf.bray <- phyloseq::distance(physeq = adonis.scaled.sf, method = "bray")
-adonis.scaled.sf <- data.frame(sample_data(adonis.scaled.sf))
-adonis(adonis.scaled.sf.bray ~ Season, data=adonis.scaled.sf)
+adonis.nonver.sf <- subset_samples(physeq = nonver, Season != "Summer")
+adonis.nonver.sf.bray <- phyloseq::distance(physeq = adonis.nonver.sf, method = "bray")
+adonis.nonver.sf <- data.frame(sample_data(adonis.nonver.sf))
+adonis(adonis.nonver.sf.bray ~ Season, data=adonis.nonver.sf)
   # p-value = 0.001
-  # R2 = 0.0946
-beta.tax = betadisper(d=adonis.scaled.sf.bray, group=adonis.scaled.sf$Fraction)
+  # R2 = 0.09429
+beta.tax = betadisper(d=adonis.nonver.sf.bray, group=adonis.nonver.sf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 26.21886  
+  # F = 25.93392   
 
 # Summer vs. Fall
-adonis.scaled.suf <- subset_samples(physeq = scaled, Season != "Spring")
-adonis.scaled.suf.bray <- phyloseq::distance(physeq = adonis.scaled.suf, method = "bray")
-adonis.scaled.suf <- data.frame(sample_data(adonis.scaled.suf))
-adonis(adonis.scaled.suf.bray ~ Season, data=adonis.scaled.suf)
+adonis.nonver.suf <- subset_samples(physeq = nonver, Season != "Spring")
+adonis.nonver.suf.bray <- phyloseq::distance(physeq = adonis.nonver.suf, method = "bray")
+adonis.nonver.suf <- data.frame(sample_data(adonis.nonver.suf))
+adonis(adonis.nonver.suf.bray ~ Season, data=adonis.nonver.suf)
   # p-value = 0.001
-  # R2 = 0.02709
-beta.tax = betadisper(d=adonis.scaled.suf.bray, group=adonis.scaled.suf$Fraction)
+  # R2 = 0.02779 
+beta.tax = betadisper(d=adonis.nonver.suf.bray, group=adonis.nonver.suf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 30.21236
+  # F = 31.50183 
 
 
 ##### Nested adonis #####
-adonis(scaled.bray ~ Lake_Type + Depth + Fraction + Season, data = bcc.sampledf)
-  ## Lake Type R2 = 0.10228
-  ## Depth R2 = 0.11807
-  ## Fraction R2 = 0.13296
-  ## Season = 0.06093
+adonis(nonver.bray ~ Lake_Type + Depth + Fraction + Season, data = bcc.sampledf)
+  ## Lake Type R2 = 0.10028
+  ## Depth R2 = 0.12046
+  ## Fraction R2 = 0.13816
+  ## Season = 0.06163
   ## All p-values = 0.001
-
-# if you rearrange the variables (and include sed as part of frac)....
-  ## Fraction R2 = 0.21318
-  ## Lake_Type R2 = 0.09883
-  ## Season R2 = 0.06407
-  ## Depth R2 = 0.03816
-  ## All p-values = 0.001
-
 ```
 
 
 
 
-### Whole Lake PERMANOVA
+### Non-Ver Lake PERMANOVA
 ```{r bcc.lake.permanova}
 ########## LAURENTIAN ##########
-sampledf <- data.frame(sample_data(scaled.lau))
+sampledf <- data.frame(sample_data(nonver.lau))
 
 ### Depth
-adonis(scaled.lau.bray ~ Depth, data=sampledf)
-  # R2 = 0.03723
-  # p-value = 0.243
-beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Depth)
+adonis(nonver.lau.bray ~ Depth, data=sampledf)
+  # R2 = 0.03615 
+  # p-value = 0.261
+beta.tax = betadisper(d=nonver.lau.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.827
-  # F = 0.03704203
+  # p-value = 0.895
+  # F = 0.02314739
 
 ### Season
-adonis(scaled.lau.bray ~ Season, data=sampledf)
-  # R2 = 0.23951
+adonis(nonver.lau.bray ~ Season, data=sampledf)
+  # R2 = 0.23234
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Season)
+beta.tax = betadisper(d=nonver.lau.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.135
-  # F = 2.141275
+  # p-value = 0.156
+  # F = 1.94518
 
 # Spring vs. Summer
-adonis.ss <- subset_samples(physeq = scaled.lau, Season != "Fall")
+adonis.ss <- subset_samples(physeq = nonver.lau, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.2255
-  # p-value = 0.001
+  # R2 = 0.21438
+  # p-value = 0.002
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.121
-  # F = 2.479235
+  # p-value = 0.145
+  # F = 2.265065  
 
 # Spring vs. Fall
-adonis.spf <- subset_samples(physeq = scaled.lau, Season != "Summer")
+adonis.spf <- subset_samples(physeq = nonver.lau, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.23554
+  # R2 = 0.23074
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.073
-  # F = 3.621429
+  # p-value = 0.088
+  # F = 3.274799
 
 # Summer vs. Fall
-adonis.suf <- subset_samples(physeq = scaled.lau, Season != "Spring")
+adonis.suf <- subset_samples(physeq = nonver.lau, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.11285
-  # p-value = 0.049
+  # R2 = 0.11018
+  # p-value = 0.05
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.903
-  # F = 0.01387363
+  # p-value = 0.901
+  # F = 0.0102609
 
 ### Fraction
-adonis(scaled.lau.bray ~ Fraction, data=sampledf)
-  # R2 = 0.34359
+adonis(nonver.lau.bray ~ Fraction, data=sampledf)
+  # R2 = 0.34954
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Fraction)
+beta.tax = betadisper(d=nonver.lau.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 52.05048
+  # F = 51.69813
 
 ### Station
-adonis(scaled.lau.bray ~ Station, data=sampledf)
-  # R2 = 0.04338
-  # p-value = 0.175
-beta.tax = betadisper(d=scaled.lau.bray, group=sampledf$Station)
+adonis(nonver.lau.bray ~ Station, data=sampledf)
+  # R2 = 0.04249
+  # p-value = 0.169
+beta.tax = betadisper(d=nonver.lau.bray, group=sampledf$Station)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.142
-  # F = 2.038993
+  # p-value = 0.183
+  # F = 1.890491
 
 
 ##### Nested adonis #####
-adonis(scaled.lau.bray ~ Fraction + Season + Station + Depth, data = sampledf)
-  ## Fraction R2= 0.34359; p-value = 0.001
-  ## Season R2= 0.24164; p-value = 0.001
-  ## Station R2= 0.04492; p-value = 0.007
-  ## Depth R2= 0.03424; p-value = 0.011
-  ## Residuals = 0.33562
+adonis(nonver.lau.bray ~ Fraction + Season + Station + Depth, data = sampledf)
+  ## Fraction R2= 0.34954; p-value = 0.001
+  ## Season R2= 0.23449; p-value = 0.001
+  ## Station R2= 0.04394; p-value = 0.012
+  ## Depth R2= 0.03331; p-value = 0.022
+  ## Residuals = 0.33872
 
 
 ########## ESTUARY ##########
-sampledf <- data.frame(sample_data(scaled.est))
+sampledf <- data.frame(sample_data(nonver.est))
 
 ### Depth
-adonis(scaled.est.bray ~ Depth, data=sampledf)
-  # R2 = 0.34738
+adonis(nonver.est.bray ~ Depth, data=sampledf)
+  # R2 = 0.35147
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Depth)
+beta.tax = betadisper(d=nonver.est.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.29
-  # F = 1.248019
+  # p-value = 0.28
+  # F = 1.223079
 
 # Water vs. Sediment
-adonis(scaled.est.bray ~ Source, data=sampledf)
-  # R2 = 0.32898
+adonis(nonver.est.bray ~ Source, data=sampledf)
+  # R2 = 0.33309
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Source)
+beta.tax = betadisper(d=nonver.est.bray, group=sampledf$Source)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.153
-  # F = 2.135097
+  # p-value = 0.202
+  # F = 1.710344
 
 # Surface vs. Bottom
-adonis.tb <- subset_samples(physeq = scaled.est, Depth != "Sediment")
+adonis.tb <- subset_samples(physeq = nonver.est, Depth != "Sediment")
 adonis.tb.bray <- phyloseq::distance(physeq = adonis.tb, method = "bray")
 adonis.tb <- data.frame(sample_data(adonis.tb))
 adonis(adonis.tb.bray ~ Depth, data=adonis.tb)
-  # R2 = 0.03248
-  # p-value = 0.186
+  # R2 = 0.03286
+  # p-value = 0.205
 beta.tax = betadisper(d=adonis.tb.bray, group=adonis.tb$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.373
-  # F = 0.9356047 
+  # p-value = 0.273
+  # F = 1.217505 
 
 # Surface vs. Sediment
-adonis.ts <- subset_samples(physeq = scaled.est, Depth != "Bottom")
+adonis.ts <- subset_samples(physeq = nonver.est, Depth != "Bottom")
 adonis.ts.bray <- phyloseq::distance(physeq = adonis.ts, method = "bray")
 adonis.ts <- data.frame(sample_data(adonis.ts))
 adonis(adonis.ts.bray ~ Depth, data=adonis.ts)
-  # R2 = 0.44651
+  # R2 = 0.45228
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.ts.bray, group=adonis.ts$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.527
-  # F = 0.4505285 
+  # p-value = 0.638
+  # F = 0.2394821   
 
 # Bottom vs. Sediment
-adonis.bs <- subset_samples(physeq = scaled.est, Depth != "Surface")
+adonis.bs <- subset_samples(physeq = nonver.est, Depth != "Surface")
 adonis.bs.bray <- phyloseq::distance(physeq = adonis.bs, method = "bray")
 adonis.bs <- data.frame(sample_data(adonis.bs))
 adonis(adonis.bs.bray ~ Depth, data=adonis.bs)
-  # R2 = 0.39941
+  # R2 = 0.40039
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.bs.bray, group=adonis.bs$Depth)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.095
-  # F = 2.882313
+  # p-value = 0.115
+  # F = 2.556682
 
 ### Season
-adonis(scaled.est.bray ~ Season, data=sampledf)
-  # R2 = 0.17726
+adonis(nonver.est.bray ~ Season, data=sampledf)
+  # R2 = 0.17451
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Season)
+beta.tax = betadisper(d=nonver.est.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.795
-  # F = 0.2208436
+  # p-value = 0.849
+  # F = 0.1617844
 
 # Spring vs. Summer
-adonis.ss <- subset_samples(physeq = scaled.est, Season != "Fall")
+adonis.ss <- subset_samples(physeq = nonver.est, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.18043
+  # R2 = 0.18016 
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.835
-  # F = 0.04943273
+  # p-value = 0.968
+  # F = 0.001441842
 
 # Spring vs. Fall
-adonis.spf <- subset_samples(physeq = scaled.est, Season != "Summer")
+adonis.spf <- subset_samples(physeq = nonver.est, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.18644
+  # R2 = 0.18133
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.502
-  # F = 0.3994813
+  # p-value = 0.641
+  # F = 0.2278158
 
 # Summer vs. Fall
-adonis.suf <- subset_samples(physeq = scaled.est, Season != "Spring")
+adonis.suf <- subset_samples(physeq = nonver.est, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.05743
-  # p-value = 0.067
+  # R2 = 0.05707
+  # p-value = 0.06
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.688
-  # F = 0.1952136
+  # p-value = 0.621
+  # F = 0.2233766 
 
 ### Fraction
-adonis(scaled.est.bray ~ Fraction, data=sampledf)
-  # R2 = 0.44619
+adonis(nonver.est.bray ~ Fraction, data=sampledf)
+  # R2 = 0.44905 
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Fraction)
+beta.tax = betadisper(d=nonver.est.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.109
-  # F = 2.371368 
+  # p-value = 0.104
+  # F = 2.352492
 
 # Particle vs. Free
-adonis.frac <- subset_samples(physeq = scaled.est, Fraction != "Sediment")
+adonis.frac <- subset_samples(physeq = nonver.est, Fraction != "Sediment")
 adonis.frac.bray <- phyloseq::distance(physeq = adonis.frac, method = "bray")
 adonis.frac <- data.frame(sample_data(adonis.frac))
 adonis(adonis.frac.bray ~ Fraction, data=adonis.frac)
-  # R2 = 0.2069  
+  # R2 = 0.20733 
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.frac.bray, group=adonis.frac$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.05
-  # F = 6.297787
+  # p-value = 0.042
+  # F = 4.301812
 
 # Particle vs. Sediment
-adonis.ps <- subset_samples(physeq = scaled.est, Fraction != "Free")
+adonis.ps <- subset_samples(physeq = nonver.est, Fraction != "Free")
 adonis.ps.bray <- phyloseq::distance(physeq = adonis.ps, method = "bray")
 adonis.ps <- data.frame(sample_data(adonis.ps))
 adonis(adonis.ps.bray ~ Fraction, data=adonis.ps)
-  # R2 = 0.40901
+  # R2 = 0.41279
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.ps.bray, group=adonis.ps$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.388
-  # F = 0.8105961
+  # p-value = 0.434
+  # F = 0.5623439 
 
 # Free vs. Sediment
-adonis.fs <- subset_samples(physeq = scaled.est, Fraction != "Particle")
+adonis.fs <- subset_samples(physeq = nonver.est, Fraction != "Particle")
 adonis.fs.bray <- phyloseq::distance(physeq = adonis.fs, method = "bray")
 adonis.fs <- data.frame(sample_data(adonis.fs))
 adonis(adonis.fs.bray ~ Fraction, data=adonis.fs)
-  # R2 = 0.53808
+  # R2 = 0.53919
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.fs.bray, group=adonis.fs$Fraction)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.32
-  # F = 0.8945355
+  # p-value = 0.251
+  # F = 1.242763 
 
 ### Station
-adonis(scaled.est.bray ~ Station, data=sampledf)
-  # R2 = 0.06863 
-  # p-value = 0.207
-beta.tax = betadisper(d=scaled.est.bray, group=sampledf$Station)
+adonis(nonver.est.bray ~ Station, data=sampledf)
+  # R2 = 0.06932
+  # p-value = 0.203
+beta.tax = betadisper(d=nonver.est.bray, group=sampledf$Station)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.657
-  # F = 0.5628271
+  # p-value = 0.691
+  # F = 0.4996159
 
 
 ##### Nested adonis #####
-adonis(scaled.est.bray ~ Source + Fraction + Season + Station + Depth, data = sampledf)
-  ## Source R2= 0.32898; p-value = 0.001
-  ## Fraction R2= 0.11720; p-value = 0.001
-  ## Season R2= 0.17726; p-value = 0.001
-  ## Station R2= 0.05509; p-value = 0.001
-  ## Depth R2=0.01840; p-value = 0.011
-  ## Residuals = 0.32043
+adonis(nonver.est.bray ~ Source + Fraction + Season + Station + Depth, data = sampledf)
+  ## Source R2= 0.33309; p-value = 0.001
+  ## Fraction R2= 0.11596; p-value = 0.001
+  ## Season R2= 0.17451; p-value = 0.001
+  ## Station R2= 0.05632; p-value = 0.001
+  ## Depth R2=0.01838; p-value = 0.018
+  ## Residuals = 0.30174
 
 
 
 
 ########## INLAND ##########
-sampledf <- data.frame(sample_data(scaled.inl))
+sampledf <- data.frame(sample_data(nonver.inl))
 
 ### Depth
-adonis(scaled.inl.bray ~ Depth, data=sampledf)
-  # R2 = 0.10041
+adonis(nonver.inl.bray ~ Depth, data=sampledf)
+  # R2 = 0.10339
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Depth)
+beta.tax = betadisper(d=nonver.inl.bray, group=sampledf$Depth)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 20.89009
+  # F = 19.1475
 
 ### Season
-adonis(scaled.inl.bray ~ Season, data=sampledf)
-  # R2 = 0.09735
+adonis(nonver.inl.bray ~ Season, data=sampledf)
+  # R2 = 0.09951
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Season)
+beta.tax = betadisper(d=nonver.inl.bray, group=sampledf$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 15.04692
+  # F = 14.42307
 
 # Spring vs. Summer
-adonis.ss <- subset_samples(physeq = scaled.inl, Season != "Fall")
+adonis.ss <- subset_samples(physeq = nonver.inl, Season != "Fall")
 adonis.ss.bray <- phyloseq::distance(physeq = adonis.ss, method = "bray")
 adonis.ss <- data.frame(sample_data(adonis.ss))
 adonis(adonis.ss.bray ~ Season, data=adonis.ss)
-  # R2 = 0.08529
+  # R2 = 0.08774
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.ss.bray, group=adonis.ss$Season)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 30.3471
+  # F = 28.55094
 
 # Spring vs. Fall
-adonis.spf <- subset_samples(physeq = scaled.inl, Season != "Summer")
+adonis.spf <- subset_samples(physeq = nonver.inl, Season != "Summer")
 adonis.spf.bray <- phyloseq::distance(physeq = adonis.spf, method = "bray")
 adonis.spf <- data.frame(sample_data(adonis.spf))
 adonis(adonis.spf.bray ~ Season, data=adonis.spf)
-  # R2 = 0.20982
+  # R2 = 0.21088
   # p-value = 0.001
 beta.tax = betadisper(d=adonis.spf.bray, group=adonis.spf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.023
-  # F = 5.219433
+  # p-value = 0.011
+  # F = 6.311706
 
 # Summer vs. Fall
-adonis.suf <- subset_samples(physeq = scaled.inl, Season != "Spring")
+adonis.suf <- subset_samples(physeq = nonver.inl, Season != "Spring")
 adonis.suf.bray <- phyloseq::distance(physeq = adonis.suf, method = "bray")
 adonis.suf <- data.frame(sample_data(adonis.suf))
 adonis(adonis.suf.bray ~ Season, data=adonis.suf)
-  # R2 = 0.02688
-  # p-value = 0.006
+  # R2 = 0.02723
+  # p-value = 0.003
 beta.tax = betadisper(d=adonis.suf.bray, group=adonis.suf$Season)
 p <- permutest(beta.tax)
 p$tab
-  # p-value = 0.057
-  # F = 4.040812
+  # p-value = 0.062
+  # F = 3.383171
 
 ### Fraction
-adonis(scaled.inl.bray ~ Fraction, data=sampledf)
-  # R2 = 0.17221
+adonis(nonver.inl.bray ~ Fraction, data=sampledf)
+  # R2 = 0.17964
   # p-value = 0.001
-beta.tax = betadisper(d=scaled.inl.bray, group=sampledf$Fraction)
+beta.tax = betadisper(d=nonver.inl.bray, group=sampledf$Fraction)
 p <- permutest(beta.tax)
 p$tab
   # p-value = 0.001
-  # F = 26.48775
+  # F = 27.74074  
 
 ##### Nested adonis #####
-adonis(scaled.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
-  ## Fraction R2= 0.17221; p-value = 0.001
-  ## Season R2= 0.09735; p-value = 0.001
-  ## Lake R2 = 0.21003; p-value = 0.001
-  ## Depth R2= 0.09506; p-value = 0.001
-  ## Residuals = 0.42535
+adonis(nonver.inl.bray ~ Fraction + Season + Lake + Depth, data = sampledf)
+  ## Fraction R2= 0.17964; p-value = 0.001
+  ## Season R2= 0.09951; p-value = 0.001
+  ## Lake R2 = 0.20179; p-value = 0.001
+  ## Depth R2= 0.09759; p-value = 0.001
+  ## Residuals = 0.42147 
 ```
 
 
 
 
-### Lake Procrustes Analyses (Verruco vs. Whole Community)
+### Lake Procrustes Analyses (Verruco vs. Non-Ver)
 ```{r}
 ########## Check Community w/ Verrucos Removed ##########
 
 ##### Laurentian #####
-# Remove Verrucos
-no.ver.all.lau <- subset_taxa(scaled.lau, Phylum != "Verrucomicrobia")
-
 # Calculate bray-curtis dissimilarity
-no.ver.all.lau.bray <- phyloseq::distance(physeq=no.ver.all.lau, method="bray")
+nonver.lau.bray <- phyloseq::distance(physeq=nonver.lau, method="bray")
 
 # Perform PCoA ordination
-no.ver.lau.pcoa <- ordinate(physeq = no.ver.all.lau, method = "PCoA", distance="bray")
+nonver.lau.pcoa <- ordinate(physeq = nonver.lau, method = "PCoA", distance="bray")
 
 # Perform Procrustes 
-procrust.no.ver.lau <- procrustes(no.ver.lau.pcoa$vectors[,1:2], 
+procrust.nonver.lau <- procrustes(nonver.lau.pcoa$vectors[,1:2], 
                                   Ver.lau.pcoa$vectors[,1:2], scale=F, symmetric=F)
   # Sum of squares = 2.065
-pro.no.ver.lau <- protest(no.ver.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
+pro.nonver.lau <- protest(nonver.lau.pcoa$vectors[,1:2], Ver.lau.pcoa$vectors[,1:2])
   # p-value = 0.001
   # m12^2 (sum of squares) = 0.3668
   # correlation = 0.7957
 
 
 ##### Estuary #####
-# Remove Verrucos
-no.ver.all.est <- subset_taxa(scaled.est, Phylum != "Verrucomicrobia")
-
 # Calculate bray-curtis dissimilarity
-no.ver.all.est.bray <- phyloseq::distance(physeq=no.ver.all.est, method="bray")
+nonver.est.bray <- phyloseq::distance(physeq=nonver.est, method="bray")
 
 # Perform PCoA ordination
-no.ver.est.pcoa <- ordinate(physeq = no.ver.all.est, method = "PCoA", distance="bray")
+non.ver.est.pcoa <- ordinate(physeq = nonver.est, method = "PCoA", distance="bray")
 
 # Perform Procrustes 
-procrust.no.ver.est <- procrustes(no.ver.est.pcoa$vectors[,1:2], 
+procrust.nonver.est <- procrustes(nonver.est.pcoa$vectors[,1:2], 
                                   Ver.est.pcoa$vectors[,1:2], scale=F, symmetric=F)
   # Sum of squares = 0.8018
-pro.no.ver.est <- protest(no.ver.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
+pro.nonver.est <- protest(nonver.est.pcoa$vectors[,1:2], Ver.est.pcoa$vectors[,1:2])
   # p-value = 0.001
   # m12^2 (sum of squares) = 0.0811
   # correlation = 0.9586
 
 
 ##### Inland #####
-# Remove Verrucos
-no.ver.all.inl <- subset_taxa(scaled.inl, Phylum != "Verrucomicrobia")
-
 # Calculate bray-curtis dissimilarity
-no.ver.all.inl.bray <- phyloseq::distance(physeq=no.ver.all.inl, method="bray")
+nonver.inl.bray <- phyloseq::distance(physeq=nonver.inl, method="bray")
 
 # Perform PCoA ordination
-no.ver.inl.pcoa <- ordinate(physeq = no.ver.all.inl, method = "PCoA", distance="bray")
+nonver.inl.pcoa <- ordinate(physeq = nonver.inl, method = "PCoA", distance="bray")
 
 # Perform Procrustes 
-procrust.no.ver.inl <- procrustes(no.ver.inl.pcoa$vectors[,1:2], 
+procrust.nonver.inl <- procrustes(nonver.inl.pcoa$vectors[,1:2], 
                                   Ver.inl.pcoa$vectors[,1:2], scale=F, symmetric=F)
   # Sum of squares = 6.328
-pro.no.ver.inl <- protest(no.ver.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
+pro.nonver.inl <- protest(nonver.inl.pcoa$vectors[,1:2], Ver.inl.pcoa$vectors[,1:2])
   # p-value = 0.001
   # m12^2 (sum of squares) = 0.4054
   # correlation = 0.7711
@@ -4680,7 +4668,7 @@ print(mean(result.est.free))
 print(max(result.est.free))
 print(quantile(result.est.free,0.95))
 print(quantile(result.est.free,0.22))
-  # correlation = 0.78
+  # p-value = 0.69
 
 # Inland Particle
 x <- 0
@@ -4729,38 +4717,38 @@ print(quantile(result.inl.free,1))
 
 
 
-########## WHOLE COM BIOENV ##########
+########## NON-VER BIOENV ##########
 # Trim otu_table so that samples match metadata samples
-scaled.meta.otus <- subset_samples(scaled, SampleID != "Su13.ED.MM15.DN")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Su13.BD.MM15.DN")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.ED.MM15.SN")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.ED.MM15.DD")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.ED.MM110.DD")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.BD.MM15.DD")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Sp13.BD.MM110.DD")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.BD.MM110.SD")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.BD.MM110.SN")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.BD.MM15.DN")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Fa13.ED.MM15.DN")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, Station != "Buoy")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, Source != "Sediment")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Z14.060.P")
-scaled.meta.otus <- subset_samples(scaled.meta.otus, SampleID != "Z14.060.F")
+nonver.meta.otus <- subset_samples(nonver, SampleID != "Su13.ED.MM15.DN")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Su13.BD.MM15.DN")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Sp13.ED.MM15.SN")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Sp13.ED.MM15.DD")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Sp13.ED.MM110.DD")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Sp13.BD.MM15.DD")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Sp13.BD.MM110.DD")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Fa13.BD.MM110.SD")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Fa13.BD.MM110.SN")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Fa13.BD.MM15.DN")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Fa13.ED.MM15.DN")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, Station != "Buoy")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, Source != "Sediment")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Z14.060.P")
+nonver.meta.otus <- subset_samples(nonver.meta.otus, SampleID != "Z14.060.F")
 
 
 # I'll be examining Laurentian, Estuary, and Inland Lake samples separately
 # First separate the samples based on Lake Type
-scaled.lau.otus <- data.frame(otu_table(subset_samples(scaled.meta.otus,Lake_Type=="Laurentian")))
-scaled.est.otus <- data.frame(otu_table(subset_samples(scaled.meta.otus,Lake_Type=="Estuary")))
-scaled.inl.otus <- data.frame(otu_table(subset_samples(scaled.meta.otus,Lake_Type=="Inland")))
+nonver.lau.otus <- data.frame(otu_table(subset_samples(nonver.meta.otus,Lake_Type=="Laurentian")))
+nonver.est.otus <- data.frame(otu_table(subset_samples(nonver.meta.otus,Lake_Type=="Estuary")))
+nonver.inl.otus <- data.frame(otu_table(subset_samples(nonver.meta.otus,Lake_Type=="Inland")))
 
 # Now prune taxa that have 0 counts
-scaled.lau.0 <- which(colSums(scaled.lau.otus) == 0)
-scaled.lau.otus <- scaled.lau.otus[,-scaled.lau.0]
-scaled.est.0 <- which(colSums(scaled.est.otus) == 0)
-scaled.est.otus <- scaled.est.otus[,-scaled.est.0]
-scaled.inl.0 <- which(colSums(scaled.inl.otus) == 0)
-scaled.inl.otus <- scaled.inl.otus[,-scaled.inl.0]
+nonver.lau.0 <- which(colSums(nonver.lau.otus) == 0)
+nonver.lau.otus <- nonver.lau.otus[,-nonver.lau.0]
+nonver.est.0 <- which(colSums(nonver.est.otus) == 0)
+nonver.est.otus <- nonver.est.otus[,-nonver.est.0]
+nonver.inl.0 <- which(colSums(nonver.inl.otus) == 0)
+nonver.inl.otus <- nonver.inl.otus[,-nonver.inl.0]
 
 # Read in metadata files
 lau.env <- read.table("metadata/metadata_laurentian.csv", header=T, sep=",", row.names=1,
@@ -4778,18 +4766,18 @@ est.env <- est.env[,-1:-10]
 inl.env <- inl.env[,-1:-10]
 
 ##### Run Whole Com Bioenv #####
-scaled.bioenv.lau <- bioenv(scaled.lau.otus ~ Temperature..C. +
+nonver.bioenv.lau <- bioenv(nonver.lau.otus ~ Temperature..C. +
                               DO.Probe..mg.L. + Chl.Lab..ug.L. + TP.ug.L +
                               PP.ug.L + TDP.ug.L + POC.mg.L + PON.mg.L +
                               DOC.mg.L +  SiO2.mg.L + TSS.mg.L +
                               Fluorescence.mg.m3. + PAR, lau.env,
                             method = "spearman", index = "bray",
                             trace = TRUE, partial = NULL)
-  # Best parameters: PP.ug.L
-  #                  TDP
+  # Best parameters: TDP
+  #                  TSS
   #                  PAR
-  # correlation = 0.373295
-scaled.bioenv.est <- bioenv(scaled.est.otus ~ Temperature..C. + 
+  # correlation = 0.3731954
+nonver.bioenv.est <- bioenv(nonver.est.otus ~ Temperature..C. + 
                               SpCond...S.cm. + TDS..mg.L. + pH +
                               ORP..mV. + Chl.Lab..ug.L. + BGA.cells.mL +
                               Cl.mg.L + SO4.mg.L + NO3.mg.L + NH3.mg.L +
@@ -4800,16 +4788,14 @@ scaled.bioenv.est <- bioenv(scaled.est.otus ~ Temperature..C. +
   # Best parameters = NH3.mg.L
   #                   SRP.ug.L
   #                   DO.probe.mg.L
-  # correlation = 0.1786684
-scaled.bioenv.inl <- bioenv(scaled.inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L +
+  # correlation = 0.1889298 
+nonver.bioenv.inl <- bioenv(nonver.inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L +
                               SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
                             inl.env, method = "spearman", index = "bray",
                             trace = TRUE, partial = NULL)
   # Best parameters = NO3.mg.L
-  #                   TP.ug.L
   #                   TDP.ug.L
-  #                   NH4.ug.L
-  # correlation = 0.5508089
+  # correlation = 0.06346412 
 
 
 
@@ -4817,9 +4803,9 @@ scaled.bioenv.inl <- bioenv(scaled.inl.otus ~ Chl.Lab..ug.L. + NO3.mg.L +
 # Perform random permutations of row names
 # Laurentian
 x <- 0
-result.scaled.lau <- vector(mode="numeric", length = 100)
+result.nonver.lau <- vector(mode="numeric", length = 100)
 while (x < 100){
-  lau.otus.rand <- scaled.lau.otus[sample(1:nrow(scaled.lau.otus)),]
+  lau.otus.rand <- nonver.lau.otus[sample(1:nrow(nonver.lau.otus)),]
   x <- x + 1
   bioenv.rand <- bioenv(lau.otus.rand ~ Temperature..C. +
                               DO.Probe..mg.L. + Chl.Lab..ug.L. + TP.ug.L +
@@ -4829,23 +4815,26 @@ while (x < 100){
                        method = "spearman",index = "bray", trace = TRUE,
                        partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.lau[x] = max(tmp)
+  result.nonver.lau[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.lau)
-print(mean(result.scaled.lau))
-print(max(result.scaled.lau))
-print(quantile(result.scaled.lau,0.95))
-print(quantile(result.scaled.lau,0.99)) 
-print(quantile(result.scaled.lau,1))
-  # All results are 0 o.O
-  ### Yay, p-value < 0.01!
+hist(result.nonver.lau)
+print(mean(result.nonver.lau))
+print(max(result.nonver.lau))
+print(quantile(result.nonver.lau,0.95))
+print(quantile(result.nonver.lau,0.98))
+print(quantile(result.nonver.lau,0.985))
+print(quantile(result.nonver.lau,0.987))
+print(quantile(result.nonver.lau,0.988))
+print(quantile(result.nonver.lau,0.989))
+print(quantile(result.nonver.lau,0.99)) 
+  # p-value = 0.02
 
 # Estuary
 x <- 0
-result.scaled.est <- vector(mode="numeric", length = 100)
+result.nonver.est <- vector(mode="numeric", length = 100)
 while (x < 100){
-  est.otus.rand <- scaled.est.otus[sample(1:nrow(scaled.est.otus)),]
+  est.otus.rand <- nonver.est.otus[sample(1:nrow(nonver.est.otus)),]
   x <- x + 1
   bioenv.rand <- bioenv(est.otus.rand ~ Temperature..C. + SpCond...S.cm. +
                           TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
@@ -4855,39 +4844,40 @@ while (x < 100){
                         est.env, method = "spearman", index = "bray", 
                         trace =TRUE, partial=NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.est[x] = max(tmp)
+  result.nonver.est[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.est)
-print(mean(result.scaled.est))
-print(max(result.scaled.est))
-print(quantile(result.scaled.est,0.95))
-print(quantile(result.scaled.est,0.99)) 
-print(quantile(result.scaled.est,1))
-  ###Yay, p-value < 0.01!
+hist(result.nonver.est)
+print(mean(result.nonver.est))
+print(max(result.nonver.est))
+print(quantile(result.nonver.est,0.61))
+print(quantile(result.nonver.est,0.95))
+print(quantile(result.nonver.est,0.99)) 
+print(quantile(result.nonver.est,1))
+  ###p-value = 0.39
 
 
 # Inland
 x <- 0
-result.scaled.inl <- vector(mode="numeric", length = 100)
+result.nonver.inl <- vector(mode="numeric", length = 100)
 while (x < 100){
-  inl.otus.rand <- scaled.inl.otus[sample(1:nrow(scaled.inl.otus)),]
+  inl.otus.rand <- nonver.inl.otus[sample(1:nrow(nonver.inl.otus)),]
   x <- x + 1
   bioenv.rand <- bioenv(inl.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
                           SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
                         inl.env, method = "spearman", index = "bray",
                         trace = TRUE, partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.inl[x] = max(tmp)
+  result.nonver.inl[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.inl)
-print(mean(result.scaled.inl))
-print(max(result.scaled.inl))
-print(quantile(result.scaled.inl,0.95))
-print(quantile(result.scaled.inl,0.99))
-print(quantile(result.scaled.inl,1))
-  ###Yay, p-value < 0.01!
+hist(result.nonver.inl)
+print(mean(result.nonver.inl))
+print(max(result.nonver.inl))
+print(quantile(result.nonver.inl,0.95))
+print(quantile(result.nonver.inl,0.99))
+print(quantile(result.nonver.inl,1))
+  ###p-value = 0.4!
 
 
 
@@ -4896,98 +4886,98 @@ print(quantile(result.scaled.inl,1))
 ##### Fraction #####
 
 # Subset out samples
-scaled.lau <- subset_samples(scaled.meta.otus, Lake_Type=="Laurentian")
-scaled.lau.part.otus <- data.frame(otu_table(subset_samples(scaled.lau, Fraction=="Particle")))
-scaled.lau.free.otus <- data.frame(otu_table(subset_samples(scaled.lau, Fraction=="Free")))
-scaled.est <- subset_samples(scaled.meta.otus, Lake_Type=="Estuary")
-scaled.est.part.otus <- data.frame(otu_table(subset_samples(scaled.est, Fraction=="Particle")))
-scaled.est.free.otus <- data.frame(otu_table(subset_samples(scaled.est, Fraction=="Free")))
-scaled.inl <- subset_samples(scaled.meta.otus, Lake_Type=="Inland")
-scaled.inl.part.otus <- data.frame(otu_table(subset_samples(scaled.inl, Fraction=="Particle")))
-scaled.inl.free.otus <- data.frame(otu_table(subset_samples(scaled.inl, Fraction=="Free")))
+nonver.lau <- subset_samples(nonver.meta.otus, Lake_Type=="Laurentian")
+nonver.lau.part.otus <- data.frame(otu_table(subset_samples(nonver.lau, Fraction=="Particle")))
+nonver.lau.free.otus <- data.frame(otu_table(subset_samples(nonver.lau, Fraction=="Free")))
+nonver.est <- subset_samples(nonver.meta.otus, Lake_Type=="Estuary")
+nonver.est.part.otus <- data.frame(otu_table(subset_samples(nonver.est, Fraction=="Particle")))
+nonver.est.free.otus <- data.frame(otu_table(subset_samples(nonver.est, Fraction=="Free")))
+nonver.inl <- subset_samples(nonver.meta.otus, Lake_Type=="Inland")
+nonver.inl.part.otus <- data.frame(otu_table(subset_samples(nonver.inl, Fraction=="Particle")))
+nonver.inl.free.otus <- data.frame(otu_table(subset_samples(nonver.inl, Fraction=="Free")))
 
 # Now prune taxa that have 0 counts
-scaled.lau.part.0 <- which(colSums(scaled.lau.part.otus) == 0)
-scaled.lau.part.otus <- scaled.lau.part.otus[,-scaled.lau.part.0]
-scaled.lau.free.0 <- which(colSums(scaled.lau.free.otus) == 0)
-scaled.lau.free.otus <- scaled.lau.free.otus[,-scaled.lau.free.0]
-scaled.est.part.0 <- which(colSums(scaled.est.part.otus) == 0)
-scaled.est.part.otus <- scaled.est.part.otus[,-scaled.est.part.0]
-scaled.est.free.0 <- which(colSums(scaled.est.free.otus) == 0)
-scaled.est.free.otus <- scaled.est.free.otus[,-scaled.est.free.0]
-scaled.inl.part.0 <- which(colSums(scaled.inl.part.otus) == 0)
-scaled.inl.part.otus <- scaled.inl.part.otus[,-scaled.inl.part.0]
-scaled.inl.free.0 <- which(colSums(scaled.inl.free.otus) == 0)
-scaled.inl.free.otus <- scaled.inl.part.otus[,-scaled.inl.free.0]
+nonver.lau.part.0 <- which(colSums(nonver.lau.part.otus) == 0)
+nonver.lau.part.otus <- nonver.lau.part.otus[,-nonver.lau.part.0]
+nonver.lau.free.0 <- which(colSums(nonver.lau.free.otus) == 0)
+nonver.lau.free.otus <- nonver.lau.free.otus[,-nonver.lau.free.0]
+nonver.est.part.0 <- which(colSums(nonver.est.part.otus) == 0)
+nonver.est.part.otus <- nonver.est.part.otus[,-nonver.est.part.0]
+nonver.est.free.0 <- which(colSums(nonver.est.free.otus) == 0)
+nonver.est.free.otus <- nonver.est.free.otus[,-nonver.est.free.0]
+nonver.inl.part.0 <- which(colSums(nonver.inl.part.otus) == 0)
+nonver.inl.part.otus <- nonver.inl.part.otus[,-nonver.inl.part.0]
+nonver.inl.free.0 <- which(colSums(nonver.inl.free.otus) == 0)
+nonver.inl.free.otus <- nonver.inl.part.otus[,-nonver.inl.free.0]
 
 # Read in metadata files
-scaled.lau.part.env <- read.table("metadata/metadata.lau.part.csv", header=T, sep=",", 
+nonver.lau.part.env <- read.table("metadata/metadata.lau.part.csv", header=T, sep=",", 
                                   row.names=1, as.is=T)
-scaled.lau.free.env <- read.table("metadata/metadata.lau.free.csv", header=T, sep=",", 
+nonver.lau.free.env <- read.table("metadata/metadata.lau.free.csv", header=T, sep=",", 
                                   row.names=1,as.is=T)
-scaled.est.part.env <- read.table("metadata/metadata.est.part.csv", header=T, sep=",", 
+nonver.est.part.env <- read.table("metadata/metadata.est.part.csv", header=T, sep=",", 
                                   row.names=1, as.is=T)
-scaled.est.part.env <- scaled.est.part.env[,-27]
+nonver.est.part.env <- nonver.est.part.env[,-27]
   # Remove DO %
-scaled.est.free.env <- read.table("metadata/metadata.est.free.csv", header=T, sep=",", 
+nonver.est.free.env <- read.table("metadata/metadata.est.free.csv", header=T, sep=",", 
                                   row.names=1, as.is=T)
-scaled.est.free.env <- scaled.est.free.env[,-27]
+nonver.est.free.env <- nonver.est.free.env[,-27]
   # Remove DO %
-scaled.inl.part.env <- read.table("metadata/metadata.inl.part.csv", header=T, sep=",", 
+nonver.inl.part.env <- read.table("metadata/metadata.inl.part.csv", header=T, sep=",", 
                                   row.names=1, as.is=T)
-scaled.inl.free.env <- read.table("metadata/metadata.inl.free.csv", header=T, sep=",", 
+nonver.inl.free.env <- read.table("metadata/metadata.inl.free.csv", header=T, sep=",", 
                                   row.names=1, as.is=T)
 
 # Trim any metadata that isn't numeric
-scaled.lau.part.env <- scaled.lau.part.env[,-1:-10]
-scaled.lau.free.env <- scaled.lau.free.env[,-1:-10]
-scaled.est.part.env <- scaled.est.part.env[,-1:-10]
-scaled.est.free.env <- scaled.est.free.env[,-1:-10]
-scaled.inl.part.env <- scaled.inl.part.env[,-1:-10]
-scaled.inl.free.env <- scaled.inl.free.env[,-1:-10]
+nonver.lau.part.env <- nonver.lau.part.env[,-1:-10]
+nonver.lau.free.env <- nonver.lau.free.env[,-1:-10]
+nonver.est.part.env <- nonver.est.part.env[,-1:-10]
+nonver.est.free.env <- nonver.est.free.env[,-1:-10]
+nonver.inl.part.env <- nonver.inl.part.env[,-1:-10]
+nonver.inl.free.env <- nonver.inl.free.env[,-1:-10]
 
 
 ##### Run Frac Bioenv #####
-bioenv.scaled.lau.part <- bioenv(scaled.lau.part.otus ~ Temperature..C. + DO.Probe..mg.L. +
+bioenv.nonver.lau.part <- bioenv(nonver.lau.part.otus ~ Temperature..C. + DO.Probe..mg.L. +
                        Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
                        POC.mg.L + PON.mg.L + DOC.mg.L + 
                        SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
-                     scaled.lau.part.env, method = "spearman", index = "bray",
+                     nonver.lau.part.env, method = "spearman", index = "bray",
                      trace = TRUE, partial = NULL)
   # Best parameters = DOC.mg.L
   #                   SIO2.mg.L
   # correlation = 0.3971576
-bioenv.scaled.lau.free <- bioenv(scaled.lau.free.otus ~ Temperature..C. + DO.Probe..mg.L. +
+bioenv.nonver.lau.free <- bioenv(nonver.lau.free.otus ~ Temperature..C. + DO.Probe..mg.L. +
                        Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
                        POC.mg.L + PON.mg.L + DOC.mg.L + 
                        SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR,
-                     scaled.lau.free.env, method = "spearman", index = "bray",
+                     nonver.lau.free.env, method = "spearman", index = "bray",
                      trace = TRUE, partial = NULL)
   # Best parameters = DO.Probe..mg.L.
   #                   DOC.mg.L
   # correlation = 0.07188957
-bioenv.scaled.est.part <- bioenv(scaled.est.part.otus ~ Temperature..C. + SpCond...S.cm. +
+bioenv.nonver.est.part <- bioenv(nonver.est.part.otus ~ Temperature..C. + SpCond...S.cm. +
                        TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
                        BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
                        NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
                        Alk.mg.L + DO.probe.mg.L + Turb.NTU,
-                     scaled.est.part.env, method = "spearman", index = "bray",
+                     nonver.est.part.env, method = "spearman", index = "bray",
                      trace =TRUE, partial=NULL)
   # Best parameters = Temperature..C.
   #                   NH3.mg.L
   # correlation = 0.04355959
-bioenv.scaled.est.free <- bioenv(scaled.est.free.otus ~ Temperature..C. + SpCond...S.cm. +
+bioenv.nonver.est.free <- bioenv(nonver.est.free.otus ~ Temperature..C. + SpCond...S.cm. +
                        TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
                        BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
                        NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
                        Alk.mg.L + DO.probe.mg.L + Turb.NTU,
-                     scaled.est.free.env, method = "spearman", index = "bray",
+                     nonver.est.free.env, method = "spearman", index = "bray",
                      trace =TRUE, partial=NULL)
   # Best parameters = SpCond...S.cm.
   #                   NH3.mg.L
   # correlation = 0.08311599
-bioenv.scaled.inl.part <- bioenv(scaled.inl.part.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
-                       TP.ug.L + TDP.ug.L + NH4.ug.L, scaled.inl.part.env,
+bioenv.nonver.inl.part <- bioenv(nonver.inl.part.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, nonver.inl.part.env,
                      method = "spearman", index = "bray", trace = TRUE,
                      partial = NULL)
   # Best parameters = NO3.mg.L
@@ -4995,8 +4985,8 @@ bioenv.scaled.inl.part <- bioenv(scaled.inl.part.otus ~ Chl.Lab..ug.L. + NO3.mg.
   #                   TDP.ug.L
   #                   NH4.ug.L
   # correlation = 0.7564373
-bioenv.scaled.inl.free <- bioenv(scaled.inl.free.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
-                       TP.ug.L + TDP.ug.L + NH4.ug.L, scaled.inl.free.env,
+bioenv.nonver.inl.free <- bioenv(nonver.inl.free.otus ~ Chl.Lab..ug.L. + NO3.mg.L + SRP.ug.L +
+                       TP.ug.L + TDP.ug.L + NH4.ug.L, nonver.inl.free.env,
                      method = "spearman", index = "bray", trace = TRUE,
                      partial = NULL)
   # Best parameters = NO3.mg.L
@@ -5007,142 +4997,142 @@ bioenv.scaled.inl.free <- bioenv(scaled.inl.free.otus ~ Chl.Lab..ug.L. + NO3.mg.
 
 ##### P-value Frac Calculations #####
 # Perform random permutations of row names
-# scaled.laurentian Particle
+# nonver.laurentian Particle
 x <- 0
-result.scaled.lau.part <- vector(mode="numeric", length = 100)
+result.nonver.lau.part <- vector(mode="numeric", length = 100)
 while (x < 100){
-  scaled.lau.part.otus.rand <- scaled.lau.part.otus[sample(1:nrow(scaled.lau.part.otus)),]
+  nonver.lau.part.otus.rand <- nonver.lau.part.otus[sample(1:nrow(nonver.lau.part.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(scaled.lau.part.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+  bioenv.rand <- bioenv(nonver.lau.part.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
                        Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
                        POC.mg.L + PON.mg.L + DOC.mg.L + 
-                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, scaled.lau.part.env,
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, nonver.lau.part.env,
                        method = "spearman",index = "bray", trace = TRUE,
                        partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.scaled.lau.part[x] = max(tmp)
+  result.nonver.lau.part[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.lau.part)
-print(mean(result.scaled.lau.part))
-print(max(result.scaled.lau.part))
-print(quantile(result.scaled.lau.part,0.95))
-print(quantile(result.scaled.lau.part,0.78))
+hist(result.nonver.lau.part)
+print(mean(result.nonver.lau.part))
+print(max(result.nonver.lau.part))
+print(quantile(result.nonver.lau.part,0.95))
+print(quantile(result.nonver.lau.part,0.78))
   # correlation = 0.22
 
-# scaled.laurentian Free
+# nonver.laurentian Free
 x <- 0
-result.scaled.lau.free <- vector(mode="numeric", length = 100)
+result.nonver.lau.free <- vector(mode="numeric", length = 100)
 while (x < 100){
-  scaled.lau.free.otus.rand <- scaled.lau.free.otus[sample(1:nrow(scaled.lau.free.otus)),]
+  nonver.lau.free.otus.rand <- nonver.lau.free.otus[sample(1:nrow(nonver.lau.free.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(scaled.lau.free.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
+  bioenv.rand <- bioenv(nonver.lau.free.otus.rand ~ Temperature..C. + DO.Probe..mg.L. +
                        Chl.Lab..ug.L. + TP.ug.L + PP.ug.L + TDP.ug.L +
                        POC.mg.L + PON.mg.L + DOC.mg.L + 
-                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, scaled.lau.free.env,
+                       SiO2.mg.L + TSS.mg.L + Fluorescence.mg.m3. + PAR, nonver.lau.free.env,
                        method = "spearman",index = "bray", trace = TRUE,
                        partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.scaled.lau.free[x] = max(tmp)
+  result.nonver.lau.free[x] = max(tmp)
   print(x)
 }
-hist(result.free.scaled.lau)
-print(mean(result.scaled.lau.free))
-print(max(result.scaled.lau.free))
-print(quantile(result.scaled.lau.free,0.95))
-print(quantile(result.scaled.lau.free,0.15))
+hist(result.free.nonver.lau)
+print(mean(result.nonver.lau.free))
+print(max(result.nonver.lau.free))
+print(quantile(result.nonver.lau.free,0.95))
+print(quantile(result.nonver.lau.free,0.15))
   # p-value = 0.85
 
-# scaled.estuary Particle
+# nonver.estuary Particle
 x <- 0
-result.scaled.est.part <- vector(mode="numeric", length = 100)
+result.nonver.est.part <- vector(mode="numeric", length = 100)
 while (x < 100){
-  scaled.est.part.otus.rand <- scaled.est.part.otus[sample(1:nrow(scaled.est.part.otus)),]
+  nonver.est.part.otus.rand <- nonver.est.part.otus[sample(1:nrow(nonver.est.part.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(scaled.est.part.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+  bioenv.rand <- bioenv(nonver.est.part.otus.rand ~ Temperature..C. + SpCond...S.cm. +
                           TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
                           BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
                           NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
                           Alk.mg.L + DO.probe.mg.L + Turb.NTU,
-                        scaled.est.part.env, method = "spearman", index = "bray", 
+                        nonver.est.part.env, method = "spearman", index = "bray", 
                         trace =TRUE, partial=NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.scaled.est.part[x] = max(tmp)
+  result.nonver.est.part[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.est.part)
-print(mean(result.scaled.est.part))
-print(max(result.scaled.est.part))
-print(quantile(result.scaled.est.part,0.95))
-print(quantile(result.scaled.est.part,0.00))
+hist(result.nonver.est.part)
+print(mean(result.nonver.est.part))
+print(max(result.nonver.est.part))
+print(quantile(result.nonver.est.part,0.95))
+print(quantile(result.nonver.est.part,0.00))
   # p-value = 1
 
-# scaled.estuary Free
+# nonver.estuary Free
 x <- 0
-result.scaled.est.free <- vector(mode="numeric", length = 100)
+result.nonver.est.free <- vector(mode="numeric", length = 100)
 while (x < 100){
-  scaled.est.free.otus.rand <- scaled.est.free.otus[sample(1:nrow(scaled.est.free.otus)),]
+  nonver.est.free.otus.rand <- nonver.est.free.otus[sample(1:nrow(nonver.est.free.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(scaled.est.free.otus.rand ~ Temperature..C. + SpCond...S.cm. +
+  bioenv.rand <- bioenv(nonver.est.free.otus.rand ~ Temperature..C. + SpCond...S.cm. +
                           TDS..mg.L. + pH + ORP..mV. + Chl.Lab..ug.L. +
                           BGA.cells.mL + Cl.mg.L + SO4.mg.L + NO3.mg.L +
                           NH3.mg.L + TKN.mg.L + SRP.ug.L + TP.ug.L +
                           Alk.mg.L + DO.probe.mg.L + Turb.NTU,
-                        scaled.est.free.env, method = "spearman", index = "bray", 
+                        nonver.est.free.env, method = "spearman", index = "bray", 
                         trace =TRUE, partial=NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.scaled.est.free[x] = max(tmp)
+  result.nonver.est.free[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.est.free)
-print(mean(result.scaled.est.free))
-print(max(result.scaled.est.free))
-print(quantile(result.scaled.est.free,0.95))
-print(quantile(result.scaled.est.free,0.03))
+hist(result.nonver.est.free)
+print(mean(result.nonver.est.free))
+print(max(result.nonver.est.free))
+print(quantile(result.nonver.est.free,0.95))
+print(quantile(result.nonver.est.free,0.03))
   # p-value = 0.97
 
-# scaled.inland Particle
+# nonver.inland Particle
 x <- 0
-result.scaled.inl.part <- vector(mode="numeric", length = 100)
+result.nonver.inl.part <- vector(mode="numeric", length = 100)
 while (x < 100){
-  scaled.inl.part.otus.rand <- scaled.inl.part.otus[sample(1:nrow(scaled.inl.part.otus)),]
+  nonver.inl.part.otus.rand <- nonver.inl.part.otus[sample(1:nrow(nonver.inl.part.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(scaled.inl.part.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+  bioenv.rand <- bioenv(nonver.inl.part.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
                           SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
-                        scaled.inl.part.env, method = "spearman", index = "bray",
+                        nonver.inl.part.env, method = "spearman", index = "bray",
                         trace = TRUE, partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.scaled.inl.part[x] = max(tmp)
+  result.nonver.inl.part[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.inl.part)
-print(mean(result.scaled.inl.part))
-print(max(result.scaled.inl.part))
-print(quantile(result.scaled.inl.part,0.95))
-print(quantile(result.scaled.inl.part,0.99))
-print(quantile(result.scaled.inl.part,1))
+hist(result.nonver.inl.part)
+print(mean(result.nonver.inl.part))
+print(max(result.nonver.inl.part))
+print(quantile(result.nonver.inl.part,0.95))
+print(quantile(result.nonver.inl.part,0.99))
+print(quantile(result.nonver.inl.part,1))
   # p-value < 0.01
 
-# scaled.inland Free
+# nonver.inland Free
 x <- 0
-result.scaled.inl.free <- vector(mode="numeric", length = 100)
+result.nonver.inl.free <- vector(mode="numeric", length = 100)
 while (x < 100){
-  scaled.inl.free.otus.rand <- scaled.inl.free.otus[sample(1:nrow(scaled.inl.free.otus)),]
+  nonver.inl.free.otus.rand <- nonver.inl.free.otus[sample(1:nrow(nonver.inl.free.otus)),]
   x <- x + 1
-  bioenv.rand <- bioenv(scaled.inl.free.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
+  bioenv.rand <- bioenv(nonver.inl.free.otus.rand ~ Chl.Lab..ug.L. + NO3.mg.L +
                           SRP.ug.L + TP.ug.L + TDP.ug.L + NH4.ug.L,
-                        scaled.inl.free.env, method = "spearman", index = "bray",
+                        nonver.inl.free.env, method = "spearman", index = "bray",
                         trace = TRUE, partial = NULL)
   tmp <- data.frame(summary(bioenv.rand)[2])
-  result.scaled.inl.free[x] = max(tmp)
+  result.nonver.inl.free[x] = max(tmp)
   print(x)
 }
-hist(result.scaled.inl.free)
-print(mean(result.scaled.inl.free))
-print(max(result.scaled.inl.free))
-print(quantile(result.scaled.inl.free,0.95))
-print(quantile(result.scaled.inl.free,0.99))
-print(quantile(result.scaled.inl.free,1))
+hist(result.nonver.inl.free)
+print(mean(result.nonver.inl.free))
+print(max(result.nonver.inl.free))
+print(quantile(result.nonver.inl.free,0.95))
+print(quantile(result.nonver.inl.free,0.99))
+print(quantile(result.nonver.inl.free,1))
   # p-value < 0.01
 ```
 
