@@ -1,6 +1,6 @@
 ## Verruco Manuscript
 
-#### **Authors:** Edna Chiang, Michelle Berry, Marian L. Schmidt, Bopaiah A. Biddanda, Ashley Burtner, Thomas H. Johengen, Danna Palladino, Vincent J. Denef
+#### **Authors:** Edna Chiang, Marian L. Schmidt, Michelle Berry, Bopaiah A. Biddanda, Ashley Burtner, Thomas H. Johengen, Danna Palladino, Vincent J. Denef
 
 ##### Submitted on -date-
 
