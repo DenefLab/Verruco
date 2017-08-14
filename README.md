@@ -1,8 +1,8 @@
-## Verruco Manuscript
+## Verrucomicrobia are prevalent in north-temperate freshwater lakes and display class-level preferences between lake habitats
 
 #### **Authors:** Edna Chiang, Marian L. Schmidt, Michelle Berry, Bopaiah A. Biddanda, Ashley Burtner, Thomas H. Johengen, Danna Palladino, Vincent J. Denef
 
-##### Submitted on -date-
+##### Submitted to Applied and Environmental Microbiology on Aug 14th, 2017
 
 **********
 
@@ -17,7 +17,7 @@
     - *VerrucoData.RData*: RData object created by `initial_processing/verruco-import.R`.
 2. **figures:** Manuscript figures created by `analysis/verruco-analysis.Rmd`
 3. **make_tree:** Files used to create IToL tree (an organized version of **analysis/tree_files**)
-4. **mothur_output:** Raw output files from mothur pipeline
+4. **mothur_output:** Output files from mothur pipeline
 5. **raw_reads:** Original fastq files
 6. **tables:** Excel files of manuscript tables
 
