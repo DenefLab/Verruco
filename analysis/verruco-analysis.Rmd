@@ -460,7 +460,7 @@ label_rev <- function(labels) {
 }
 
 
-#png("phy.relabund.png", width = 17.8, height = 23, units = "cm", res = 600)
+tiff("phy.relabund.tiff", width = 17.4, height = 18, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
@@ -471,7 +471,7 @@ ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
   coord_flip() +
   scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50), limits = c(0,51)) +
           theme(axis.title.x = element_text(size=10, face="bold"),
-                axis.text.x = element_text(size=8),
+                axis.text.x = element_text(size=7),
                 axis.text.y = element_blank(),
                 axis.ticks.y = element_blank(),
                 axis.title.y = element_text(size=10, face="bold"),
@@ -484,7 +484,7 @@ ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
                 strip.background = element_blank(),
                 legend.position="right") +
   guides(fill = guide_legend(reverse=TRUE, keywidth = 0.75, keyheight = 0.75))
-#dev.off()
+dev.off()
 
 
 ```
@@ -521,8 +521,7 @@ otu_table(Ver.rel)[otu_table(Ver.rel)<.01] <- 0
 
 # Remove anything with 0% rel abun
 Ver.rel = prune_taxa(taxa_sums(Ver.rel)>0,Ver.rel)
-  # Remove taxa = 135
-  # Remain taxa = 208
+
 
 # Create rank abundance of OTUs
 barplot(sort(taxa_sums(Ver.rel),TRUE)[1:20]/nsamples(Ver.rel),las=2,cex.axis=.7)
@@ -625,7 +624,7 @@ label_rev <- function(labels) {
   label_value(rev(labels))
 }
 
-#tiff("intraver.tiff", width = 17.8, height = 18, units = "cm", res = 600)
+#tiff("intraver.tiff", width = 17.4, height = 18, units = "cm", res = 600)
 ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -951,6 +950,311 @@ boxplot.kw.vals$Lake <- c("LE", "LI", "EI", "All", "All", "All", "All", "All", "
 boxplot.kw.vals$Comp <- c("Lake", "Lake", "Lake", "Frac", "Source", "PF", "PS", "FS", "Frac", "Source", "PF", "PS", "FS", "Frac", "Seas", "Seas", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Depth", "TB", "Depth", "Depth", "WS", "TB", "BS", "TS", "Depth")
 boxplot.kw.vals$Bonf <- p.adjust(boxplot.kw.vals$pvals, method="bonferroni")
 boxplot.kw.vals$BenH <- p.adjust(boxplot.kw.vals$pvals, method="BH")
+```
+
+
+### Alpha Diversity
+```{r}
+# Min # of reads
+min_lib <- min(sample_sums(Ver))
+
+# We will subsample to the minimum number of reads. We will repeat this 100 times and average the diversity estimates from each trial.
+
+# Initialize matrices to store richness and evenness estimates
+nsamp = nsamples(Ver)
+trials = 100
+
+richness <- matrix(nrow = nsamp, ncol = trials)
+row.names(richness) <- sample_names(Ver)
+evenness <- matrix(nrow = nsamp, ncol = trials)
+row.names(evenness) <- sample_names(Ver)
+
+for (i in 1:100) {
+  # Subsample
+  r <- rarefy_even_depth(Ver, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Calculate richness
+  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+  richness[ ,i] <- rich
+  
+  # Calculate evenness
+  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+  evenness[ ,i] <- even
+}
+
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+SampleID <- row.names(richness)
+mean <- apply(richness, 1, mean)
+sd <- apply(richness, 1, sd)
+measure <- rep("Observed Richness", nsamp)
+rich_stats <- data.frame(SampleID, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+SampleID <- row.names(evenness)
+mean <- apply(evenness, 1, mean)
+sd <- apply(evenness, 1, sd)
+measure <- rep("Inverse Simpson", nsamp)
+even_stats <- data.frame(SampleID, mean, sd, measure)
+
+# Calculate Simpson's Evenness
+simps_stats<- data.frame(matrix(nrow = nrow(even_stats), ncol = 4))
+colnames(simps_stats) = c("SampleID", "mean", "sd", "measure")
+simps_stats$SampleID <- even_stats$SampleID
+simps_stats$mean <- even_stats$mean/rich_stats$mean
+simps_stats$sd <- even_stats$sd/rich_stats$sd
+simps_stats$measure <- "Simpson's Evenness"
+
+# Combine the estimates into one dataframe
+alpha <- rbind(rich_stats, even_stats, simps_stats)
+
+# Add the sample metadata into this dataframe using the merge() command
+s <- data.frame(sample_data(Ver))
+alphadiv <- merge(alpha, s, by = "SampleID") 
+
+# Group samples together by Lake_Type and Fraction & summarize stats
+sum.stats <- alphadiv %>%
+  group_by(Lake_Type, Fraction, measure) %>%
+  summarize(Mean = mean(mean), 
+            SE = se(mean), 
+            SD = sd(mean), 
+            Median = median(mean))
+
+# Combine stats summary & sample metadata
+final.stats <- left_join(alphadiv, sum.stats, by=c("Lake_Type", "Fraction", "measure"))
+final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
+
+
+
+
+##### Isolate Inverse Simpson #####
+
+# Pull out just Inverse Simpson
+inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
+
+
+### Fraction ###
+inv.simp.water <- inv.simp[which(inv.simp$Depth != "Sediment"),]
+inv.simp.frac.plot <- ggplot(inv.simp.water, aes(x=Lake_Type, y=mean, fill=Fraction)) +
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("rosybrown","gold")) +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=8),
+        axis.text.x = element_text(angle=0, colour="black", size=6),
+        axis.text.y = element_text(colour="black", size=6),
+        axis.title.y = element_text(face="bold", size=8),
+        plot.title = element_text(face="bold", size=8),
+        legend.title = element_text(size=8, face="bold"),
+        legend.text = element_text(size = 7),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
+
+
+### Season ###
+
+# This is the annotation text for the plot below (seas.box)
+# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+
+ann.seas <- data.frame(lab=c("", "+", ""),
+                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Season = factor(c("Spring", "Summer", "Fall"),
+                                         levels = c("Spring", "Summer", "Fall")))
+
+inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
+  geom_boxplot(position=position_dodge(1)) +
+  #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=8),
+        axis.text.x = element_text(angle=0, colour="black", size=6),
+        axis.text.y = element_text(colour="black", size=6),
+        axis.title.y = element_text(face="bold", size=8),
+        plot.title = element_text(face="bold", size=8),
+        legend.title = element_text(size=8, face="bold"),
+        legend.text = element_text(size = 7),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  geom_text(data = ann.seas, aes(x = c(1.33,1.33,1), y=c(5.15,15,5.15), label = lab), size = 3, color="red")
+
+
+
+
+### Depth ###
+
+# This is the annotation text for the plot below (seas.box)
+# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
+ann.depth <- data.frame(lab=c(" ", "+", ""),
+                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
+                                          levels = c("Laurentian", "Estuary",
+                                                     "Inland")),
+                       Depth = factor(c("Surface", "Bottom", "Sediment")))
+
+inv.simp.depth.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Depth)) +
+  geom_boxplot(position=position_dodge(1)) +
+  scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
+  xlab("Lake Type") + ylab("Inverse Simpson") +
+  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  theme(axis.title.x = element_text(face="bold", size=8),
+        axis.text.x = element_text(angle=0, colour="black", size=6),
+        axis.text.y = element_text(colour="black", size=6),
+        axis.title.y = element_text(face="bold", size=8),
+        plot.title = element_text(face="bold", size=8),
+        legend.title = element_text(size=8, face="bold"),
+        legend.text = element_text(size = 7),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
+  geom_text( data = ann.depth, aes(x=c(1,1.33,1), y=c(16.5,16.5,16.5), label=lab), size=3, color="red")
+
+
+
+
+
+
+
+
+##### Kruskal-Wallis #####
+# For Inverse Simpson values
+
+# Lake Type
+kruskal.test(formula = mean ~ Lake_Type, data = inv.simp)
+  # p-value = 0.07479
+
+# Source
+kruskal.test(formula = mean ~ Source, data = inv.simp)
+  # p-value = 0.0007124
+
+# Free vs Part
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Fraction != "Sediment")
+  # p-value = 0.3659
+
+### Fraction
+
+# Laurentian
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Laurentian")
+  # Fraction
+  # p-value = 0.1464
+
+# Estuary
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Fraction
+  # p-value = 0.005992
+kruskalmc(resp = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Part-Free = nonsig
+  # Part-Sed, Free-Sed = Sig
+kruskal.test(formula = mean ~ Source, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Sed vs Water
+  # p-value = 0.001382
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
+  # Free vs Part
+  # p-value = 0.9439
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Free")
+  # Part vs Sed
+  # p-value = 0.008412
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Particle")
+  # Free vs Sed
+  # p-value = 0.001526
+
+# Inland
+kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Inland")
+  # Fraction
+  # p-value = 0.7716
+
+### Season
+kruskal.test(formula = mean ~ Season, data = inv.simp)
+  # All Season
+  # p-value = 0.5134
+
+# Laurentian
+kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Laurentian")
+  # Season  
+  # p-value = 0.1302
+
+# Estuary
+kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Season
+  # p-value = 0.00288
+kruskalmc(resp = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary")
+kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary" & Season != "Spring")
+  # Summer vs Fall
+  # p-value = 0.003485
+kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary" & Season != "Summer")
+  # Spring vs Fall
+  # p-value = 0.7897
+kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary" & Season != "Fall")
+  # Spring vs Summer
+  # p-value = 0.003732
+
+# Inland
+kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Inland")
+  # Season
+  # p-value = 0.3546
+
+
+### Depth
+kruskal.test(formula = mean ~ Depth, data = inv.simp)
+  # All Depth
+  # p-value = 0.001582
+kruskalmc(resp = mean ~ Depth, data = inv.simp)
+  # Sur-Sed, Bot-Sed = Sig
+  # Sur-Bot = nonsig
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset= Depth != "Sediment")
+  # All Water
+  # p-value = 0.2206
+
+# Laurentian
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Laurentian")
+  # Depth 
+  # p-value = 0.03301
+
+# Estuary
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary")
+  # Depth
+  # p-value = 0.005557
+kruskalmc(resp = mean ~ Depth, data = inv.simp, subset=Lake_Type=="Estuary")
+  # Sur-Bot = nonsig
+  # Sur-Sed, Bot-Sed = Sig
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Sediment" )
+  # Sur vs Bottom
+  # p-value = 0.6387
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Surface" )
+  # Bottom vs Sediment
+  # p-value = 0.004181
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Bottom" )
+  # Sur vs Sediment 
+  # p-value = 0.003276
+
+# Inland
+kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Inland")
+  # p-value = 0.9873
+
+##### Adjust P-values #####
+invsimp.kw.vals <- data.frame(c(0.07479, 0.0007124, 0.3659, 0.1464, 0.005992, 0.001382, 0.9439, 0.008412, 0.001526, 0.7716, 0.5134, 0.1302, 0.00288, 0.003485, 0.7897, 0.003732, 0.3546, 0.001582, 0.2206, 0.03301, 0.005557, 0.6387, 0.004181, 0.003276, 0.9873))
+colnames(invsimp.kw.vals) <- "pvals"
+invsimp.kw.vals$Lake <- c("All", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "E", "E", "E", "E", "I", "All", "All", "L", "E", "E", "E", "E", "I")
+invsimp.kw.vals$Comp <- c("Lake", "Source", "PF", "Frac", "Frac", "Source", "PF", "PS", "FS", "PF", "Seas", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Seas", "Depth", "TB", "TB", "Depth", "TB", "BS", "TS", "Depth")
+invsimp.kw.vals$Bonf <- p.adjust(invsimp.kw.vals$pvals, method="bonferroni")
+invsimp.kw.vals$BenH <- p.adjust(invsimp.kw.vals$pvals, method="BH")
+
+
+```
+
+### RelAbun + Inverse Simpson Plot
+```{r}
+# Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
+tiff("boxplot.invsimp.tiff", width = 17.4, height = 10, units = "cm", res = 600)
+grid.newpage()
+pushViewport(viewport(layout=(grid.layout(2,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
+print(depth.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(seas.box, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=3))
+print(inv.simp.depth.plot, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+print(inv.simp.seas.plot, vp=viewport(layout.pos.row=2, layout.pos.col=2))
+print(inv.simp.frac.plot, vp=viewport(layout.pos.row=2, layout.pos.col=3))
+dev.off()
+
 ```
 
 
@@ -1333,353 +1637,48 @@ lau.y <- as.vector(lau.df$Abundance)
 # Remove these 2 data points
 #lau.y <- lau.y[-1]
 #lau.y <- lau.y[-7]
+dev.new()
+tiff("residuals.lau.tiff", width = 15, height = 6, units = "cm", res = 600)
+grid.newpage()
 plot_residuals(lau.model, lau.y, "Laurentian")
+dev.off()
 
 
 ### Estuary ###
 est.y <- as.vector(est.df$Abundance)
+dev.new()
+tiff("residuals.est.tiff", width = 15, height = 6, units = "cm", res = 600)
+grid.newpage()
 plot_residuals(est.model, est.y, "Estuary")
-
+dev.off()
 
 ### Inland ###
 inl.y <- as.vector(inl.df$Abundance)
+dev.new()
+tiff("residuals.inl.tiff", width = 15, height = 6, units = "cm", res = 600)
+grid.newpage()
 plot_residuals(inl.model, inl.y, "Inland")
-
+dev.off()
 
 
 
 ##### PLOT!!! #####
 dev.new()
-tiff("residuals.tiff", width = 15, height = 10, units = "cm", res = 600)
+tiff("residuals.tiff", width = 15, height = 18, units = "cm", res = 600)
 grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,3))))
-print(plot_residuals(lau.model, lau.y, "Laurentian"), vp=viewport(layout.pos.row=1, 
-                                                                  layout.pos.col=1:3))
-print(plot_residuals(est.model, est.y, "Estuary"), vp=viewport(layout.pos.row=2, 
-                                                                  layout.pos.col=1:3))
-print(plot_residuals(inl.model, inl.y, "Inland"), vp=viewport(layout.pos.row=3, 
-                                                                  layout.pos.col=1:3))
+pushViewport(viewport(layout=(grid.layout(3,1))))
+print("residuals.lau.tiff", vp=viewport(layout.pos.row=1, 
+                                                                  layout.pos.col=1))
+print("residuals.est.tiff", vp=viewport(layout.pos.row=2, 
+                                                                  layout.pos.col=1))
+print("residuals.inl.tiff", vp=viewport(layout.pos.row=3, 
+                                                                  layout.pos.col=1))
 dev.off()
 
 
 
 
-
-
-#tiff("ver.pcoa.tiff", width = 15, height = 10, units = "cm", res = 500)
-#grid.newpage()
-#pushViewport(viewport(layout=(grid.layout(1,3, widths=c(1,1,1), heights=c(1,1,1)))))
-#print(Ver.lau.ord, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-#print(Ver.est.ord, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-#print(Ver.inl.ord, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-#dev.off()
-
 ```
-
-### Alpha Diversity
-```{r}
-# Min # of reads
-min_lib <- min(sample_sums(Ver))
-
-# We will subsample to the minimum number of reads. We will repeat this 100 times and average the diversity estimates from each trial.
-
-# Initialize matrices to store richness and evenness estimates
-nsamp = nsamples(Ver)
-trials = 100
-
-richness <- matrix(nrow = nsamp, ncol = trials)
-row.names(richness) <- sample_names(Ver)
-evenness <- matrix(nrow = nsamp, ncol = trials)
-row.names(evenness) <- sample_names(Ver)
-
-for (i in 1:100) {
-  # Subsample
-  r <- rarefy_even_depth(Ver, sample.size = min_lib, verbose = FALSE, replace = TRUE)
-  
-  # Calculate richness
-  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
-  richness[ ,i] <- rich
-  
-  # Calculate evenness
-  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
-  evenness[ ,i] <- even
-}
-
-
-# Create a new dataframe to hold the means and standard deviations of richness estimates
-SampleID <- row.names(richness)
-mean <- apply(richness, 1, mean)
-sd <- apply(richness, 1, sd)
-measure <- rep("Observed Richness", nsamp)
-rich_stats <- data.frame(SampleID, mean, sd, measure)
-
-# Create a new dataframe to hold the means and standard deviations of evenness estimates
-SampleID <- row.names(evenness)
-mean <- apply(evenness, 1, mean)
-sd <- apply(evenness, 1, sd)
-measure <- rep("Inverse Simpson", nsamp)
-even_stats <- data.frame(SampleID, mean, sd, measure)
-
-# Calculate Simpson's Evenness
-simps_stats<- data.frame(matrix(nrow = nrow(even_stats), ncol = 4))
-colnames(simps_stats) = c("SampleID", "mean", "sd", "measure")
-simps_stats$SampleID <- even_stats$SampleID
-simps_stats$mean <- even_stats$mean/rich_stats$mean
-simps_stats$sd <- even_stats$sd/rich_stats$sd
-simps_stats$measure <- "Simpson's Evenness"
-
-# Combine the estimates into one dataframe
-alpha <- rbind(rich_stats, even_stats, simps_stats)
-
-# Add the sample metadata into this dataframe using the merge() command
-s <- data.frame(sample_data(Ver))
-alphadiv <- merge(alpha, s, by = "SampleID") 
-
-# Group samples together by Lake_Type and Fraction & summarize stats
-sum.stats <- alphadiv %>%
-  group_by(Lake_Type, Fraction, measure) %>%
-  summarize(Mean = mean(mean), 
-            SE = se(mean), 
-            SD = sd(mean), 
-            Median = median(mean))
-
-# Combine stats summary & sample metadata
-final.stats <- left_join(alphadiv, sum.stats, by=c("Lake_Type", "Fraction", "measure"))
-final.stats$measure <- factor(final.stats$measure, levels=c("Inverse Simpson", "Simpson's Evenness", "Observed Richness"))
-
-
-
-
-##### Isolate Inverse Simpson #####
-
-# Pull out just Inverse Simpson
-inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
-
-
-### Fraction ###
-inv.simp.water <- inv.simp[which(inv.simp$Depth != "Sediment"),]
-inv.simp.frac.plot <- ggplot(inv.simp.water, aes(x=Lake_Type, y=mean, fill=Fraction)) +
-  geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold")) +
-  xlab("Lake Type") + ylab("Inverse Simpson") +
-  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=8),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
-        strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
-
-
-### Season ###
-
-# This is the annotation text for the plot below (seas.box)
-# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
-
-ann.seas <- data.frame(lab=c("", "+", ""),
-                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
-                                          levels = c("Laurentian", "Estuary",
-                                                     "Inland")),
-                       Season = factor(c("Spring", "Summer", "Fall"),
-                                         levels = c("Spring", "Summer", "Fall")))
-
-inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
-  geom_boxplot(position=position_dodge(1)) +
-  #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
-  xlab("Lake Type") + ylab("Inverse Simpson") +
-  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
-        strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.seas, aes(x = c(1.33,1.33,1), y=c(5.15,15,5.15), label = lab), size = 3, color="red")
-
-
-
-
-### Depth ###
-
-# This is the annotation text for the plot below (seas.box)
-# Since the plot is facetted and you have different text in each facet, you have to use geom_text and call on the dataframe made below (ann_text)
-ann.depth <- data.frame(lab=c(" ", "+", ""),
-                       Lake_Type = factor(c("Laurentian", "Estuary", "Inland"),
-                                          levels = c("Laurentian", "Estuary",
-                                                     "Inland")),
-                       Depth = factor(c("Surface", "Bottom", "Sediment")))
-
-inv.simp.depth.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Depth)) +
-  geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
-  xlab("Lake Type") + ylab("Inverse Simpson") +
-  facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
-        strip.text.x = element_blank(),
-        plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text( data = ann.depth, aes(x=c(1,1.33,1), y=c(16.5,16.5,16.5), label=lab), size=3, color="red")
-
-
-
-
-
-
-
-
-##### Kruskal-Wallis #####
-# For Inverse Simpson values
-
-# Lake Type
-kruskal.test(formula = mean ~ Lake_Type, data = inv.simp)
-  # p-value = 0.07479
-
-# Source
-kruskal.test(formula = mean ~ Source, data = inv.simp)
-  # p-value = 0.0007124
-
-# Free vs Part
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Fraction != "Sediment")
-  # p-value = 0.3659
-
-### Fraction
-
-# Laurentian
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Laurentian")
-  # Fraction
-  # p-value = 0.1464
-
-# Estuary
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary")
-  # Fraction
-  # p-value = 0.005992
-kruskalmc(resp = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary")
-  # Part-Free = nonsig
-  # Part-Sed, Free-Sed = Sig
-kruskal.test(formula = mean ~ Source, data = inv.simp, subset=Lake_Type=="Estuary")
-  # Sed vs Water
-  # p-value = 0.001382
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Sediment")
-  # Free vs Part
-  # p-value = 0.9439
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Free")
-  # Part vs Sed
-  # p-value = 0.008412
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Estuary" & Fraction != "Particle")
-  # Free vs Sed
-  # p-value = 0.001526
-
-# Inland
-kruskal.test(formula = mean ~ Fraction, data = inv.simp, subset=Lake_Type=="Inland")
-  # Fraction
-  # p-value = 0.7716
-
-### Season
-kruskal.test(formula = mean ~ Season, data = inv.simp)
-  # All Season
-  # p-value = 0.5134
-
-# Laurentian
-kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Laurentian")
-  # Season  
-  # p-value = 0.1302
-
-# Estuary
-kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary")
-  # Season
-  # p-value = 0.00288
-kruskalmc(resp = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary")
-kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary" & Season != "Spring")
-  # Summer vs Fall
-  # p-value = 0.003485
-kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary" & Season != "Summer")
-  # Spring vs Fall
-  # p-value = 0.7897
-kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Estuary" & Season != "Fall")
-  # Spring vs Summer
-  # p-value = 0.003732
-
-# Inland
-kruskal.test(formula = mean ~ Season, data = inv.simp, subset=Lake_Type=="Inland")
-  # Season
-  # p-value = 0.3546
-
-
-### Depth
-kruskal.test(formula = mean ~ Depth, data = inv.simp)
-  # All Depth
-  # p-value = 0.001582
-kruskalmc(resp = mean ~ Depth, data = inv.simp)
-  # Sur-Sed, Bot-Sed = Sig
-  # Sur-Bot = nonsig
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset= Depth != "Sediment")
-  # All Water
-  # p-value = 0.2206
-
-# Laurentian
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Laurentian")
-  # Depth 
-  # p-value = 0.03301
-
-# Estuary
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary")
-  # Depth
-  # p-value = 0.005557
-kruskalmc(resp = mean ~ Depth, data = inv.simp, subset=Lake_Type=="Estuary")
-  # Sur-Bot = nonsig
-  # Sur-Sed, Bot-Sed = Sig
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Sediment" )
-  # Sur vs Bottom
-  # p-value = 0.6387
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Surface" )
-  # Bottom vs Sediment
-  # p-value = 0.004181
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Estuary" & Depth != "Bottom" )
-  # Sur vs Sediment 
-  # p-value = 0.003276
-
-# Inland
-kruskal.test(formula = mean ~ Depth, data = inv.simp, subset = Lake_Type == "Inland")
-  # p-value = 0.9873
-
-##### Adjust P-values #####
-invsimp.kw.vals <- data.frame(c(0.07479, 0.0007124, 0.3659, 0.1464, 0.005992, 0.001382, 0.9439, 0.008412, 0.001526, 0.7716, 0.5134, 0.1302, 0.00288, 0.003485, 0.7897, 0.003732, 0.3546, 0.001582, 0.2206, 0.03301, 0.005557, 0.6387, 0.004181, 0.003276, 0.9873))
-colnames(invsimp.kw.vals) <- "pvals"
-invsimp.kw.vals$Lake <- c("All", "All", "All", "L", "E", "E", "E", "E", "E", "I", "All", "L", "E", "E", "E", "E", "I", "All", "All", "L", "E", "E", "E", "E", "I")
-invsimp.kw.vals$Comp <- c("Lake", "Source", "PF", "Frac", "Frac", "Source", "PF", "PS", "FS", "PF", "Seas", "Seas", "Seas", "SuFa", "SpFa", "SpSu", "Seas", "Depth", "TB", "TB", "Depth", "TB", "BS", "TS", "Depth")
-invsimp.kw.vals$Bonf <- p.adjust(invsimp.kw.vals$pvals, method="bonferroni")
-invsimp.kw.vals$BenH <- p.adjust(invsimp.kw.vals$pvals, method="BH")
-
-
-```
-
-### RelAbun + Inverse Simpson Plot
-```{r}
-# Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-tiff("boxplot.invsimp.tiff", width = 17.8, height = 10, units = "cm", res = 600)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(2,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
-print(depth.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-print(seas.box, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-print(frac.box, vp=viewport(layout.pos.row=1, layout.pos.col=3))
-print(inv.simp.depth.plot, vp=viewport(layout.pos.row=2, layout.pos.col=1))
-print(inv.simp.seas.plot, vp=viewport(layout.pos.row=2, layout.pos.col=2))
-print(inv.simp.frac.plot, vp=viewport(layout.pos.row=2, layout.pos.col=3))
-dev.off()
-
-```
-
 
 
 ### Phylogenetic Diversity
@@ -1844,7 +1843,7 @@ mpd.seas.plot <- ggplot(final.mpd, aes(x=Lake_Type, y=Stat, fill=Season)) +
 
 
 ######## Plot MPD ########
-tiff("mpd.tiff", width = 17.8, height = 7, units = "cm", res = 600)
+tiff("mpd.tiff", width = 17.4, height = 5, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,3, widths=c(0.7,1,1), heights=c(0.5,0.5,0.5))))) 
 print(mpd.lake.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -2891,15 +2890,15 @@ nonver.inl.ord <- plot_ordination(physeq = nonver.inl, ordination = nonver.inl.p
 
 ### Big PCoA Figure
 ```{r}
-tiff("pcoa.tiff", width = 17.8, height = 11, units = "cm", res = 600)
+tiff("pcoa.tiff", width = 17.4, height = 12, units = "cm", res = 600)
 #pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,8), heights=c(1,14,14)))))
-grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=10,fontface="bold"))
-grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=10,fontface="bold"))
-grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=10,fontface="bold"))
-grid.text("Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
-grid.text("Non-Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=10,fontface="bold"))
+grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=9,fontface="bold"))
+grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=9,fontface="bold"))
+grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=9,fontface="bold"))
+grid.text("Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=9,fontface="bold"))
+grid.text("Non-Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=9,fontface="bold"))
 print(Ver.lau.ord, vp=viewport(layout.pos.row=2, layout.pos.col=2))
 print(Ver.est.ord, vp=viewport(layout.pos.row=2, layout.pos.col=3))
 print(Ver.inl.ord, vp=viewport(layout.pos.row=2, layout.pos.col=4))
