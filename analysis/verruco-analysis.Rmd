@@ -232,7 +232,9 @@ ks.test(Ver.box.buoy$Relative_Abundance, "pnorm",
 
 ##### Check all Lake Michigan Cruise Samples #####
 Ver.box.LM <- Ver.box.buoy[which(Ver.box.buoy$Study == "LakeMichigan"),]
-Ver.box.LM$Station <- ordered(Ver.box.LM$Station, levels = c("Buoy", "Shore", "Far"))
+rename <- c("Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore", "Nearshore", "Nearshore", "Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore","Buoy", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Bouy", "Offshore","Offshore","Nearshore","Nearshore","Nearshore")
+Ver.box.LM$Station <- rename
+Ver.box.LM$Station <- ordered(Ver.box.LM$Station, levels = c("Buoy", "Nearshore", "Offshore"))
 
 ### Plot! ###
 ann_LM <- data.frame(lab=c(" ", "+"),
@@ -241,7 +243,7 @@ ann_LM <- data.frame(lab=c(" ", "+"),
 Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance, 
                                            fill = Lake_Type)) +
   geom_boxplot(position=position_dodge(1)) +
-  ggtitle("Laurentian Cruise Samples") +
+  ggtitle("Laurentian Survey Samples") +
   scale_fill_manual(values = c("salmon","turquoise3")) +
   theme(axis.title.x = element_text(face="bold", size=8),
         axis.text.x = element_text(angle=0, colour="black", size=6),
