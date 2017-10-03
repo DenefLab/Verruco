@@ -183,7 +183,7 @@ ggplot(data.frame(sum = sample_sums(scaled)), aes(sum)) +
 good_phylum.buoy <- tax_glom(scaled.buoy, taxrank = "Phylum")
 
 # Transform each merged phylum count to rel abun
-phylum.99.buoy = transform_sample_counts(good_phylum.buoy, function(x){(x/sum(x))*100})
+phylum.99.buoy <- transform_sample_counts(good_phylum.buoy, function(x){(x/sum(x))*100})
 
 # If a phylum has <1% rel abun, change that to 0%
 otu_table(phylum.99.buoy)[otu_table(phylum.99.buoy) < 1] <- 0
@@ -218,21 +218,10 @@ ks.test(Ver.box.buoy$Relative_Abundance, "pnorm",
     # 0.01515
     # Not normal
 
-### Log Transform ###
-#Ver.box.buoy.log <- log(Ver.box.buoy$Relative_Abundance)
-#hist(Ver.box.buoy.log)
-#shapiro.test(Ver.box.buoy.log)
-  # p-value = 0.04068
-  # Not Normal
-#ks.test(Ver.box.buoy.log, "pnorm", mean=mean(Ver.box.buoy.log), sd=sd(Ver.box.buoy.log))
-  # p-value = 0.4067
-  # Normal
-#Ver.box.buoy$Relative_Abundance <- log(Ver.box.buoy$Relative_Abundance)
-# Choosing to stick with non-transformed data because the overall Verruco data wasn't log transformed; I want to treat everything equally
 
 ##### Check all Lake Michigan Cruise Samples #####
 Ver.box.LM <- Ver.box.buoy[which(Ver.box.buoy$Study == "LakeMichigan"),]
-rename <- c("Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore", "Nearshore", "Nearshore", "Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore","Buoy", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Bouy", "Offshore","Offshore","Nearshore","Nearshore","Nearshore")
+rename <- c("Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore", "Nearshore", "Nearshore", "Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore","Buoy", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Buoy", "Offshore","Offshore","Nearshore","Nearshore","Nearshore")
 Ver.box.LM$Station <- rename
 Ver.box.LM$Station <- ordered(Ver.box.LM$Station, levels = c("Buoy", "Nearshore", "Offshore"))
 
@@ -348,7 +337,7 @@ comp.kw.vals$BenH <- p.adjust(comp.kw.vals$pvals, method="BH")
 
 
 ### Plot Comparisons ###
-tiff("LM.comp.tiff", width = 15, height = 5, units = "cm", res = 600)
+tiff("Fig_S1.tiff", width = 15, height = 5, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,2, widths=c(1,1), heights=c(1,1)))))
 print(Ver.box.LM.plot1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -462,7 +451,7 @@ label_rev <- function(labels) {
 }
 
 
-tiff("phy.relabund.tiff", width = 17.4, height = 18, units = "cm", res = 600)
+tiff("Fig_S2.tiff", width = 17.4, height = 18, units = "cm", res = 600)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
@@ -626,7 +615,7 @@ label_rev <- function(labels) {
   label_value(rev(labels))
 }
 
-#tiff("intraver.tiff", width = 17.4, height = 18, units = "cm", res = 600)
+#tiff("Fig_S6.tiff", width = 17.4, height = 18, units = "cm", res = 600)
 ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -712,7 +701,6 @@ ann_text <- data.frame(lab=c("*", " ", "*"),
                                                      "Inland")),
                        Fraction = factor(c("Particle", "Free", "Free")))
 
-#tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
 frac.box <- ggplot(Ver.box.frac, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("rosybrown","gold")) + 
@@ -728,7 +716,6 @@ frac.box <- ggplot(Ver.box.frac, aes(x=Lake_Type, y=Relative_Abundance, fill=Fra
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
   geom_text(data = ann_text, aes(label=lab), x=c(1,1,1), y=c(41,41,41), size=3, color="red")
-#dev.off()
 
 
 ### Season ###
@@ -769,7 +756,6 @@ ann2_text <- data.frame(lab=c(" ", "+", "*"),
                                                      "Inland")),
                        Depth = factor(c("Surface", "Bottom", "Sediment")))
 
-#tiff("boxplot.tiff", width = 8.7, height = 8.7, units = "cm", res = 600)
 depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
@@ -785,17 +771,9 @@ depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth))
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
   geom_text(data = ann2_text, aes(label=lab), x=c(1,1.33,1), y=c(42,42,41), size=3, color="red")
-#dev.off()
 
 
 
-# tiff("boxplot.tiff", width = 8.7, height = 10, units = "cm", res = 600)
-# grid.newpage()
-# pushViewport(viewport(layout=(grid.layout(1,2, widths=c(7,2.15), heights=c(1)))))
-# print(plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-# legend$vp <- viewport(layout.pos.row = 1, layout.pos.col = 2)
-# grid.draw(legend)
-# dev.off()
 
 
 ##### Kruskal-Wallis #####
@@ -1246,7 +1224,7 @@ invsimp.kw.vals$BenH <- p.adjust(invsimp.kw.vals$pvals, method="BH")
 ### RelAbun + Inverse Simpson Plot
 ```{r}
 # Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-tiff("boxplot.invsimp.tiff", width = 17.4, height = 10, units = "cm", res = 600)
+tiff("Fig_2.tiff", width = 17.4, height = 10, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
 print(depth.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -1666,7 +1644,7 @@ dev.off()
 
 ##### PLOT!!! #####
 dev.new()
-tiff("residuals.tiff", width = 15, height = 18, units = "cm", res = 600)
+tiff("Fig_S3.tiff", width = 15, height = 18, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(3,1))))
 print("residuals.lau.tiff", vp=viewport(layout.pos.row=1, 
@@ -1845,7 +1823,7 @@ mpd.seas.plot <- ggplot(final.mpd, aes(x=Lake_Type, y=Stat, fill=Season)) +
 
 
 ######## Plot MPD ########
-tiff("mpd.tiff", width = 17.4, height = 5, units = "cm", res = 600)
+tiff("Fig_S4.tiff", width = 17.4, height = 5, units = "cm", res = 600)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,3, widths=c(0.7,1,1), heights=c(0.5,0.5,0.5))))) 
 print(mpd.lake.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -2892,7 +2870,7 @@ nonver.inl.ord <- plot_ordination(physeq = nonver.inl, ordination = nonver.inl.p
 
 ### Big PCoA Figure
 ```{r}
-tiff("pcoa.tiff", width = 17.4, height = 12, units = "cm", res = 600)
+tiff("Fig_3.tiff", width = 17.4, height = 12, units = "cm", res = 600)
 #pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,8), heights=c(1,14,14)))))
