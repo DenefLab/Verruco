@@ -2,7 +2,7 @@
 
 #### **Authors:** Edna Chiang, Marian L. Schmidt, Michelle Berry, Bopaiah A. Biddanda, Ashley Burtner, Thomas H. Johengen, Danna Palladino, Vincent J. Denef
 
-##### Submitted to Applied and Environmental Microbiology on Aug 14th, 2017
+##### Submitted to PLoS ONE on Oct, 2017
 
 **********
 
