@@ -4053,6 +4053,98 @@ p.lambda
 ```
 
 
+### Unifrac
+```{r}
+# Add Verruco tree to Ver phyloseq boject
+newick <- read.newick(file="tree_files/ver.tre")
+newick_phy <- phy_tree(newick)
+Ver.unifrac <- merge_phyloseq(Ver, newick_phy)
+
+### Weighted Unifrac
+Ver.wUF <- phyloseq::distance(physeq=Ver.unifrac, method="unifrac")
+sampledf <- data.frame(sample_data(Ver.unifrac))
+wUF.ord <- ordinate(Ver.unifrac, method="PCoA", distance="unifrac", weighted=T)
+
+
+
+adonis(Ver.wUF ~ Lake_Type, data=sampledf)
+  ## R2 = 0.15095
+  ## p-value = 0.001
+beta.tax <- betadisper(d=Ver.wUF, group=sampledf$Lake_Type)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.01
+  # F = 4.50001
+
+adonis(Ver.wUF ~ Depth, data=sampledf)
+  ## R2 = 0.13513
+  ## p-value = 0.001
+beta.tax <- betadisper(d=Ver.wUF, group=sampledf$Depth)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.005
+  # F = 5.554072
+
+adonis(Ver.wUF ~ Fraction, data=sampledf)
+  ## R2 = 0.14479
+  ## p-value = 0.001
+beta.tax <- betadisper(d=Ver.wUF, group=sampledf$Fraction)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.001
+  # F = 7.695803
+
+adonis(Ver.wUF ~ Season, data=sampledf)
+  ## R2 = 0.0823
+  ## p-value = 0.001
+beta.tax <- betadisper(d=Ver.wUF, group=sampledf$Season)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.28
+  # F = 1.294149
+
+adonis(Ver.wUF ~ Source, data=sampledf)
+  ## R2 = 0.08975
+  ## p-value = 0.001
+beta.tax <- betadisper(d=Ver.wUF, group=sampledf$Source)
+p <- permutest(beta.tax)
+p$tab
+  # p-value = 0.165
+  # F = 1.883727
+
+
+adonis(Ver.wUF ~ Lake_Type + Source + Fraction + Season + Depth , data=sampledf)
+
+adonis(Ver.wUF ~ Depth + Lake_Type + Source + Fraction + Season, data=sampledf)
+
+
+
+tiff("test.tiff", width = 17.4, height = 12, units = "cm", res = 325)
+plot_ordination(physeq=Ver.unifrac, ordination=wUF.ord) +
+  geom_point(size=2, aes(color=Fraction, shape=Source))
+dev.off()
+
+Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes = c(1, 2),
+                title= "Bray-Curtis Dissimilarity") + 
+  geom_point(size=2, aes(color = Season, shape = Depth,
+                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
+                         alpha = Fraction)) +
+  scale_shape_manual(values = c(21, 24, 22)) +
+  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.x = element_text(face="bold", family="Times",size=9),
+        axis.title.y = element_text(face="bold", family="Times",size=9),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size=8, family="Times"),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
+        plot.title = element_text(size = 9, face="bold", hjust=0.5, family="Times")) +
+  annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black", family="Times") +
+  guides(colour=FALSE, shape=FALSE, alpha = FALSE)
+
+```
 ### Bootstrap Values
 ```{r}
 #https://cran.r-project.org/web/packages/phangorn/vignettes/Trees.pdf
