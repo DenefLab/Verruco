@@ -30,7 +30,7 @@ library(leaps)
 library(pgirmess)
 library(car)
 theme_set(theme_bw())
-set.seed(1)
+windowsFonts(Times=windowsFont("Times New Roman"))set.seed(1)
 setwd("~/Verruco/analysis")
 ```
 
@@ -232,18 +232,19 @@ ann_LM <- data.frame(lab=c(" ", "+"),
 Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance, 
                                            fill = Lake_Type)) +
   geom_boxplot(position=position_dodge(1)) +
-  ggtitle("Laurentian Survey Samples") +
+  ggtitle("Lake Michigan Survey Samples") +
   scale_fill_manual(values = c("salmon","turquoise3")) +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=10, hjust = 0.5),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=10, 
+                                  hjust = 0.5),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
-  geom_text(data = ann_LM, aes(label=lab), x=c(1,3), y=c(16,18), size=4, color="red")
+  geom_text(data = ann_LM, aes(label=lab), x=c(1,3), y=c(16,18), size=4, color="red", family="Times")
 
 ### Kruskal-Wallis LM 2013 Samples ###
 kruskal.test(formula = Relative_Abundance ~ Station, data = Ver.box.LM)
@@ -289,16 +290,17 @@ Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
   geom_boxplot(position=position_dodge(1)) + ylim(0,44) +
   ggtitle("Estuary Samples") +
   scale_fill_manual(values = c("turquoise3","salmon")) +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=10, hjust = 0.5),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=10,
+                                  hjust = 0.5),
+        legend.title = element_text(size=8, family="Times", face="bold"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
-    geom_text(data = ann_est, aes(label=lab), x=c(1,5), y=c(45,45), size=3, color="red")
+    geom_text(data = ann_est, aes(label=lab), x=c(1,5), y=c(45,45), size=3, color="red", family="Times")
 
 
 ### Kruskal-Wallis Estuary Comparisons ###
@@ -337,7 +339,7 @@ comp.kw.vals$BenH <- p.adjust(comp.kw.vals$pvals, method="BH")
 
 
 ### Plot Comparisons ###
-tiff("Fig_S1.tiff", width = 15, height = 5, units = "cm", res = 600)
+tiff("FigS1.tiff", width = 17, height = 5, units = "cm", res = 300)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,2, widths=c(1,1), heights=c(1,1)))))
 print(Ver.box.LM.plot1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -451,7 +453,7 @@ label_rev <- function(labels) {
 }
 
 
-tiff("Fig_S2.tiff", width = 17.4, height = 18, units = "cm", res = 600)
+tiff("FigS2.tiff", width = 17, height = 14, units = "cm", res = 300)
 ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
           geom_bar(stat="identity", color="black") +
           scale_fill_manual(values = phylum.colors, name="Phylum") +
@@ -461,16 +463,17 @@ ggplot(phy.trim, aes(x=Phylum, y=Median, fill=Phylum)) +
              labeller = label_rev) +
   coord_flip() +
   scale_y_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50), limits = c(0,51)) +
-          theme(axis.title.x = element_text(size=10, face="bold"),
-                axis.text.x = element_text(size=7),
+          theme(axis.title.x = element_text(size=9, face="bold", family="Times"),
+                axis.text.x = element_text(size=8, family="Times"),
                 axis.text.y = element_blank(),
                 axis.ticks.y = element_blank(),
-                axis.title.y = element_text(size=10, face="bold"),
-                plot.title = element_text(size = 12, face="bold", hjust=0.5),
-                legend.title = element_text(size=10, face="bold"),
-                legend.text = element_text(size =8),
-                strip.text.x = element_text(size=10, face="bold"),
-                strip.text.y = element_text(size=10, face="bold"),
+                axis.title.y = element_text(size=9, face="bold", family="Times"),
+                plot.title = element_text(size = 9, face="bold", hjust=0.5,
+                                          family="Times"),
+                legend.title = element_text(size=9, face="bold", family="Times"),
+                legend.text = element_text(size =8, family="Times"),
+                strip.text.x = element_text(size=9, face="bold", family="Times"),
+                strip.text.y = element_text(size=9, face="bold", family="Times"),
                 plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
                 strip.background = element_blank(),
                 legend.position="right") +
@@ -615,7 +618,7 @@ label_rev <- function(labels) {
   label_value(rev(labels))
 }
 
-#tiff("Fig_S6.tiff", width = 17.4, height = 18, units = "cm", res = 600)
+tiff("FigS6.tiff", width = 15, height = 16, units = "cm", res = 300)
 ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   facet_grid(Fraction + Season ~ Lake_Type, labeller= label_rev)   +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -623,21 +626,22 @@ ggplot(lakefracseas, aes(y=Median, x = Class, fill = Class)) +
   theme_bw() + ggtitle("Verrucomicrobia Classes Above 1%") + coord_flip() +
   geom_errorbar(aes(ymin = iqr.min, ymax = iqr.max), width = 0.25) + 
   xlab("Class") + ylab("Median Relative Abundance (%)") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(colour = "black", size=8),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=9),
+        axis.text.x = element_text(colour = "black", family="Times", size=9),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size = 12, hjust=0.5),
-        strip.text.x = element_text(size=10, face="bold"),
-        strip.text.y = element_text(size=10, face="bold"),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=9),
+        plot.title = element_text(face="bold", family="Times", size = 10,
+                                  hjust=0.5),
+        strip.text.x = element_text(size=9, family="Times", face="bold"),
+        strip.text.y = element_text(size=9, family="Times", face="bold"),
+        legend.title = element_text(size=9, family="Times", face="bold"),
+        legend.text = element_text(size=8, family="Times"),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
         strip.background = element_blank(),
         legend.position="right") +
   guides(fill = guide_legend(reverse=TRUE))
-#dev.off()
+dev.off()
 
 ```
 
@@ -706,16 +710,16 @@ frac.box <- ggplot(Ver.box.frac, aes(x=Lake_Type, y=Relative_Abundance, fill=Fra
   scale_fill_manual(values = c("rosybrown","gold")) + 
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1), y=c(41,41,41), size=3, color="red")
+  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1), y=c(41,41,41), size=3, color="red", family="Times")
 
 
 ### Season ###
@@ -733,16 +737,16 @@ seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season))
   #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8),
+        legend.title = element_text(size=8, family="Times", face="bold"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1.33), y=c(42,42,42), size=3, color="red")
+  geom_text(data = ann_text, aes(label=lab), x=c(1,1,1.33), y=c(42,42,42), size=3, color="red", family="Times")
 
 
 
@@ -761,16 +765,16 @@ depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth))
   scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann2_text, aes(label=lab), x=c(1,1.33,1), y=c(42,42,41), size=3, color="red")
+  geom_text(data = ann2_text, aes(label=lab), x=c(1,1.33,1), y=c(42,42,41), size=3, color="red", family="Times")
 
 
 
@@ -1020,13 +1024,13 @@ inv.simp.frac.plot <- ggplot(inv.simp.water, aes(x=Lake_Type, y=mean, fill=Fract
   scale_fill_manual(values = c("rosybrown","gold")) +
   xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) # top, right, bottom, left
 
@@ -1048,16 +1052,16 @@ inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
   #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
   xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.seas, aes(x = c(1.33,1.33,1), y=c(5.15,15,5.15), label = lab), size = 3, color="red")
+  geom_text(data = ann.seas, aes(x = c(1.33,1.33,1), y=c(5.15,15,5.15), label = lab), size = 3, color="red", family="Times")
 
 
 
@@ -1077,16 +1081,16 @@ inv.simp.depth.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Depth)) +
   scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
   xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=8),
-        axis.text.x = element_text(angle=0, colour="black", size=6),
-        axis.text.y = element_text(colour="black", size=6),
-        axis.title.y = element_text(face="bold", size=8),
-        plot.title = element_text(face="bold", size=8),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size = 7),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text( data = ann.depth, aes(x=c(1,1.33,1), y=c(16.5,16.5,16.5), label=lab), size=3, color="red")
+  geom_text( data = ann.depth, aes(x=c(1,1.33,1), y=c(16.5,16.5,16.5), label=lab), size=3, color="red", family="Times")
 
 
 
@@ -1224,7 +1228,7 @@ invsimp.kw.vals$BenH <- p.adjust(invsimp.kw.vals$pvals, method="BH")
 ### RelAbun + Inverse Simpson Plot
 ```{r}
 # Combine Verruco Rel Abun Boxplot & Inverse Simpson Plot
-tiff("Fig_2.tiff", width = 17.4, height = 10, units = "cm", res = 600)
+tiff("Fig2.tiff", width = 19.05, height = 10, units = "cm", res = 300)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(2,3, widths=c(1,1,1), heights=c(1.5,1.5,1.5)))))
 print(depth.box, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -1618,7 +1622,7 @@ lau.y <- as.vector(lau.df$Abundance)
 #lau.y <- lau.y[-1]
 #lau.y <- lau.y[-7]
 dev.new()
-tiff("residuals.lau.tiff", width = 15, height = 6, units = "cm", res = 600)
+tiff("residuals.lau.tiff", width = 15, height = 6, units = "cm", res = 300)
 grid.newpage()
 plot_residuals(lau.model, lau.y, "Laurentian")
 dev.off()
@@ -1627,7 +1631,7 @@ dev.off()
 ### Estuary ###
 est.y <- as.vector(est.df$Abundance)
 dev.new()
-tiff("residuals.est.tiff", width = 15, height = 6, units = "cm", res = 600)
+tiff("residuals.est.tiff", width = 15, height = 6, units = "cm", res = 300)
 grid.newpage()
 plot_residuals(est.model, est.y, "Estuary")
 dev.off()
@@ -1635,26 +1639,10 @@ dev.off()
 ### Inland ###
 inl.y <- as.vector(inl.df$Abundance)
 dev.new()
-tiff("residuals.inl.tiff", width = 15, height = 6, units = "cm", res = 600)
+tiff("residuals.inl.tiff", width = 15, height = 6, units = "cm", res = 300)
 grid.newpage()
 plot_residuals(inl.model, inl.y, "Inland")
 dev.off()
-
-
-
-##### PLOT!!! #####
-dev.new()
-tiff("Fig_S3.tiff", width = 15, height = 18, units = "cm", res = 600)
-grid.newpage()
-pushViewport(viewport(layout=(grid.layout(3,1))))
-print("residuals.lau.tiff", vp=viewport(layout.pos.row=1, 
-                                                                  layout.pos.col=1))
-print("residuals.est.tiff", vp=viewport(layout.pos.row=2, 
-                                                                  layout.pos.col=1))
-print("residuals.inl.tiff", vp=viewport(layout.pos.row=3, 
-                                                                  layout.pos.col=1))
-dev.off()
-
 
 
 
@@ -1755,21 +1743,21 @@ sum.mpd <- mpd.ready %>%
 final.mpd <- left_join(mpd.ready, sum.mpd, by=c("Lake_Type", "Fraction", "Measure"))
 
 ##### Lake Type #####
-mpd.lake.plot <- ggplot(final.mpd, aes(x = Lake_Type, y = Stat, fill = Lake_Type)) + 
+mpd.lake.plot <- ggplot(final.mpd, aes(x = Lake_Type, y = Stat, fill = Lake_Type)) +
   geom_boxplot(position=position_dodge(1)) +
   scale_fill_manual(values = c("firebrick2","darkorange","khaki1")) +
   xlab("Lake Type") + ylab("Mean") +
   ggtitle("SES MPD") +
-  theme(axis.title.x = element_text(face="bold", size=10),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
         axis.text.x = element_blank(),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10, hjust=0.5),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8, hjust=0.5),
+        legend.title = element_text(size=8, family="Times", face="bold"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
-  annotate("text", x= 2, y=3.2, label = "*", fontface="bold", size=5, colour="red")
+  annotate("text", x= 2, y=3.2, label = "*", fontface="bold", size=3, colour="red", family="Times")
 
 
 ##### Fraction #####
@@ -1784,16 +1772,16 @@ mpd.frac.plot <- ggplot(final.mpd, aes(x = Lake_Type, y = Stat, fill = Fraction)
   xlab("Lake Type") + ylab("Mean") +
   ggtitle("SES MPD") +
   facet_grid(~Lake_Type, space = "free_x", scale = "free") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=7),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10, hjust=0.5),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8, hjust=0.5),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) +
-  geom_text(data = ann.mpd.frac, aes(x = c(1,1.35,1), y=c(4.5, 4.5, 4.5), label = lab), size = 4, color="red")
+  geom_text(data = ann.mpd.frac, aes(x = c(1,1.35,1), y=c(4.5, 4.5, 4.5), label = lab), size = 3, color="red", family="Times")
 
 ##### Season #####
 ann.mpd.seas <- data.frame(lab=c("a", "a", "", "+"),
@@ -1808,22 +1796,22 @@ mpd.seas.plot <- ggplot(final.mpd, aes(x=Lake_Type, y=Stat, fill=Season)) +
   xlab("Lake Type") + ylab("Mean") +
   ggtitle("SES MPD") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
-  theme(axis.title.x = element_text(face="bold", size=10),
-        axis.text.x = element_text(angle=0, colour="black", size=7),
-        axis.text.y = element_text(colour="black", size=8),
-        axis.title.y = element_text(face="bold", size=10),
-        plot.title = element_text(face="bold", size=10, hjust=0.5),
-        legend.title = element_text(size=10, face="bold"),
-        legend.text = element_text(size = 9),
+  theme(axis.title.x = element_text(face="bold", family="Times", size=8),
+        axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
+        axis.text.y = element_text(colour="black", family="Times", size=8),
+        axis.title.y = element_text(face="bold", family="Times", size=8),
+        plot.title = element_text(face="bold", family="Times", size=8, hjust=0.5),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size = 8, family="Times"),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0.1, -0.1, 0.1, 0.1), "cm")) + # top, right, bottom, left
-  geom_text(data = ann.mpd.seas, aes(x = c(0.65,1.35,1,0.65), y=c(4.5,4.5,4.5,4.5), label = lab), size = 4, color="red")
+  geom_text(data = ann.mpd.seas, aes(x = c(0.65,1.35,1,0.65), y=c(4.5,4.5,4.5,4.5), label = lab), size = 3, color="red", family="Times")
 
 
 
 
 ######## Plot MPD ########
-tiff("Fig_S4.tiff", width = 17.4, height = 5, units = "cm", res = 600)
+tiff("FigS4.tiff", width = 17.4, height = 5, units = "cm", res = 300)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(1,3, widths=c(0.7,1,1), heights=c(0.5,0.5,0.5))))) 
 print(mpd.lake.plot, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -2277,14 +2265,14 @@ Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=9),
-        axis.title.y = element_text(face="bold", size=9),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.x = element_text(face="bold", family="Times",size=9),
+        axis.title.y = element_text(face="bold", family="Times",size=9),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size=8, family="Times"),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
-  annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", hjust=0.5, family="Times")) +
+  annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black", family="Times") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE)
 # Particle = fill, Free = empty
 # Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25; You also can't set colors manually
@@ -2314,14 +2302,14 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
   scale_y_reverse() +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=9),
-        axis.title.y = element_text(face="bold", size=9),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.x = element_text(face="bold", family="Times",size=9),
+        axis.title.y = element_text(face="bold", family="Times",size=9),
+        legend.title = element_text(size=8, family="Times",face="bold"),
+        legend.text = element_text(size=8,family="Times"),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
-  annotate("text", x= -0.62, y=-0.31, label = "B", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", family="Times", hjust=0.5)) +
+  annotate("text", x= -0.62, y=-0.31, label = "B", fontface = "bold", size=5, colour="black", family="Times") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
   #guides(color = guide_legend(order=1, title="Season", override.aes=list(size=3)),
   #       shape = guide_legend(order=2, title="Depth",override.aes=list(size=3)),
@@ -2362,14 +2350,14 @@ Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=9),
-        axis.title.y = element_text(face="bold", size=9),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.x = element_text(face="bold", family="Times", size=9),
+        axis.title.y = element_text(face="bold", family="Times", size=9),
+        legend.title = element_text(size=8, family="Times", face="bold"),
+        legend.text = element_text(size=8, family="Times"),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
-  annotate("text", x= -0.46, y=0.66, label = "C", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", family="Times", hjust=0.5)) +
+  annotate("text", x= -0.46, y=0.66, label = "C", fontface = "bold", size=5, colour="black", family="Times") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 
 ```
@@ -2783,14 +2771,14 @@ nonver.lau.ord <- plot_ordination(physeq = nonver.lau, ordination = nonver.lau.p
   scale_x_reverse() +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=9),
-        axis.title.y = element_text(face="bold", size=9),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.x = element_text(face="bold", family="Times", size=9),
+        axis.title.y = element_text(face="bold", family="Times", size=9),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size=8, family="Times"),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
-  annotate("text", x= 0.42, y=0.44, label = "D", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", family="Times", hjust=0.5)) +
+  annotate("text", x= 0.42, y=0.44, label = "D", fontface = "bold", size=5, colour="black", family="Times") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 # Note: for scale_fill_discrete to work, you MUST set scale_shape_manual to between 21-25
 #        You also can't set colors manually
@@ -2818,15 +2806,15 @@ nonver.est.ord <- plot_ordination(physeq = nonver.est, ordination = nonver.est.p
   scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=9),
-        axis.title.y = element_text(face="bold", size=9),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.x = element_text(face="bold", family="Times", size=9),
+        axis.title.y = element_text(face="bold", family="Times", size=9),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size=8, family="Times"),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
+        plot.title = element_text(size = 9, face="bold", family="Times", hjust=0.5)) +
   scale_y_reverse() +
-  annotate("text", x= -0.63, y=-0.23, label = "E", fontface = "bold", size=5, colour="black") +
+  annotate("text", x= -0.63, y=-0.23, label = "E", fontface = "bold", size=5, colour="black", family="Times") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 
 
@@ -2856,29 +2844,29 @@ nonver.inl.ord <- plot_ordination(physeq = nonver.inl, ordination = nonver.inl.p
   scale_y_reverse() + scale_x_reverse() +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", size=9),
-        axis.title.y = element_text(face="bold", size=9),
-        legend.title = element_text(size=8, face="bold"),
-        legend.text = element_text(size=8),
+        axis.title.x = element_text(face="bold", family="Times", size=9),
+        axis.title.y = element_text(face="bold", family="Times", size=9),
+        legend.title = element_text(size=8, face="bold", family="Times"),
+        legend.text = element_text(size=8, family="Times"),
         axis.ticks = element_blank(),
         plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5)) +
-  annotate("text", x= 0.37, y=-0.55, label = "F", fontface = "bold", size=5, colour="black") +
+        plot.title = element_text(size = 9, face="bold", family="Times", hjust=0.5)) +
+  annotate("text", x= 0.37, y=-0.55, label = "F", fontface = "bold", size=5, colour="black", family="Times") +
   guides(colour=FALSE, shape=FALSE, alpha = FALSE) 
 ```
 
 
 ### Big PCoA Figure
 ```{r}
-tiff("Fig_3.tiff", width = 17.4, height = 12, units = "cm", res = 600)
+tiff("Fig3.tiff", width = 17.4, height = 12, units = "cm", res = 325)
 #pdf("pcoa.pdf", width=7, height=7, useDingbats = F)
 grid.newpage()
 pushViewport(viewport(layout=(grid.layout(3,5, widths=c(1.5,19,19,19,8), heights=c(1,14,14)))))
-grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=9,fontface="bold"))
-grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=9,fontface="bold"))
-grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=9,fontface="bold"))
-grid.text("Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=9,fontface="bold"))
-grid.text("Non-Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=9,fontface="bold"))
+grid.text("Laurentian", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=2), gp=gpar(fontsize=9,fontface="bold",fontfamily="Times"))
+grid.text("Estuary", just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=3), gp=gpar(fontsize=9,fontface="bold",fontfamily="Times"))
+grid.text("Inland",  just=c(0.35, 0.5), vp=viewport(layout.pos.row=1, layout.pos.col=4), gp=gpar(fontsize=9,fontface="bold",fontfamily="Times"))
+grid.text("Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=2, layout.pos.col=1), gp=gpar(fontsize=9,fontface="bold",fontfamily="Times"))
+grid.text("Non-Verrucomicrobia Community", rot=90, vp=viewport(layout.pos.row=3, layout.pos.col=1), gp=gpar(fontsize=9,fontface="bold",fontfamily="Times"))
 print(Ver.lau.ord, vp=viewport(layout.pos.row=2, layout.pos.col=2))
 print(Ver.est.ord, vp=viewport(layout.pos.row=2, layout.pos.col=3))
 print(Ver.inl.ord, vp=viewport(layout.pos.row=2, layout.pos.col=4))
@@ -5148,11 +5136,12 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
   qqPlot(lm_model, col="blue", reps=10000, 
          ylab="Studentized residuals", 
          xlab="Theoretical quantiles (t-distribution)",
-         cex=1.5, las=1)
+         cex=1.5, las=1, family="serif")
   
   # 2nd plot:  Fitted values (x-axis) vs studentized residuals (y-axis) 
   plot(y=studres(lm_model), x=predict(lm_model), col="blue",
-       las=1,ylab="Studentized residuals", xlab="Fitted Values", cex=1.5)
+       las=1,ylab="Studentized residuals", xlab="Fitted Values", cex=1.5,
+       family="serif")
   # Draw a line at y=0
   lines(x=c(-10,60), y=c(0,0), lty=2)
   
@@ -5166,14 +5155,14 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
          print("There are no high leverage points in this model.")) 
   
   # Add a title to all the plots
-  mtext(text = main_title, side = 3, line = 2, outer = FALSE)
+  mtext(text = main_title, side = 3, line = 2, outer = FALSE, family="serif")
   #  side:  1=bottom, 2=left, 3=top, 4=right
   
   # 3rd plot: Fitted values (x-axis) vs observed values (y-axis) 
   plot(y=lm_observed_y, x=predict(lm_model), col="blue",
        ylab="Observed values",
        xlab="Fitted Values", cex=1.5,
-       las=1)
+       las=1, family="serif")
   # draw a 1:1 line
   abline(a = 0, b = 1, lty=2)
   
