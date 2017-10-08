@@ -4066,7 +4066,7 @@ sampledf <- data.frame(sample_data(Ver.unifrac))
 wUF.ord <- ordinate(Ver.unifrac, method="PCoA", distance="unifrac", weighted=T)
 
 
-
+### PERMANOVA
 adonis(Ver.wUF ~ Lake_Type, data=sampledf)
   ## R2 = 0.15095
   ## p-value = 0.001
@@ -4113,36 +4113,7 @@ p$tab
   # F = 1.883727
 
 
-adonis(Ver.wUF ~ Lake_Type + Source + Fraction + Season + Depth , data=sampledf)
-
-adonis(Ver.wUF ~ Depth + Lake_Type + Source + Fraction + Season, data=sampledf)
-
-
-
-tiff("test.tiff", width = 17.4, height = 12, units = "cm", res = 325)
-plot_ordination(physeq=Ver.unifrac, ordination=wUF.ord) +
-  geom_point(size=2, aes(color=Fraction, shape=Source))
-dev.off()
-
-Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes = c(1, 2),
-                title= "Bray-Curtis Dissimilarity") + 
-  geom_point(size=2, aes(color = Season, shape = Depth,
-                         fill = factor(ifelse(Fraction == "Free", NA, Season)),
-                         alpha = Fraction)) +
-  scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
-  scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
-  theme(axis.text.x = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_text(face="bold", family="Times",size=9),
-        axis.title.y = element_text(face="bold", family="Times",size=9),
-        legend.title = element_text(size=8, face="bold", family="Times"),
-        legend.text = element_text(size=8, family="Times"),
-        axis.ticks = element_blank(),
-        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"), #top, right, bottom, left
-        plot.title = element_text(size = 9, face="bold", hjust=0.5, family="Times")) +
-  annotate("text", x= -0.39, y=0.43, label = "A", fontface = "bold", size=5, colour="black", family="Times") +
-  guides(colour=FALSE, shape=FALSE, alpha = FALSE)
+adonis(Ver.wUF ~ Lake_Type + Fraction + Season + Depth, data=sampledf)
 
 ```
 ### Bootstrap Values
