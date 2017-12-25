@@ -709,7 +709,7 @@ ann_text <- data.frame(lab=c("*", " ", "*"),
 
 frac.box <- ggplot(Ver.box.frac, aes(x=Lake_Type, y=Relative_Abundance, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold")) + 
+  scale_fill_manual(values = c("gray34","gray88")) + 
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
@@ -736,7 +736,7 @@ ann_text <- data.frame(lab=c(" ", " ", "+"),
 
 seas.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
-  #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
+  scale_fill_manual(values = c("#d9ef8b","#41ab5d","darkgreen")) +
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
@@ -764,7 +764,7 @@ ann2_text <- data.frame(lab=c(" ", "+", "*"),
 
 depth.box <- ggplot(Ver.box, aes(x=Lake_Type, y=Relative_Abundance, fill=Depth)) +
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
+  scale_fill_manual(values = c("#66ddff","#3366ee","magenta4")) +
   xlab("Lake Type") + ylab("Relative Abundance (%)") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
@@ -1023,7 +1023,7 @@ inv.simp <- final.stats[which(final.stats$measure == "Inverse Simpson"),]
 inv.simp.water <- inv.simp[which(inv.simp$Depth != "Sediment"),]
 inv.simp.frac.plot <- ggplot(inv.simp.water, aes(x=Lake_Type, y=mean, fill=Fraction)) +
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold")) +
+  scale_fill_manual(values = c("gray34","gray88")) +
   xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
@@ -1051,7 +1051,7 @@ ann.seas <- data.frame(lab=c("", "+", ""),
 
 inv.simp.seas.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Season)) +
   geom_boxplot(position=position_dodge(1)) +
-  #scale_fill_manual(values = c("indianred1","skyblue2","mediumpurple2")) +
+  scale_fill_manual(values = c("#d9ef8b","#41ab5d","darkgreen")) +
   xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
@@ -1080,7 +1080,7 @@ ann.depth <- data.frame(lab=c(" ", "+", ""),
 
 inv.simp.depth.plot <- ggplot(inv.simp, aes(x=Lake_Type, y=mean, fill=Depth)) +
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("cadetblue1","dodgerblue3","purple3")) +
+  scale_fill_manual(values = c("#66ddff","#3366ee","magenta4")) +
   xlab("Lake Type") + ylab("Inverse Simpson") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
