@@ -30,7 +30,8 @@ library(leaps)
 library(pgirmess)
 library(car)
 theme_set(theme_bw())
-windowsFonts(Times=windowsFont("Times New Roman"))set.seed(1)
+windowsFonts(Times=windowsFont("Times New Roman"))
+set.seed(1)
 setwd("~/Verruco/analysis")
 ```
 
@@ -224,16 +225,17 @@ Ver.box.LM <- Ver.box.buoy[which(Ver.box.buoy$Study == "LakeMichigan"),]
 rename <- c("Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore", "Nearshore", "Nearshore", "Buoy", "Buoy", "Offshore", "Offshore", "Offshore", "Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore","Buoy", "Buoy", "Offshore","Offshore","Offshore","Nearshore","Nearshore","Nearshore", "Buoy", "Buoy", "Offshore","Offshore","Nearshore","Nearshore","Nearshore")
 Ver.box.LM$Station <- rename
 Ver.box.LM$Station <- ordered(Ver.box.LM$Station, levels = c("Buoy", "Nearshore", "Offshore"))
+Ver.box.LM$Lake_Type <- ordered(Ver.box.LM$Lake_Type, levels=c("Laurentian", "Estuary"))
 
 ### Plot! ###
 ann_LM <- data.frame(lab=c(" ", "+"),
-                       Lake_Type = factor(c("Estuary", "Laurentian"),
-                                          levels = c("Estuary", "Laurentian")))
+                       Lake_Type = factor(c("Laurentian", "Estuary"),
+                                          levels = c("Laurentian", "Estuary")))
 Ver.box.LM.plot1 <- ggplot(Ver.box.LM, aes(x=Station, y= Relative_Abundance, 
                                            fill = Lake_Type)) +
   geom_boxplot(position=position_dodge(1)) +
-  ggtitle("Lake Michigan Survey Samples") +
-  scale_fill_manual(values = c("salmon","turquoise3")) +
+  ggtitle("Laurentian Survey Samples") +
+  scale_fill_manual(values = c("#d73027","#fc8d59")) +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
         axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
         axis.text.y = element_text(colour="black", family="Times", size=8),
@@ -276,20 +278,20 @@ Ver.box.est <- Ver.box.buoy[which(Ver.box.buoy$Lake_Type == "Estuary"),]
 Ver.box.est <- Ver.box.est[which(Ver.box.est$Depth != "Sediment"),]
 Ver.box.est$Station <- ordered(Ver.box.est$Station, 
                                levels = c("Buoy","Inlet", "Bear", "Outlet", "Deep"))
-Ver.box.est$Cruise <- "Laurentian"
+Ver.box.est$Survey <- "Laurentian"
 Ver.box.est[which(Ver.box.est$Study == "Muskegon"), 14] <- "Estuary"
-Ver.box.est$Cruise <- ordered(Ver.box.est$Cruise, levels = c("Estuary", "Laurentian"))
+Ver.box.est$Survey <- ordered(Ver.box.est$Survey, levels = c("Laurentian", "Estuary"))
 
 
 ### Plot!!! ###
 ann_est <- data.frame(lab=c("a", "a"),
-                       Cruise = factor(c("Estuary", "Laurentian"),
-                                          levels = c("Estuary", "Laurentian")))
+                       Survey = factor(c("Laurentian", "Estuary"),
+                                          levels = c("Laurentian", "Estuary")))
 Ver.box.est.plot <- ggplot(Ver.box.est, aes(x=Station, y=Relative_Abundance,
-                                            fill = Cruise)) +
+                                            fill = Survey)) +
   geom_boxplot(position=position_dodge(1)) + ylim(0,44) +
   ggtitle("Estuary Samples") +
-  scale_fill_manual(values = c("turquoise3","salmon")) +
+  scale_fill_manual(values = c("#d73027","#fc8d59")) +
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
         axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
         axis.text.y = element_text(colour="black", family="Times", size=8),
