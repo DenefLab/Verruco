@@ -2264,7 +2264,9 @@ Ver.lau.ord <- plot_ordination(physeq = Ver.lau, ordination = Ver.lau.pcoa, axes
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
                          alpha = Fraction)) +
   scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
+   scale_colour_manual(values=c("#ace600","#41ab5d","#00441b")) +
+  scale_fill_manual(values=c("#ace600","#41ab5d","#00441b")
+                      , na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
@@ -2300,7 +2302,9 @@ Ver.est.ord <- plot_ordination(physeq = Ver.est, ordination = Ver.est.pcoa, axes
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
                          alpha = Fraction)) +
   scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_colour_manual(values=c("#ace600","#41ab5d","#00441b")) +
+  scale_fill_manual(values=c("#ace600","#41ab5d","#00441b")
+                      , na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
   scale_y_reverse() +
   theme(axis.text.x = element_blank(), 
@@ -2349,7 +2353,9 @@ Ver.inl.ord <- plot_ordination(physeq = Ver.inl, ordination = Ver.inl.pcoa, axes
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
                          alpha = Fraction)) +
   scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_colour_manual(values=c("#ace600","#41ab5d","#00441b")) +
+  scale_fill_manual(values=c("#ace600","#41ab5d","#00441b")
+                      , na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
@@ -2768,7 +2774,9 @@ nonver.lau.ord <- plot_ordination(physeq = nonver.lau, ordination = nonver.lau.p
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
                          alpha = Fraction)) +
   scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_colour_manual(values=c("#ace600","#41ab5d","#00441b")) +
+  scale_fill_manual(values=c("#ace600","#41ab5d","#00441b")
+                      , na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   #scale_y_reverse() +
   scale_x_reverse() +
@@ -2805,7 +2813,9 @@ nonver.est.ord <- plot_ordination(physeq = nonver.est, ordination = nonver.est.p
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
                          alpha = Fraction)) +
   scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_colour_manual(values=c("#ace600","#41ab5d","#00441b")) +
+  scale_fill_manual(values=c("#ace600","#41ab5d","#00441b")
+                      , na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1, "Sediment"=0.5)) +
   theme(axis.text.x = element_blank(), 
         axis.text.y = element_blank(),
@@ -2842,7 +2852,9 @@ nonver.inl.ord <- plot_ordination(physeq = nonver.inl, ordination = nonver.inl.p
                          fill = factor(ifelse(Fraction == "Free", NA, Season)),
                          alpha = Fraction)) +
   scale_shape_manual(values = c(21, 24, 22)) +
-  scale_fill_discrete(na.value = "white", guide = "none") +
+  scale_colour_manual(values=c("#ace600","#41ab5d","#00441b")) +
+  scale_fill_manual(values=c("#ace600","#41ab5d","#00441b")
+                      , na.value = "white", guide = "none") +
   scale_alpha_manual(values=c("Particle"=1, "Free"=1)) +
   scale_y_reverse() + scale_x_reverse() +
   theme(axis.text.x = element_blank(), 
