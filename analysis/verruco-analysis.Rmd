@@ -1770,7 +1770,7 @@ ann.mpd.frac <- data.frame(lab=c("*", "+", "*"),
                        Fraction = factor(c("Particle", "Free", "Sediment")))
 mpd.frac.plot <- ggplot(final.mpd, aes(x = Lake_Type, y = Stat, fill = Fraction)) + 
   geom_boxplot(position=position_dodge(1)) +
-  scale_fill_manual(values = c("rosybrown","gold","saddlebrown")) +
+  scale_fill_manual(values = c("gray34","gray88","magenta4")) +
   xlab("Lake Type") + ylab("Mean") +
   ggtitle("SES MPD") +
   facet_grid(~Lake_Type, space = "free_x", scale = "free") +
@@ -1798,6 +1798,7 @@ mpd.seas.plot <- ggplot(final.mpd, aes(x=Lake_Type, y=Stat, fill=Season)) +
   xlab("Lake Type") + ylab("Mean") +
   ggtitle("SES MPD") +
   facet_grid(~ Lake_Type, space = "free_x", scale="free") +
+  scale_fill_manual(values=c("#d9ef8b","#41ab5d","darkgreen")) + 
   theme(axis.title.x = element_text(face="bold", family="Times", size=8),
         axis.text.x = element_text(angle=0, colour="black", family="Times", size=8),
         axis.text.y = element_text(colour="black", family="Times", size=8),
