@@ -2,7 +2,10 @@
 
 #### **Authors:** Edna Chiang, Marian L. Schmidt, Michelle Berry, Bopaiah A. Biddanda, Ashley Burtner, Thomas H. Johengen, Danna Palladino, Vincent J. Denef
 
-##### Submitted to PLoS ONE on Oct 16th, 2017
+##### Accepted by *PLoS ONE* on Mar 17th, 2018  
+  
+Link to article: http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0195112  
+  
 
 **********
 
